@@ -5,7 +5,7 @@ require "mxnet/version"
 
 Gem::Specification.new do |spec|
   spec.name          = "mxnet"
-  spec.version       = Mxnet::VERSION
+  spec.version       = MXNet::VERSION
   spec.authors       = ["Kenta Murata"]
   spec.email         = ["mrkn@mrkn.jp"]
 

@@ -1,5 +1,5 @@
 require "mxnet/version"
 
-module Mxnet
+module MXNet
   # Your code goes here...
 end

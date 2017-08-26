@@ -1,8 +1,8 @@
 require "spec_helper"
 
-RSpec.describe Mxnet do
+RSpec.describe MXNet do
   it "has a version number" do
-    expect(Mxnet::VERSION).not_to be nil
+    expect(MXNet::VERSION).not_to be nil
   end
 
   it "does something useful" do
