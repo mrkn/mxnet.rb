@@ -1,5 +1,9 @@
 require "mxnet/version"
 
 module MXNet
-  # Your code goes here...
+  require 'mxnet/libmxnet'
+  require 'mxnet/context'
+  require 'mxnet/ndarray'
+  require 'mxnet/utils'
+  require 'mxnet.so'
 end
