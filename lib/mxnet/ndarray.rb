@@ -92,6 +92,42 @@ module MXNet
       to_a[0]
     end
 
+    def +(other)
+      case other
+      when NDArray
+        Ops.broadcast_add(self, other)
+      else
+        super
+      end
+    end
+
+    def -(other)
+      case other
+      when NDArray
+        Ops.broadcast_sub(self, other)
+      else
+        super
+      end
+    end
+
+    def *(other)
+      case other
+      when NDArray
+        Ops.broadcast_mul(self, other)
+      else
+        super
+      end
+    end
+
+    def /(other)
+      case other
+      when NDArray
+        Ops.broadcast_div(self, other)
+      else
+        super
+      end
+    end
+
     module Ops
       def self._import_ndarray_operations
         LibMXNet._each_op_names do |op_name|
