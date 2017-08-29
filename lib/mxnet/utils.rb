@@ -49,7 +49,7 @@ def #{op_info.name}(*#{ary_name}, **kwargs)
         if dtype_name
           code << <<-RUBY
   if kwargs.has_key?(:#{dtype_name})
-    kwargs[:#{dtype_name}] = MXNet::NDArray::DType.dtype_name(#{dtype_name})
+    kwargs[:#{dtype_name}] = MXNet::DType.name(#{dtype_name})
     # TDOD: dtype normalization
   end
           RUBY
@@ -89,7 +89,7 @@ def #{op_info.name}(#{signature.join(', ')})
           code << <<-RUBY
   if #{dtype_name}
     keys << :#{dtype_name}
-    vals << MXNet::NDArray::DType.dtype_name(#{dtype_name})
+    vals << MXNet::DType.name(#{dtype_name})
   end
           RUBY
         end

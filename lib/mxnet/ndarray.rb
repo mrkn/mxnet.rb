@@ -1,48 +1,74 @@
 module MXNet
   class NDArray
-    module DType
-      NAME_TO_ID = {
-        float32: 0,
-        float64: 1,
-        float16: 2,
-        uint8: 3,
-        int32: 4,
-        int8: 5,
-        int64: 6,
-      }.freeze
-
-      ID_TO_NAME = NAME_TO_ID.inject({}) {|h, (k, v)| h.update(v => k) }.freeze
-
-      NAME_TO_ID.each do |name, id|
-        const_set(name.to_s.upcase, id)
-      end
-
-      def self.dtype_name(val)
-        case val
-        when Integer
-          ID_TO_NAME[val]
-        when Symbol
-          ID_TO_NAME[val]
-        else
-          ID_TO_NAME[val.to_str.to_sym]
-        end
-      end
-    end
-
-    def self._dtype(name)
-      DType.const_get(name.to_s.upcase)
-    rescue NameError
-      raise ArgumentError, 'unknown dtype name: #{name}'
-    end
-
-    def self.ones(shape, ctx=nil, dtype=DType::FLOAT32, **kwargs)
+    def self.ones(shape, ctx=nil, dtype=:float32, **kwargs)
       ctx ||= Context.default
+      case dtype
+      when String, Symbol
+        dtype = MXNet::DType.name2id(dtype)
+      when Integer
+        # do nothing
+      else
+        raise TypeError, "wrong type of dtype #{dtype.class} (expected Symbol or Integer)"
+      end
       Ops._ones(shape, ctx, dtype, **kwargs)
     end
 
-    def self.zeros(shape, ctx=nil, dtype=DType::FLOAT32, **kwargs)
+    def self.zeros(shape, ctx=nil, dtype=:float32, **kwargs)
       ctx ||= Context.default
+      case dtype
+      when String, Symbol
+        dtype = MXNet::DType.name2id(dtype)
+      when Integer
+        # do nothing
+      else
+        raise TypeError, "wrong type of dtype #{dtype.class} (expected Symbol or Integer)"
+      end
       Ops._zeros(shape, ctx, dtype, **kwargs)
+    end
+
+    # Returns a sliced view of this array.
+    #
+    # @param [Integer, Range, Array] key  Indexing key.
+    # @return [NDArray] a sliced view of this array.
+    def [](key)
+      case key
+      when Integer
+        if key > shape[0] - 1
+          raise IndexError, "index #{key} is out of bounds for axis 0 with size #{shape[0]}"
+        end
+        _at(key)
+      when Range
+        if key.begin || key.end
+          _slice(key.begin, key.end)
+        else
+          self
+        end
+      when Array
+        keys = key
+        shape = self.shape
+        unless shape.length >= keys.length
+          raise IndexError, "Slicing dimensions exceeds array dimensions, #{keys.length} vs #{shape.length}"
+        end
+        out_shape, begins, ends = [], [], []
+        keys.each_with_index do |key, idx|
+          case key
+          when Integer
+            begins << key
+            ends << key + 1
+          when Range
+            begins << (key.begin.nil? || key.begin == -Float::INFINITY) ? 0 : key.begin
+            ends << (key.end.nil? || key.end == Float::INFINITY) ? shape[i] : key.end
+            out_shape << ends.last - begins.last
+          else
+            raise IndexError, "NDArray does not support slicing with key #{key} of type #{key.class}"
+          end
+        end
+        out_shape.concat(shape[keys.length..-1])
+        out_shape << 1 if out_shape.empty?
+        return slice(begins, ends).reshape(out_shape)
+      else
+        raise IndexError, "NDArray does not support slicing with key #{key} of type #{key.class}"
+      end
     end
 
     def ndim
@@ -57,6 +83,13 @@ module MXNet
 
     def transpose(axes=nil)
       Ops.transpose(self, axes)
+    end
+
+    def as_scalar
+      unless shape == [1]
+        raise TypeError, "The current array is not a scalar"
+      end
+      to_a[0]
     end
 
     module Ops

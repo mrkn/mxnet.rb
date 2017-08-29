@@ -51,6 +51,9 @@ init_api_table(VALUE handle)
   INIT_API_TABLE_ENTRY(MXGetLastError);
   INIT_API_TABLE_ENTRY(MXNDArrayCreateEx);
   INIT_API_TABLE_ENTRY(MXNDArrayGetShape);
+  INIT_API_TABLE_ENTRY(MXNDArrayGetDType);
+  INIT_API_TABLE_ENTRY(MXNDArraySyncCopyToCPU);
+  INIT_API_TABLE_ENTRY(MXNDArrayAt);
 
   INIT_API_TABLE_ENTRY(MXListAllOpNames);
   INIT_API_TABLE_ENTRY(NNGetOpHandle);
@@ -131,14 +134,12 @@ imperative_invoke(VALUE mod, VALUE handle, VALUE ndargs, VALUE keys, VALUE vals,
     return out;
   }
   if (num_outputs == 1) {
-    out = PTR2NUM(outputs[0]);
-    return rb_class_new_instance(1, &out, mxnet_cNDArray);
+    return mxnet_ndarray_new(outputs[0]);
   }
 
   out = rb_ary_new_capa(num_outputs);
   for (i = 0; i < num_outputs; ++i) {
-    VALUE out_handle = PTR2NUM(outputs[i]);
-    rb_ary_push(out, rb_class_new_instance(1, &out_handle, mxnet_cNDArray));
+    rb_ary_push(out, mxnet_ndarray_new(outputs[i]));
   }
   return out;
 }

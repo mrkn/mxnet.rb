@@ -6,8 +6,48 @@ module MXNet
       pending
     end
 
+    describe '#[]' do
+      context 'when the array is 1D' do
+        specify do
+          x = MXNet::NDArray.zeros([3])
+          expect(x[0]).to be_a(MXNet::NDArray)
+          expect(x[0].as_scalar).to eq(0.0)
+          expect(x[1].as_scalar).to eq(0.0)
+          expect(x[2].as_scalar).to eq(0.0)
+        end
+
+        specify do
+          x = MXNet::NDArray.zeros([2, 3])
+          expect(x[0]).to be_a(MXNet::NDArray)
+          expect(x[0].shape).to eq([3])
+          expect(x[0][0].as_scalar).to eq(0.0)
+        end
+      end
+
+      context 'when the array is 2D' do
+        pending
+      end
+
+      context 'when the array is 3D' do
+        pending
+      end
+    end
+
     describe '#[]=' do
       pending
+    end
+
+    describe '#dtype' do
+      specify do
+        expect(MXNet::NDArray.empty([1, 2]).dtype).to eq(DType.name2id(:float32))
+        expect(MXNet::NDArray.empty([1, 2], dtype: :float32).dtype).to eq(DType.name2id(:float32))
+        expect(MXNet::NDArray.empty([1, 2], dtype: :float64).dtype).to eq(DType.name2id(:float64))
+        expect(MXNet::NDArray.empty([1, 2], dtype: :float16).dtype).to eq(DType.name2id(:float16))
+        expect(MXNet::NDArray.empty([1, 2], dtype: :uint8).dtype).to eq(DType.name2id(:uint8))
+        expect(MXNet::NDArray.empty([1, 2], dtype: :int8).dtype).to eq(DType.name2id(:int8))
+        expect(MXNet::NDArray.empty([1, 2], dtype: :int32).dtype).to eq(DType.name2id(:int32))
+        expect(MXNet::NDArray.empty([1, 2], dtype: :int64).dtype).to eq(DType.name2id(:int64))
+      end
     end
 
     describe '#ndim' do
