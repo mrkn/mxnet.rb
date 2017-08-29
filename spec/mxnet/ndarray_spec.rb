@@ -37,6 +37,17 @@ module MXNet
       pending
     end
 
+    describe '#reshape' do
+      specify do
+        x = MXNet::NDArray.zeros([2, 3])
+        expect(x.reshape([6]).shape).to eq([6])
+        expect(x.reshape([6, 1]).shape).to eq([6, 1])
+        expect(x.reshape([3, 2]).shape).to eq([3, 2])
+        expect(x.reshape([2, 2]).shape).to eq([2, 2])
+        expect { x.reshape([2, 2, 2]) }.to raise_error(MXNet::Error, /target shape size is larger current shape/)
+      end
+    end
+
     describe '#dtype' do
       specify do
         expect(MXNet::NDArray.empty([1, 2]).dtype).to eq(DType.name2id(:float32))
@@ -146,6 +157,7 @@ module MXNet
         x = MXNet::NDArray.zeros([2, 1, 3])
         expect(x).to be_a(MXNet::NDArray)
         expect(x.shape).to eq([2, 1, 3])
+        expect(x.reshape([6]).to_a).to be_all {|x| x == 0.0 }
       end
     end
 

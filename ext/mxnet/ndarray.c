@@ -160,6 +160,35 @@ ndarray_initialize(VALUE obj, VALUE handle_v)
   return obj;
 }
 
+/* Returns a **view**  of this array with a new shape without altering any data.
+ * 
+ * @param [Array<Integer>] shape  The new shape should not change the array size.
+ * @return [NDArray] An array with desired shape that shares data with this array.
+ */
+static VALUE
+ndarray_reshape(VALUE obj, VALUE shape_v)
+{
+  NDArrayHandle handle, out_handle;
+  VALUE dims_str;
+  int ndim, *dims, i;
+
+  handle = mxnet_ndarray_get_handle(obj);
+  shape_v = rb_check_convert_type(shape_v, T_ARRAY, "Array", "to_ary");
+
+  /* TODO: check INT_MAX */
+  ndim = (int)RARRAY_LEN(shape_v);
+  dims_str = rb_str_tmp_new(sizeof(int) * ndim);
+  dims = (int *)RSTRING_PTR(dims_str);
+
+  for (i = 0; i < ndim; ++i) {
+    dims[i] = NUM2INT(RARRAY_AREF(shape_v, i));
+  }
+
+  CHECK_CALL(MXNET_API(MXNDArrayReshape)(handle, ndim, dims, &out_handle));
+
+  return mxnet_ndarray_new(out_handle);
+}
+
 static int
 ndarray_get_dtype_id(VALUE obj)
 {
@@ -372,6 +401,7 @@ mxnet_init_ndarray(void)
   rb_define_method(cNDArray, "dtype", ndarray_get_dtype, 0);
   rb_define_method(cNDArray, "dtype_name", ndarray_get_dtype_name, 0);
   rb_define_method(cNDArray, "shape", ndarray_get_shape, 0);
+  rb_define_method(cNDArray, "reshape", ndarray_reshape, 1);
   rb_define_method(cNDArray, "_at", ndarray_at, 1);
   rb_define_method(cNDArray, "to_a", ndarray_to_a, 0);
 
