@@ -35,12 +35,24 @@ module MXNet
           end
         end
         dll_path.map! {|path| File.join(path, "#{LIBPREFIX}mxnet.#{LIBSUFFIX}") }
+        dll_path.unshift(find_libmxnet_in_python(ENV['PYTHON']))
         dll_path.unshift(ENV['LIBMXNET'])
         lib_path = dll_path.select {|path| path && File.file?(path) }
         if lib_path.empty?
           raise "Unable to find MXNet shared library.  The list of candidates:\n#{lib_path.join("\n")}"
         end
         lib_path
+      end
+
+      def find_libmxnet_in_python(python=nil)
+        python ||= 'python'
+        investigator_py = File.expand_path('../find_libmxnet.py', __FILE__)
+        lib_path = `'#{python}' '#{investigator_py}' 2>/dev/null`.chomp
+        if $?.success?
+          lib_path
+        else
+          nil
+        end
       end
     end
   end
