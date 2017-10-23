@@ -35,8 +35,8 @@ module MXNet
           end
         end
         dll_path.map! {|path| File.join(path, "#{LIBPREFIX}mxnet.#{LIBSUFFIX}") }
-        dll_path << ENV['LIBMXNET'] if ENV['LIBMXNET']
-        lib_path = dll_path.select {|path| File.file?(path) }
+        dll_path.unshift(ENV['LIBMXNET'])
+        lib_path = dll_path.select {|path| path && File.file?(path) }
         if lib_path.empty?
           raise "Unable to find MXNet shared library.  The list of candidates:\n#{lib_path.join("\n")}"
         end
