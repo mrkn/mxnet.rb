@@ -128,6 +128,15 @@ module MXNet
       end
     end
 
+    def %(other)
+      case other
+      when NDArray
+        Ops.broadcast_mod(self, other)
+      else
+        super
+      end
+    end
+
     module Ops
       def self._import_ndarray_operations
         LibMXNet._each_op_names do |op_name|

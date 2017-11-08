@@ -220,7 +220,11 @@ module MXNet
     end
 
     describe '#%' do
-      pending
+      specify do
+        x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
+        z = (x + x + x) % (x + x)
+        expect(z.reshape([24]).to_a).to eq([1.0] * 24)
+      end
     end
 
     describe '#**' do
