@@ -146,6 +146,60 @@ module MXNet
       end
     end
 
+    def ==(other)
+      case other
+      when NDArray
+        Ops.broadcast_equal(self, other)
+      else
+        super
+      end
+    end
+
+    def !=(other)
+      case other
+      when NDArray
+        Ops.broadcast_not_equal(self, other)
+      else
+        super
+      end
+    end
+
+    def >(other)
+      case other
+      when NDArray
+        Ops.broadcast_greater(self, other)
+      else
+        super
+      end
+    end
+
+    def >=(other)
+      case other
+      when NDArray
+        Ops.broadcast_greater_equal(self, other)
+      else
+        super
+      end
+    end
+
+    def <(other)
+      case other
+      when NDArray
+        Ops.broadcast_lesser(self, other)
+      else
+        super
+      end
+    end
+
+    def <=(other)
+      case other
+      when NDArray
+        Ops.broadcast_lesser_equal(self, other)
+      else
+        super
+      end
+    end
+
     module Ops
       def self._import_ndarray_operations
         LibMXNet._each_op_names do |op_name|
