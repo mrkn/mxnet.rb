@@ -92,6 +92,14 @@ module MXNet
       to_a[0]
     end
 
+    def +@
+      self
+    end
+
+    def -@
+      Ops._mul_scalar(self, -1.0)
+    end
+
     def +(other)
       case other
       when NDArray
