@@ -26,6 +26,19 @@ module MXNet
       Ops._zeros(shape, ctx, dtype, **kwargs)
     end
 
+    def self.arange(start, stop=nil, step: 1.0, repeat: 1, ctx: nil, dtype: :float32)
+      ctx ||= Context.default
+      case dtype
+      when String, Symbol
+        dtype = dtype.to_s
+      when Integer
+        dtype = MXNet::DType.id2name(dtype)
+      else
+        raise TypeError, "wrong type of dtype #{dtype.class} (expected Symbol or Integer)"
+      end
+      Ops._arange(start: start, stop: stop, step: step, repeat: repeat, dtype: dtype, ctx: ctx)
+    end
+
     # Returns a sliced view of this array.
     #
     # @param [Integer, Range, Array] key  Indexing key.

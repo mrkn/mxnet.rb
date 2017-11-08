@@ -169,6 +169,25 @@ module MXNet
       end
     end
 
+    describe '.arange' do
+      specify do
+        x = MXNet::NDArray.arange(3)
+        expect(x.to_a).to eq([0.0, 1.0, 2.0])
+
+        x = MXNet::NDArray.arange(2, 6)
+        expect(x.to_a).to eq([2.0, 3.0, 4.0, 5.0])
+
+        x = MXNet::NDArray.arange(2, 8, step: 2)
+        expect(x.to_a).to eq([2.0, 4.0, 6.0])
+
+        x = MXNet::NDArray.arange(2, 6, step: 1.5, repeat: 2)
+        expect(x.to_a).to eq([2.0, 2.0, 3.5, 3.5, 5.0, 5.0])
+
+        x = MXNet::NDArray.arange(2, 6, step: 2, repeat: 3, dtype: :int32)
+        expect(x.to_a).to eq([2, 2, 2, 4, 4, 4])
+      end
+    end
+
     describe '.full' do
       pending
     end
