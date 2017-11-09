@@ -109,18 +109,8 @@ mxnet_init_operations(void)
 
   mOps = rb_define_module_under(mxnet_cNDArray, "Ops");
 
-  mxnet_sOpInfo = rb_struct_define_under(mxnet_mMXNet, "OpInfo",
-      "name",
-      "description",
-      "args",
-      "key_var_num_args",
-      "return_type",
-      NULL);
-  mxnet_sOpArgInfo = rb_struct_define_under(mxnet_mMXNet, "OpArgInfo",
-      "name",
-      "type_info",
-      "description",
-      NULL);
+  mxnet_sOpInfo = rb_const_get_at(mxnet_mMXNet, rb_intern("OpInfo"));
+  mxnet_sOpArgInfo = rb_const_get_at(mxnet_mMXNet, rb_intern("OpArgInfo"));
 
   id_handles = rb_intern("handles");
   id_descriptions = rb_intern("descriptions");

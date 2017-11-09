@@ -5,5 +5,6 @@ module MXNet
   require 'mxnet/context'
   require 'mxnet/ndarray'
   require 'mxnet/utils'
+  require 'mxnet/op_info'
   require 'mxnet.so'
 end
