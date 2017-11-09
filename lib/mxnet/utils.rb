@@ -62,7 +62,7 @@ module MXNet
       code = []
       if ary_name
         code << <<-RUBY
-def #{op_info.name}(*#{ary_name}, **kwargs)
+def #{op_info.func_name}(*#{ary_name}, **kwargs)
   #{ary_name}.each do |i|
     raise TypeError, "unexpected positional arguments \#{i.class} (expect NDArray)" unless i.kind_of? NDArray
   end
@@ -85,7 +85,7 @@ def #{op_info.name}(*#{ary_name}, **kwargs)
         RUBY
       else # if ary_name
         code << <<-RUBY
-def #{op_info.name}(#{signature.join(', ')})
+def #{op_info.func_name}(#{signature.join(', ')})
   ndargs = []
   kwargs.delete_if { |k, v| v.nil? }
   keys = kwargs.keys
@@ -120,7 +120,7 @@ def #{op_info.name}(#{signature.join(', ')})
       code << <<-RUBY
   return LibMXNet.imperative_invoke(#{handle}, ndargs, keys, vals, out)
 end
-module_function :#{op_info.name}
+module_function :#{op_info.func_name}
       RUBY
 
       mod.module_eval(code.join(''), fname, lineno)

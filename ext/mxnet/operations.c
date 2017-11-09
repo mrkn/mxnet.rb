@@ -13,6 +13,10 @@ get_m_description(VALUE mod, VALUE name)
 {
   VALUE hash;
   hash = rb_ivar_get(mxnet_mNDArrayOps, id_handles);
+  if (NIL_P(hash)) {
+    hash = rb_hash_new();
+    rb_ivar_set(mod, id_descriptions, rb_hash_new());
+  }
   StringValue(name);
   return rb_hash_aref(hash, rb_to_symbol(name));
 }
@@ -21,6 +25,10 @@ static void
 register_handle(VALUE mod, char const* name, void *handle)
 {
   VALUE hash = rb_ivar_get(mod, id_handles);
+  if (NIL_P(hash)) {
+    hash = rb_hash_new();
+    rb_ivar_set(mod, id_handles, rb_hash_new());
+  }
   rb_hash_aset(hash, ID2SYM(rb_intern(name)), PTR2NUM(handle));
 }
 
@@ -61,12 +69,12 @@ op_info_new(char const *name, char const *description, mx_uint num_args,
 }
 
 static void
-setup_operation(VALUE mod, VALUE name)
+setup_operation(VALUE klass, VALUE name)
 {
   void *op_handle;
   char const *real_name, *description, **arg_names, **arg_type_infos, **arg_descriptions, *key_var_num_args, *return_type;
   mx_uint num_args;
-  VALUE op_info;
+  VALUE op_info, mod_name, mod;
 
   CHECK_CALL(MXNET_API(NNGetOpHandle)(RSTRING_PTR(name), &op_handle)); /* check handle availability just in case */
 
@@ -75,10 +83,12 @@ setup_operation(VALUE mod, VALUE name)
       &num_args, &arg_names, &arg_type_infos, &arg_descriptions,
       &key_var_num_args, &return_type));
 
-  register_handle(mod, real_name, op_handle);
-
   op_info = op_info_new(real_name, description, num_args, arg_names, arg_type_infos,
                         arg_descriptions, key_var_num_args, return_type);
+  mod_name = rb_funcall(op_info, rb_intern("module_name"), 0);
+  mod = rb_const_get_at(klass, SYM2ID(mod_name));
+
+  register_handle(mod, real_name, op_handle);
   register_description(mod, real_name, op_info);
 
   rb_funcall(mxnet_mUtils, rb_intern("define_operation_delegator"), 3, mod, PTR2NUM(op_handle), op_info);
@@ -103,11 +113,15 @@ list_all_op_names(void)
 void
 mxnet_init_operations(void)
 {
-  VALUE mOps;
+  VALUE mOps, mInternal, mContrib, mLinalg, mSparse;
   long i;
   VALUE op_names;
 
   mOps = rb_define_module_under(mxnet_cNDArray, "Ops");
+  mInternal = rb_define_module_under(mxnet_cNDArray, "Internal");
+  mContrib = rb_define_module_under(mxnet_cNDArray, "Contrib");
+  mLinalg = rb_define_module_under(mxnet_cNDArray, "Linalg");
+  mSparse = rb_define_module_under(mxnet_cNDArray, "Sparse");
 
   mxnet_sOpInfo = rb_const_get_at(mxnet_mMXNet, rb_intern("OpInfo"));
   mxnet_sOpArgInfo = rb_const_get_at(mxnet_mMXNet, rb_intern("OpArgInfo"));
@@ -115,12 +129,9 @@ mxnet_init_operations(void)
   id_handles = rb_intern("handles");
   id_descriptions = rb_intern("descriptions");
 
-  rb_ivar_set(mOps, id_handles, rb_hash_new());
-  rb_ivar_set(mOps, id_descriptions, rb_hash_new());
-
   op_names = list_all_op_names();
   for (i = 0; i < RARRAY_LEN(op_names); ++i) {
-    setup_operation(mOps, RARRAY_AREF(op_names, i));
+    setup_operation(mxnet_cNDArray, RARRAY_AREF(op_names, i));
   }
 
   rb_define_module_function(mOps, "description", get_m_description, 1);

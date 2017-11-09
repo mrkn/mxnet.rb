@@ -3,19 +3,19 @@ module MXNet
     def self.ones(shape, ctx=nil, dtype=:float32, **kwargs)
       ctx ||= Context.default
       dtype = Utils.dtype_id(dtype)
-      Ops._ones(shape, ctx, dtype, **kwargs)
+      Internal._ones(shape, ctx, dtype, **kwargs)
     end
 
     def self.zeros(shape, ctx=nil, dtype=:float32, **kwargs)
       ctx ||= Context.default
       dtype = Utils.dtype_id(dtype)
-      Ops._zeros(shape, ctx, dtype, **kwargs)
+      Internal._zeros(shape, ctx, dtype, **kwargs)
     end
 
     def self.arange(start, stop=nil, step: 1.0, repeat: 1, ctx: nil, dtype: :float32)
       ctx ||= Context.default
       dtype = Utils.dtype_name(dtype)
-      Ops._arange(start: start, stop: stop, step: step, repeat: repeat, dtype: dtype, ctx: ctx)
+      Internal._arange(start: start, stop: stop, step: step, repeat: repeat, dtype: dtype, ctx: ctx)
     end
 
     # Returns a sliced view of this array.
@@ -89,7 +89,7 @@ module MXNet
     end
 
     def -@
-      Ops._mul_scalar(self, -1.0)
+      Internal._mul_scalar(self, -1.0)
     end
 
     def +(other)
