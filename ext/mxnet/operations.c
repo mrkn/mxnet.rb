@@ -69,6 +69,16 @@ op_info_new(char const *name, char const *description, mx_uint num_args,
 }
 
 static void
+define_operation_delegator(VALUE klass, VALUE target_mod, void *op_handle, VALUE op_info)
+{
+  VALUE recv;
+  ID mid;
+  recv = rb_const_get_at(klass, rb_intern("OperationDelegator"));
+  mid = rb_intern("define_delegator");
+  rb_funcall(recv, mid, 3, target_mod, PTR2NUM(op_handle), op_info);
+}
+
+static void
 setup_operation(VALUE klass, VALUE name)
 {
   void *op_handle;
@@ -91,7 +101,7 @@ setup_operation(VALUE klass, VALUE name)
   register_handle(mod, real_name, op_handle);
   register_description(mod, real_name, op_info);
 
-  rb_funcall(mxnet_mUtils, rb_intern("define_operation_delegator"), 3, mod, PTR2NUM(op_handle), op_info);
+  define_operation_delegator(klass, mod, op_handle, op_info);
 }
 
 static VALUE
