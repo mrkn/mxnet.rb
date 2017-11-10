@@ -20,7 +20,7 @@ module MXNet
           elsif arg.type_info.start_with?('NDArray') || arg.type_info.start_with?('Symbol')
             raise "Op can only have one argument with variable size and it must be the last argument." if ary_name
             if arg.type_info.end_with?('[]')
-              ndsignature << "#{name}"
+              ndsignature << "*#{name}"
               ary_name = name
             else
               ndsignature << "#{name}=nil"
