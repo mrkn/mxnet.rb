@@ -12,13 +12,15 @@ static VALUE
 get_m_description(VALUE mod, VALUE name)
 {
   VALUE hash;
-  hash = rb_ivar_get(mxnet_mNDArrayOps, id_handles);
+  hash = rb_ivar_get(mod, id_descriptions);
   if (NIL_P(hash)) {
-    hash = rb_hash_new();
-    rb_ivar_set(mod, id_descriptions, rb_hash_new());
+    return Qnil;
   }
-  StringValue(name);
-  return rb_hash_aref(hash, rb_to_symbol(name));
+  if (!RB_TYPE_P(name, T_SYMBOL)) {
+    StringValue(name);
+    name = rb_to_symbol(name);
+  }
+  return rb_hash_aref(hash, name);
 }
 
 static void
@@ -35,7 +37,11 @@ register_handle(VALUE mod, char const* name, void *handle)
 static void
 register_description(VALUE mod, char const *name, VALUE description)
 {
-  VALUE hash = rb_ivar_get(mod, id_handles);
+  VALUE hash = rb_ivar_get(mod, id_descriptions);
+  if (NIL_P(hash)) {
+    hash = rb_hash_new();
+    rb_ivar_set(mod, id_descriptions, rb_hash_new());
+  }
   rb_hash_aset(hash, ID2SYM(rb_intern(name)), description);
 }
 
