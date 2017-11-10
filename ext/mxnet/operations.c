@@ -1,7 +1,5 @@
 #include "mxnet_internal.h"
 
-VALUE mxnet_mNDArrayOps;
-
 VALUE mxnet_sOpInfo;
 VALUE mxnet_sOpArgInfo;
 
@@ -155,6 +153,4 @@ mxnet_init_operations(VALUE klass)
   for (i = 0; i < RARRAY_LEN(op_names); ++i) {
     setup_operation(klass, RARRAY_AREF(op_names, i));
   }
-
-  mxnet_mNDArrayOps = mOps;
 }

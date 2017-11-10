@@ -134,7 +134,6 @@ extern VALUE mxnet_mMXNet;
 extern VALUE mxnet_mUtils;
 extern VALUE mxnet_cContext;
 extern VALUE mxnet_cNDArray;
-extern VALUE mxnet_mNDArrayOps;
 
 extern VALUE mxnet_sOpInfo;
 extern VALUE mxnet_sOpArgInfo;
