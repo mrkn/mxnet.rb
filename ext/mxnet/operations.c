@@ -139,6 +139,12 @@ mxnet_init_operations(void)
   mLinalg = rb_define_module_under(mxnet_cNDArray, "Linalg");
   mSparse = rb_define_module_under(mxnet_cNDArray, "Sparse");
 
+  rb_define_module_function(mOps, "description", get_m_description, 1);
+  rb_define_module_function(mInternal, "description", get_m_description, 1);
+  rb_define_module_function(mContrib, "description", get_m_description, 1);
+  rb_define_module_function(mLinalg, "description", get_m_description, 1);
+  rb_define_module_function(mSparse, "description", get_m_description, 1);
+
   mxnet_sOpInfo = rb_const_get_at(mxnet_mMXNet, rb_intern("OpInfo"));
   mxnet_sOpArgInfo = rb_const_get_at(mxnet_mMXNet, rb_intern("OpArgInfo"));
 
@@ -149,8 +155,6 @@ mxnet_init_operations(void)
   for (i = 0; i < RARRAY_LEN(op_names); ++i) {
     setup_operation(mxnet_cNDArray, RARRAY_AREF(op_names, i));
   }
-
-  rb_define_module_function(mOps, "description", get_m_description, 1);
 
   mxnet_mNDArrayOps = mOps;
 }
