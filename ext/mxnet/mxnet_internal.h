@@ -126,7 +126,7 @@ void *mxnet_ndarray_get_handle(VALUE ndary);
 
 void mxnet_init_libmxnet(void);
 void mxnet_init_ndarray(void);
-void mxnet_init_operations(void);
+void mxnet_init_operations(VALUE klass);
 NORETURN(void mxnet_raise_last_error(void));
 #define CHECK_CALL(expr) if ((expr) != 0) mxnet_raise_last_error()
 

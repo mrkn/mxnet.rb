@@ -127,17 +127,17 @@ list_all_op_names(void)
 }
 
 void
-mxnet_init_operations(void)
+mxnet_init_operations(VALUE klass)
 {
   VALUE mOps, mInternal, mContrib, mLinalg, mSparse;
   long i;
   VALUE op_names;
 
-  mOps = rb_define_module_under(mxnet_cNDArray, "Ops");
-  mInternal = rb_define_module_under(mxnet_cNDArray, "Internal");
-  mContrib = rb_define_module_under(mxnet_cNDArray, "Contrib");
-  mLinalg = rb_define_module_under(mxnet_cNDArray, "Linalg");
-  mSparse = rb_define_module_under(mxnet_cNDArray, "Sparse");
+  mOps = rb_define_module_under(klass, "Ops");
+  mInternal = rb_define_module_under(klass, "Internal");
+  mContrib = rb_define_module_under(klass, "Contrib");
+  mLinalg = rb_define_module_under(klass, "Linalg");
+  mSparse = rb_define_module_under(klass, "Sparse");
 
   rb_define_module_function(mOps, "description", get_m_description, 1);
   rb_define_module_function(mInternal, "description", get_m_description, 1);
@@ -153,7 +153,7 @@ mxnet_init_operations(void)
 
   op_names = list_all_op_names();
   for (i = 0; i < RARRAY_LEN(op_names); ++i) {
-    setup_operation(mxnet_cNDArray, RARRAY_AREF(op_names, i));
+    setup_operation(klass, RARRAY_AREF(op_names, i));
   }
 
   mxnet_mNDArrayOps = mOps;

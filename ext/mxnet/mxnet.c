@@ -43,5 +43,5 @@ Init_mxnet(void)
   mxnet_eError = rb_define_class_under(mxnet_mMXNet, "Error", rb_eStandardError);
   mxnet_init_libmxnet();
   mxnet_init_ndarray();
-  mxnet_init_operations();
+  mxnet_init_operations(mxnet_cNDArray);
 }
