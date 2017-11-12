@@ -80,14 +80,6 @@ mxnet_ndarray_new(void *ndarray_handle)
   return rb_class_new_instance(1, &handle_v, mxnet_cNDArray);
 }
 
-void *
-mxnet_ndarray_get_handle(VALUE obj)
-{
-  VALUE handle_v = rb_ivar_get(obj, rb_intern("mxnet_handle"));
-  if (NIL_P(handle_v)) return NULL;
-  return NUM2PTR(handle_v);
-}
-
 static VALUE
 ndarray_allocate_handle(VALUE shape_v, VALUE ctx_v, VALUE delay_alloc, VALUE dtype_v)
 {
@@ -156,7 +148,7 @@ ndarray_s_empty(int argc, VALUE *argv, VALUE klass)
 static VALUE
 ndarray_initialize(VALUE obj, VALUE handle_v)
 {
-  rb_ivar_set(obj, rb_intern("mxnet_handle"), handle_v);
+  rb_call_super(1, &handle_v);
   return obj;
 }
 
@@ -172,7 +164,7 @@ ndarray_reshape(VALUE obj, VALUE shape_v)
   VALUE dims_str;
   int ndim, *dims, i;
 
-  handle = mxnet_ndarray_get_handle(obj);
+  handle = mxnet_get_handle(obj);
   shape_v = rb_check_convert_type(shape_v, T_ARRAY, "Array", "to_ary");
 
   /* TODO: check INT_MAX */
@@ -195,7 +187,7 @@ ndarray_get_dtype_id(VALUE obj)
   void *handle;
   int dtype_id;
 
-  handle = mxnet_ndarray_get_handle(obj);
+  handle = mxnet_get_handle(obj);
   CHECK_CALL(MXNET_API(MXNDArrayGetDType)(handle, &dtype_id));
   return dtype_id;
 }
@@ -213,15 +205,15 @@ ndarray_get_dtype_name(VALUE obj)
   return mxnet_dtype_id2name(dtype_id);
 }
 
-static VALUE
-ndarray_get_shape(VALUE obj)
+VALUE
+mxnet_ndarray_get_shape(VALUE obj)
 {
   void *handle;
   mx_uint ndim, i;
   mx_uint const* shape;
   VALUE ary;
 
-  handle = mxnet_ndarray_get_handle(obj);
+  handle = mxnet_get_handle(obj);
   CHECK_CALL(MXNET_API(MXNDArrayGetShape)(handle, &ndim, &shape));
 
   ary = rb_ary_new_capa(ndim);
@@ -244,7 +236,7 @@ ndarray_at(VALUE obj, VALUE idx_v)
   void *handle, *out_handle;
   mx_uint idx;
   
-  handle = mxnet_ndarray_get_handle(obj);
+  handle = mxnet_get_handle(obj);
   idx = NUM2MXUINT(idx_v);
   CHECK_CALL(MXNET_API(MXNDArrayAt)(handle, idx, &out_handle));
 
@@ -301,7 +293,7 @@ ndarray_to_a(VALUE obj)
   mx_uint const* shape;
   VALUE data_str, ary;
 
-  handle = mxnet_ndarray_get_handle(obj);
+  handle = mxnet_get_handle(obj);
 
   CHECK_CALL(MXNET_API(MXNDArrayGetShape)(handle, &ndim, &shape));
   if (ndim > 1) {
@@ -400,7 +392,7 @@ mxnet_init_ndarray(void)
   rb_define_method(cNDArray, "initialize", ndarray_initialize, 1);
   rb_define_method(cNDArray, "dtype", ndarray_get_dtype, 0);
   rb_define_method(cNDArray, "dtype_name", ndarray_get_dtype_name, 0);
-  rb_define_method(cNDArray, "shape", ndarray_get_shape, 0);
+  rb_define_method(cNDArray, "shape", mxnet_ndarray_get_shape, 0);
   rb_define_method(cNDArray, "reshape", ndarray_reshape, 1);
   rb_define_method(cNDArray, "_at", ndarray_at, 1);
   rb_define_method(cNDArray, "to_a", ndarray_to_a, 0);

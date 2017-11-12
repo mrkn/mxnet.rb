@@ -1,5 +1,7 @@
 module MXNet
   class NDArray
+    include HandleWrapper
+
     def self.ones(shape, ctx=nil, dtype=:float32, **kwargs)
       ctx ||= Context.default
       dtype = Utils.dtype_id(dtype)

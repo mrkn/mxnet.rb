@@ -50,8 +50,8 @@ op_arg_info_new(char const *name, char const *type_info, char const *description
 }
 
 static VALUE
-op_info_new(char const *name, char const *description, mx_uint num_args,
-            char const **arg_names, char const **arg_type_infos,
+op_info_new(char const *name, char const *real_name, char const *description,
+            mx_uint num_args, char const **arg_names, char const **arg_type_infos,
             char const **arg_descriptions, char const *key_var_num_args,
             char const *return_type)
 {
@@ -65,10 +65,11 @@ op_info_new(char const *name, char const *description, mx_uint num_args,
 
   return rb_struct_new(mxnet_sOpInfo,
     ID2SYM(rb_intern(name)),
+    ID2SYM(rb_intern(real_name)),
     rb_str_new2(description),
     args,
-    key_var_num_args ? ID2SYM(rb_intern(key_var_num_args)) : Qnil,
-    return_type ? rb_str_new2(return_type) : Qnil,
+    (key_var_num_args && strlen(key_var_num_args) > 0) ? ID2SYM(rb_intern(key_var_num_args)) : Qnil,
+    rb_str_new2(return_type ? return_type : ""),
     0);
 }
 
@@ -86,24 +87,30 @@ static void
 setup_operation(VALUE klass, VALUE name)
 {
   void *op_handle;
-  char const *real_name, *description, **arg_names, **arg_type_infos, **arg_descriptions, *key_var_num_args, *return_type;
+  char const *name_cstr, *real_name, *description, *key_var_num_args, *return_type;
+  char const **arg_names, **arg_type_infos, **arg_descriptions;
   mx_uint num_args;
-  VALUE op_info, mod_name, mod;
+  VALUE op_info, mod_name, mod, func_name;
 
-  CHECK_CALL(MXNET_API(NNGetOpHandle)(RSTRING_PTR(name), &op_handle)); /* check handle availability just in case */
+  name_cstr = StringValueCStr(name);
+
+  CHECK_CALL(MXNET_API(NNGetOpHandle)(name_cstr, &op_handle)); /* check handle availability just in case */
 
   CHECK_CALL(MXNET_API(MXSymbolGetAtomicSymbolInfo)(
       op_handle, &real_name, &description,
       &num_args, &arg_names, &arg_type_infos, &arg_descriptions,
       &key_var_num_args, &return_type));
 
-  op_info = op_info_new(real_name, description, num_args, arg_names, arg_type_infos,
+  op_info = op_info_new(name_cstr, real_name, description,
+                        num_args, arg_names, arg_type_infos,
                         arg_descriptions, key_var_num_args, return_type);
   mod_name = rb_funcall(op_info, rb_intern("module_name"), 0);
   mod = rb_const_get_at(klass, SYM2ID(mod_name));
 
-  register_handle(mod, real_name, op_handle);
-  register_description(mod, real_name, op_info);
+  func_name = rb_funcall(op_info, rb_intern("func_name"), 0);
+  func_name = rb_sym_to_s(func_name);
+  register_handle(mod, RSTRING_PTR(func_name), op_handle);
+  register_description(mod, RSTRING_PTR(func_name), op_info);
 
   define_operation_delegator(klass, mod, op_handle, op_info);
 }

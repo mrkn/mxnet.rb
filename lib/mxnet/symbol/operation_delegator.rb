@@ -1,5 +1,5 @@
 module MXNet
-  class NDArray
+  class Symbol
     module OperationDelegator
       def self.define_delegator(mod, handle, op_info, fname='(eval)', lineno=1)
         dtype_name = nil
@@ -31,8 +31,9 @@ module MXNet
             kwarg_names << name
           end
         end
-        signature << 'out=nil'
         signature << 'name=nil'
+        signature << 'attr=nil'
+        signature << 'out=nil'
         signature << '**kwargs'
         signature = ndsignature + signature
 
@@ -41,9 +42,9 @@ module MXNet
           code << <<-RUBY
   def #{op_info.func_name}(*#{ary_name}, **kwargs)
     #{ary_name}.each do |i|
-      raise TypeError, "unexpected positional arguments \#{i.class} (expect NDArray)" unless i.kind_of? NDArray
+      raise TypeError, "unexpected positional arguments \#{i.class} (expect NDArray)" unless i.kind_of? MXNet::Symbol
     end
-    ndargs = #{ary_name}
+    sym_args = #{ary_name}
           RUBY
           if dtype_name
             code << <<-RUBY
@@ -54,24 +55,58 @@ module MXNet
           end
           code << <<-RUBY
     kwargs.delete_if { |k, v| v.nil? } # TODO: check if this is necessary or not
-    _ = kwargs.delete(:name)
-    out = kwargs.delete(:out)
-    keys = kwargs.keys
-    vals = kwargs.values
+    attr = kwargs.delete(:attr)
+    kwargs.update(AttrScope.current.get(attr))
+    name = kwargs.delete(:name)
+    name = NameManager.current.get(name, :'#{op_info.func_name.to_s.downcase}')
+    _ = kwargs.delete(:out)
+    keys = []
+    vals = []
+    sym_kwargs = {}
+    kwargs.each do |k, v|
+      case v
+      when MXNet::Symbol
+        sym_kwargs[k] = v
+      else
+        keys << k
+        vals << v
+      end
+    end
+          RUBY
+          if op_info.key_var_num_args
+            code << <<-RUBY
+    if kwargs.include?(:#{op_info.key_var_num_args})
+      keys << :#{op_info.key_var_num_args}
+      vals << sym_args.length + sym_kwargs.length
+    end
+            RUBY
+          end
+          code << <<-RUBY
+    return LibMXNet.symbol_creator(#{handle}, sym_args, sym_kwargs, keys, vals, name)
           RUBY
         else # if ary_name
           code << <<-RUBY
   def #{op_info.func_name}(#{signature.join(', ')})
-    ndargs = []
     kwargs.delete_if { |k, v| v.nil? } # TODO: check if this is necessary or not
-    keys = kwargs.keys
-    vals = kwargs.values
+    kwargs.update(AttrScope.current.get(attr))
+    sym_kwargs = {}
+    keys = []
+    vals = []
+    kwargs.each do |k, v|
+      case v
+      when MXNet::Symbol
+        sym_kwargs[k] = v
+      else
+        keys << k
+        vals << v
+      end
+    end
           RUBY
           ndarg_names.each do |name|
             code << <<-RUBY
     if #{name}
-      raise TypeError, "unexpected type of argument \#{#{name}.class} (expected NDArray)" unless #{name}.kind_of? NDArray
-      ndargs << #{name}
+      raise TypeError, "unexpected type of argument \#{#{name}.class} (expected #{MXNet::Symbol})" unless #{name}.kind_of? MXNet::Symbol
+      sym_kwargs[:#{name}] = #{name}
     end
             RUBY
           end
@@ -94,7 +129,8 @@ module MXNet
         end # if ary_name
 
         code << <<-RUBY
-    return LibMXNet.imperative_invoke(#{handle}, ndargs, keys, vals, out)
+    name = NameManager.current.get(name, :'#{op_info.func_name.to_s.downcase}')
+    return LibMXNet.symbol_creator(#{handle}, nil, sym_kwargs, keys, vals, name)
   end
   module_function :#{op_info.func_name}
         RUBY

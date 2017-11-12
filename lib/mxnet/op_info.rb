@@ -1,5 +1,5 @@
 module MXNet
-  OpInfo = Struct.new(:name, :description, :args, :key_var_num_args, :return_type)
+  OpInfo = Struct.new(:name, :real_name, :description, :args, :key_var_num_args, :return_type)
   OpArgInfo = Struct.new(:name, :type_info, :description)
 
   class OpInfo
@@ -17,13 +17,7 @@ module MXNet
     end
 
     def func_name
-      prefix = name_prefix
-      case
-      when prefix.length > 0
-        name[prefix.length..-1]
-      else
-        name
-      end
+      @func_name ||= calculate_func_name
     end
 
     def module_name
@@ -35,6 +29,18 @@ module MXNet
         :Internal
       else
         :Ops
+      end
+    end
+
+    private
+
+    def calculate_func_name
+      prefix = name_prefix
+      case
+      when prefix.length > 0
+        name[prefix.length..-1].to_sym
+      else
+        name.to_sym
       end
     end
   end

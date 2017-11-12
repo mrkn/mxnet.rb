@@ -10,6 +10,7 @@ extern "C" {
 
 #include <ruby.h>
 
+#include <assert.h>
 #ifdef HAVE_STDINT_H
 # include <stdint.h>
 #endif
@@ -64,7 +65,9 @@ typedef unsigned LONG_LONG uint64_t;
 
 typedef unsigned int mx_uint;
 typedef float mx_float;
+typedef void *ExecutorHandle;
 typedef void *NDArrayHandle;
+typedef void *SymbolHandle;
 
 #define NUM2MXUINT(num) NUM2UINT(num)
 #define MXUINT2NUM(val) UINT2NUM(val)
@@ -82,6 +85,31 @@ enum DTypeID {
 
 struct mxnet_api_table {
   const char * (* MXGetLastError)();
+
+  int (* MXExecutorOutputs)(ExecutorHandle handle,
+                            mx_uint *out_size,
+                            NDArrayHandle **out);
+  int (* MXExecutorForward)(ExecutorHandle handle, int is_train);
+  int (* MXExecutorBackwardEx)(ExecutorHandle handle,
+                               mx_uint len,
+                               void **head_grads,
+                               int is_train);
+  int (* MXExecutorBindEX)(SymbolHandle symbol_handle,
+                           int dev_type,
+                           int dev_id,
+                           mx_uint num_map_keys,
+                           const char** map_keys,
+                           const int* map_dev_types,
+                           const int* map_dev_ids,
+                           mx_uint len,
+                           NDArrayHandle *in_args,
+                           NDArrayHandle *arg_grad_store,
+                           mx_uint *grad_req_type,
+                           mx_uint aux_states_len,
+                           NDArrayHandle *aux_states,
+                           ExecutorHandle shared_exec,
+                           ExecutorHandle *out);
+
   int (* MXNDArrayCreateEx)(const mx_uint *shape, mx_uint ndim,
                             int dev_type, int dev_id, int delay_alloc,
                             int dtype, NDArrayHandle *out);
@@ -109,6 +137,31 @@ struct mxnet_api_table {
       int num_params,
       const char **param_keys,
       const char **param_vals);
+
+  int (* MXSymbolCreateAtomicSymbol)(void *creator,
+                                     mx_uint num_param,
+                                     const char **keys,
+                                     const char **vals,
+                                     void *out);
+  int (* NNSymbolCompose)(SymbolHandle sym,
+                          const char *name,
+                          mx_uint num_args,
+                          const char **keys,
+                          void **args);
+  int (* MXSymbolCopy)(SymbolHandle symbol, SymbolHandle *out);
+  int (* MXSymbolCreateVariable)(const char *name, void **out);
+  int (* MXSymbolGetName)(SymbolHandle symbol,
+                          const char** out,
+                          int *success);
+  int (* MXSymbolListArguments)(SymbolHandle symbol,
+                                mx_uint *out_size,
+                                const char ***out_str_array);
+  int (* MXSymbolListAuxiliaryStates)(SymbolHandle symbol,
+                                      mx_uint *out_size,
+                                      const char ***out_str_array);
+  int (* MXSymbolListOutputs)(SymbolHandle symbol,
+                              mx_uint *out_size,
+                              const char ***out_str_array);
 };
 
 struct mxnet_api_table *mxnet_get_api_table(void);
@@ -117,15 +170,30 @@ struct mxnet_api_table *mxnet_get_api_table(void);
 int mxnet_context_get_device_type_id(VALUE ctx);
 int mxnet_context_get_device_id(VALUE ctx);
 
+void *mxnet_get_handle(VALUE obj);
+void mxnet_set_handle(VALUE obj, VALUE handle_v);
+
 VALUE mxnet_dtype_id2name(int dtype_id);
 int mxnet_dtype_name2id(VALUE dtype_name);
 VALUE mxnet_dtype_name(VALUE id_or_name);
 
-VALUE mxnet_ndarray_new(void *ndarray_handle);
-void *mxnet_ndarray_get_handle(VALUE ndary);
+VALUE mxnet_grad_req_map(void);
+
+VALUE mxnet_executor_new(ExecutorHandle executor_handle, VALUE symbol, VALUE ctx, VALUE grad_req, VALUE group2ctx);
+void mxnet_executor_set_arg_arrays(VALUE obj, VALUE args);
+void mxnet_executor_set_grad_arrays(VALUE obj, VALUE args_grad);
+void mxnet_executor_set_aux_arrays(VALUE obj, VALUE aux_states);
+
+VALUE mxnet_ndarray_new(NDArrayHandle ndarray_handle);
+VALUE mxnet_ndarray_get_shape(VALUE obj);
+
+VALUE mxnet_symbol_new(SymbolHandle mxsymbol_handle);
+VALUE mxnet_symbol_list_outputs(VALUE obj);
 
 void mxnet_init_libmxnet(void);
+void mxnet_init_executor(void);
 void mxnet_init_ndarray(void);
+void mxnet_init_symbol(void);
 void mxnet_init_operations(VALUE klass);
 NORETURN(void mxnet_raise_last_error(void));
 #define CHECK_CALL(expr) if ((expr) != 0) mxnet_raise_last_error()
@@ -133,7 +201,9 @@ NORETURN(void mxnet_raise_last_error(void));
 extern VALUE mxnet_mMXNet;
 extern VALUE mxnet_mUtils;
 extern VALUE mxnet_cContext;
+extern VALUE mxnet_cExecutor;
 extern VALUE mxnet_cNDArray;
+extern VALUE mxnet_cSymbol;
 
 extern VALUE mxnet_sOpInfo;
 extern VALUE mxnet_sOpArgInfo;

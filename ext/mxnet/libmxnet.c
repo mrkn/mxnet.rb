@@ -49,6 +49,12 @@ init_api_table(VALUE handle)
 #define INIT_API_TABLE_ENTRY(api_name) INIT_API_TABLE_ENTRY2(api_name, api_name)
 
   INIT_API_TABLE_ENTRY(MXGetLastError);
+
+  INIT_API_TABLE_ENTRY(MXExecutorOutputs);
+  INIT_API_TABLE_ENTRY(MXExecutorForward);
+  INIT_API_TABLE_ENTRY(MXExecutorBackwardEx);
+  INIT_API_TABLE_ENTRY(MXExecutorBindEX);
+
   INIT_API_TABLE_ENTRY(MXNDArrayCreateEx);
   INIT_API_TABLE_ENTRY(MXNDArrayReshape);
   INIT_API_TABLE_ENTRY(MXNDArrayGetShape);
@@ -60,6 +66,14 @@ init_api_table(VALUE handle)
   INIT_API_TABLE_ENTRY(NNGetOpHandle);
   INIT_API_TABLE_ENTRY(MXSymbolGetAtomicSymbolInfo);
   INIT_API_TABLE_ENTRY(MXImperativeInvoke);
+  INIT_API_TABLE_ENTRY(MXSymbolCreateAtomicSymbol);
+  INIT_API_TABLE_ENTRY(NNSymbolCompose);
+  INIT_API_TABLE_ENTRY(MXSymbolCopy);
+  INIT_API_TABLE_ENTRY(MXSymbolCreateVariable);
+  INIT_API_TABLE_ENTRY(MXSymbolGetName);
+  INIT_API_TABLE_ENTRY(MXSymbolListArguments);
+  INIT_API_TABLE_ENTRY(MXSymbolListAuxiliaryStates);
+  INIT_API_TABLE_ENTRY(MXSymbolListOutputs);
 }
 
 static VALUE
@@ -82,7 +96,7 @@ imperative_invoke(VALUE mod, VALUE handle, VALUE ndargs, VALUE keys, VALUE vals,
   inputs_str = rb_str_tmp_new(sizeof(void *)*num_inputs);
   inputs = (void **)RSTRING_PTR(inputs_str);
   for (i = 0; i < num_inputs; ++i) {
-    inputs[i] = mxnet_ndarray_get_handle(RARRAY_AREF(ndargs, i));
+    inputs[i] = mxnet_get_handle(RARRAY_AREF(ndargs, i));
   }
 
   num_params = (int)RARRAY_LEN(keys);
@@ -108,7 +122,7 @@ imperative_invoke(VALUE mod, VALUE handle, VALUE ndargs, VALUE keys, VALUE vals,
       num_outputs = 1;
       outputs_str = rb_str_tmp_new(sizeof(void *));
       outputs = (void **)RSTRING_PTR(outputs_str);
-      outputs[0] = mxnet_ndarray_get_handle(out);
+      outputs[0] = mxnet_get_handle(out);
     }
     else {
       out = rb_check_convert_type(out, T_ARRAY, "Array", "to_ary");
@@ -120,7 +134,7 @@ imperative_invoke(VALUE mod, VALUE handle, VALUE ndargs, VALUE keys, VALUE vals,
       outputs = (void **)RSTRING_PTR(outputs_str);
       for (i = 0; i < num_outputs; ++i) {
         VALUE v = RARRAY_AREF(out, i);
-        outputs[i] = mxnet_ndarray_get_handle(v);
+        outputs[i] = mxnet_get_handle(v);
       }
     }
   }
@@ -145,6 +159,127 @@ imperative_invoke(VALUE mod, VALUE handle, VALUE ndargs, VALUE keys, VALUE vals,
   return out;
 }
 
+struct collect_sym_args_params {
+  int cursor;
+  int num_sym_args;
+  char const **sym_keys;
+  void **sym_args;
+};
+
+static int
+collect_sym_args_i(VALUE key, VALUE val, VALUE arg)
+{
+  struct collect_sym_args_params *params = (struct collect_sym_args_params *)arg;
+  if (RB_TYPE_P(key, T_SYMBOL)) {
+    key = rb_sym_to_s(key);
+  }
+  params->sym_keys[params->cursor] = StringValueCStr(key);
+  params->sym_args[params->cursor] = mxnet_get_handle(val);
+  ++params->cursor;
+  return ST_CONTINUE;
+}
+
+static VALUE
+symbol_creator(VALUE mod, VALUE handle, VALUE args, VALUE kwargs, VALUE keys, VALUE vals, VALUE name)
+{
+  VALUE keys_str, vals_str, sym_keys_str, sym_args_str;
+  int i;
+  int num_params, num_sym_args;
+  char const **params_keys, **params_vals, **sym_keys;
+  void **sym_handle, **sym_args;
+
+  keys = rb_check_convert_type(keys, T_ARRAY, "Array", "to_ary");
+  vals = rb_check_convert_type(vals, T_ARRAY, "Array", "to_ary");
+
+  num_params = (int)RARRAY_LEN(keys);
+  keys_str = rb_str_tmp_new(sizeof(char const **)*num_params);
+  params_keys = (char const **)RSTRING_PTR(keys_str);
+  vals_str = rb_str_tmp_new(sizeof(char const **)*num_params);
+  params_vals = (char const **)RSTRING_PTR(vals_str);
+  for (i = 0; i < num_params; ++i) {
+    VALUE key, val;
+
+    key = RARRAY_AREF(keys, i);
+    if (RB_TYPE_P(key, T_SYMBOL)) {
+      key = rb_sym_to_s(key);
+    }
+    params_keys[i] = StringValueCStr(key);
+
+    val = rb_String(RARRAY_AREF(vals, i));
+    params_vals[i] = StringValueCStr(val);
+  }
+
+  CHECK_CALL(MXNET_API(MXSymbolCreateAtomicSymbol)(
+        NUM2PTR(handle),
+        num_params,
+        params_keys,
+        params_vals,
+        &sym_handle));
+
+  if (!NIL_P(args) && !NIL_P(kwargs)) {
+    rb_raise(rb_eTypeError,
+        "Operators with variable length input can only accept input "
+        "Symbols either as positional or keyword arguments, not both");
+  }
+
+  if (!NIL_P(args)) {
+    num_sym_args = (int)RARRAY_LEN(args);
+    sym_keys = NULL;
+    sym_args_str = rb_str_tmp_new(sizeof(void *)*num_sym_args);
+    sym_args = (void **)RSTRING_PTR(sym_args_str);
+    for (i = 0; i < num_sym_args; ++i) {
+      sym_args[i] = NUM2PTR(RARRAY_AREF(args, i));
+    }
+  }
+  else if (!NIL_P(kwargs)) {
+    struct collect_sym_args_params iter_params;
+
+    num_sym_args = (int)RHASH_SIZE(kwargs);
+    sym_keys_str = rb_str_tmp_new(sizeof(char const *)*num_sym_args);
+    sym_keys = (char const **)RSTRING_PTR(sym_keys_str);
+    sym_args_str = rb_str_tmp_new(sizeof(void *)*num_sym_args);
+    sym_args = (void **)RSTRING_PTR(sym_args_str);
+
+    iter_params.cursor = 0;
+    iter_params.num_sym_args = num_sym_args;
+    iter_params.sym_keys = sym_keys;
+    iter_params.sym_args = sym_args;
+    rb_hash_foreach(kwargs, collect_sym_args_i, (VALUE)&iter_params);
+  }
+  else {
+    num_sym_args = 0;
+    sym_keys = NULL;
+    sym_args = NULL;
+  }
+
+  if (RB_TYPE_P(name, T_SYMBOL)) {
+    name = rb_sym_to_s(name);
+  }
+
+  CHECK_CALL(MXNET_API(NNSymbolCompose)(
+        sym_handle,
+        StringValueCStr(name),
+        num_sym_args, sym_keys, sym_args));
+
+  return mxnet_symbol_new(sym_handle);
+}
+
+static VALUE
+create_variable(VALUE mod, VALUE name)
+{
+  void *handle;
+  char const *name_cstr;
+
+  if (RB_TYPE_P(name, T_SYMBOL)) {
+    name = rb_sym_to_s(name);
+  }
+
+  name_cstr = StringValueCStr(name);
+
+  CHECK_CALL(MXNET_API(MXSymbolCreateVariable)(name_cstr, &handle));
+  return PTR2NUM(handle);
+}
+
 void
 mxnet_init_libmxnet(void)
 {
@@ -153,5 +288,7 @@ mxnet_init_libmxnet(void)
   mxnet_eAPINotFound = rb_define_class_under(mxnet_mMXNet, "APINotFound", mxnet_eError);
   handle = rb_funcallv(mxnet_mLibMXNet, rb_intern("handle"), 0, 0);
   rb_define_module_function(mxnet_mLibMXNet, "imperative_invoke", imperative_invoke, 5);
+  rb_define_module_function(mxnet_mLibMXNet, "symbol_creator", symbol_creator, 6);
+  rb_define_module_function(mxnet_mLibMXNet, "create_variable", create_variable, 1);
   init_api_table(handle);
 }
