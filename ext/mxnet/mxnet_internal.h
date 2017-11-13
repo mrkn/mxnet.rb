@@ -162,6 +162,36 @@ struct mxnet_api_table {
   int (* MXSymbolListOutputs)(SymbolHandle symbol,
                               mx_uint *out_size,
                               const char ***out_str_array);
+  int (* MXSymbolInferShape)(SymbolHandle sym,
+                             mx_uint num_args,
+                             const char** keys,
+                             const mx_uint *arg_ind_ptr,
+                             const mx_uint *arg_shape_data,
+                             mx_uint *in_shape_size,
+                             const mx_uint **in_shape_ndim,
+                             const mx_uint ***in_shape_data,
+                             mx_uint *out_shape_size,
+                             const mx_uint **out_shape_ndim,
+                             const mx_uint ***out_shape_data,
+                             mx_uint *aux_shape_size,
+                             const mx_uint **aux_shape_ndim,
+                             const mx_uint ***aux_shape_data,
+                             int *complete);
+  int (* MXSymbolInferShapePartial)(SymbolHandle sym,
+                                    mx_uint num_args,
+                                    const char** keys,
+                                    const mx_uint *arg_ind_ptr,
+                                    const mx_uint *arg_shape_data,
+                                    mx_uint *in_shape_size,
+                                    const mx_uint **in_shape_ndim,
+                                    const mx_uint ***in_shape_data,
+                                    mx_uint *out_shape_size,
+                                    const mx_uint **out_shape_ndim,
+                                    const mx_uint ***out_shape_data,
+                                    mx_uint *aux_shape_size,
+                                    const mx_uint **aux_shape_ndim,
+                                    const mx_uint ***aux_shape_data,
+                                    int *complete);
 };
 
 struct mxnet_api_table *mxnet_get_api_table(void);

@@ -74,6 +74,8 @@ init_api_table(VALUE handle)
   INIT_API_TABLE_ENTRY(MXSymbolListArguments);
   INIT_API_TABLE_ENTRY(MXSymbolListAuxiliaryStates);
   INIT_API_TABLE_ENTRY(MXSymbolListOutputs);
+  INIT_API_TABLE_ENTRY(MXSymbolInferShape);
+  INIT_API_TABLE_ENTRY(MXSymbolInferShapePartial);
 }
 
 static VALUE

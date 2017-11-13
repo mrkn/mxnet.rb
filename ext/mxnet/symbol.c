@@ -442,6 +442,190 @@ symbol_dup(VALUE obj)
   return mxnet_symbol_new(copy_handle);
 }
 
+static inline void
+sdata_extend(VALUE sdata_str, long *sdata_capa, long *sdata_len, VALUE shape, long remaining_count)
+{
+  mx_uint *sdata = (mx_uint *)RSTRING_PTR(sdata_str);
+  long i;
+
+  if (*sdata_capa < *sdata_len + RARRAY_LEN(shape)) {
+    *sdata_capa += remaining_count * 3;
+    rb_str_resize(sdata_str, sizeof(mx_uint) * *sdata_capa);
+    sdata = (mx_uint *)RSTRING_PTR(sdata_str);
+  }
+  for (i = 0; i < RARRAY_LEN(shape); ++i) {
+    sdata[(*sdata_len)++] = NUM2UINT(RARRAY_AREF(shape, i));
+  }
+}
+
+struct infer_shape_process_kwargs_params {
+  char const **keys;
+  mx_uint *indptr;
+  VALUE sdata_str;
+  long *sdata_capa;
+  long *sdata_len;
+  long i;
+  long total_count;
+};
+
+static int
+infer_shape_process_kwargs_i(VALUE key, VALUE val, VALUE arg)
+{
+  struct infer_shape_process_kwargs_params *params = (struct infer_shape_process_kwargs_params *)arg;
+
+  if (!RB_TYPE_P(val, T_ARRAY)) {
+    rb_raise(rb_eTypeError, "Arguments need to be shapes (arrays), but `%"PRIsVALUE"` is %"PRIsVALUE, key, val);
+  }
+
+  if (RB_TYPE_P(key, T_SYMBOL)) {
+    key = rb_sym_to_s(key);
+  }
+  params->keys[params->i] = StringValueCStr(key);
+  sdata_extend(params->sdata_str, params->sdata_capa, params->sdata_len, val, params->total_count - params->i);
+  params->indptr[params->i + 1] = (mx_uint)*params->sdata_len;
+  ++params->i;
+
+  return ST_CONTINUE;
+}
+
+static inline VALUE
+make_shape_array(mx_uint size, mx_uint const *ndim, mx_uint const **data)
+{
+  VALUE shapes;
+  mx_uint i, j;
+
+  shapes = rb_ary_new_capa(size);
+  for (i = 0; i < size; ++i) {
+    VALUE shape = rb_ary_new_capa(ndim[i]);
+    for (j = 0; j < ndim[i]; ++j) {
+      rb_ary_push(shape, UINT2NUM(data[i][j]));
+    }
+    rb_ary_push(shapes, shape);
+  }
+
+  return shapes;
+}
+
+/* The actual implementation for calling shape inference API. */
+static VALUE
+symbol_infer_shape_impl(int argc, VALUE *argv, VALUE obj)
+{
+  SymbolHandle handle;
+  VALUE partial, args, kwargs;
+  VALUE indptr_str, sdata_str, keys_str;
+  mx_uint *indptr, *sdata;
+  char const **keys;
+  long i, args_len, sdata_capa, sdata_len;
+  mx_uint arg_shape_size, out_shape_size, aux_shape_size;
+  mx_uint const *arg_shape_ndim, *out_shape_ndim, *aux_shape_ndim;
+  mx_uint const **arg_shape_data, **out_shape_data, **aux_shape_data;
+  int complete;
+
+  int (* infer_func)(
+      SymbolHandle, mx_uint, char const **, mx_uint const *, mx_uint const *,
+      mx_uint *, mx_uint const **, mx_uint const ***,
+      mx_uint *, mx_uint const **, mx_uint const ***,
+      mx_uint *, mx_uint const **, mx_uint const ***,
+      int *);
+
+  rb_scan_args(argc, argv, "1*:", &partial, &args, &kwargs);
+
+  if (RARRAY_LEN(args) != 0 && RHASH_SIZE(kwargs) != 0) {
+    rb_raise(rb_eArgError, "Can only specify known argument shapes either by positional or kwargs way.");
+  }
+
+  if (RARRAY_LEN(args) != 0) {
+    args_len = RARRAY_LEN(args);
+
+    keys = NULL;
+
+    indptr_str = rb_str_tmp_new(sizeof(mx_uint) * (args_len + 1));
+    indptr = (mx_uint *)RSTRING_PTR(indptr_str);
+    indptr[0] = 0;
+
+    sdata_capa = RARRAY_LEN(args) * 3;
+    sdata_str = rb_str_tmp_new(sizeof(mx_uint) * sdata_capa);
+    sdata = (mx_uint *)RSTRING_PTR(sdata_str);
+    sdata_len = 0;
+
+    for (i = 0; i < RARRAY_LEN(args); ++i) {
+      VALUE s = RARRAY_AREF(args, i);
+      if (!NIL_P(s)) {
+        if (!RB_TYPE_P(s, T_ARRAY)) {
+          rb_raise(rb_eTypeError, "Arguments need to be shapes (arrays), but argument %ld is %"PRIsVALUE, i, s);
+        }
+        sdata_extend(sdata_str, &sdata_capa, &sdata_len, s, RARRAY_LEN(args) - i);
+      }
+      indptr[i + 1] = (mx_uint)sdata_len;
+    }
+  }
+  else {
+    struct infer_shape_process_kwargs_params params;
+
+    args_len = RHASH_SIZE(kwargs);
+
+    keys_str = rb_str_tmp_new(sizeof(char const *) * RHASH_SIZE(kwargs));
+    keys = (char const **)RSTRING_PTR(keys_str);
+
+    indptr_str = rb_str_tmp_new(sizeof(mx_uint) * (args_len + 1));
+    indptr = (mx_uint *)RSTRING_PTR(indptr_str);
+    indptr[0] = 0;
+
+    sdata_capa = RHASH_SIZE(kwargs) * 3;
+    sdata_str = rb_str_tmp_new(sizeof(mx_uint) * sdata_capa);
+    sdata = (mx_uint *)RSTRING_PTR(sdata_str);
+    sdata_len = 0;
+
+    params.keys = keys;
+    params.indptr = indptr;
+    params.sdata_str = sdata_str;
+    params.sdata_capa = &sdata_capa;
+    params.sdata_len = &sdata_len;
+    params.i = 0;
+    params.total_count = RHASH_SIZE(kwargs);
+
+    rb_hash_foreach(kwargs, infer_shape_process_kwargs_i, (VALUE)&params);
+
+    sdata = (mx_uint *)RSTRING_PTR(sdata_str);
+  }
+
+  handle = mxnet_get_handle(obj);
+
+  if (RTEST(partial)) {
+    infer_func = MXNET_API(MXSymbolInferShapePartial);
+  }
+  else {
+    infer_func = MXNET_API(MXSymbolInferShape);
+  }
+  CHECK_CALL(infer_func(
+        handle,
+        (mx_uint)args_len,
+        keys,
+        indptr,
+        sdata,
+        &arg_shape_size,
+        &arg_shape_ndim,
+        &arg_shape_data,
+        &out_shape_size,
+        &out_shape_ndim,
+        &out_shape_data,
+        &aux_shape_size,
+        &aux_shape_ndim,
+        &aux_shape_data,
+        &complete));
+
+  if (complete != 0) {
+    VALUE arg_shapes, out_shapes, aux_shapes;
+    arg_shapes = make_shape_array(arg_shape_size, arg_shape_ndim, arg_shape_data);
+    out_shapes = make_shape_array(out_shape_size, out_shape_ndim, out_shape_data);
+    aux_shapes = make_shape_array(aux_shape_size, aux_shape_ndim, aux_shape_data);
+    return rb_ary_new_from_args(3, arg_shapes, out_shapes, aux_shapes);
+  }
+  else {
+    return rb_ary_new_from_args(3, Qnil, Qnil, Qnil);
+  }
+}
+
 void
 mxnet_init_symbol(void)
 {
@@ -456,6 +640,8 @@ mxnet_init_symbol(void)
   rb_define_method(cSymbol, "list_outputs", mxnet_symbol_list_outputs, 0);
   rb_define_method(cSymbol, "bind", symbol_bind, -1);
   rb_define_method(cSymbol, "dup", symbol_dup, 0);
+
+  rb_define_private_method(cSymbol, "infer_shape_impl", symbol_infer_shape_impl, -1);
 
   mxnet_cSymbol = cSymbol;
 }

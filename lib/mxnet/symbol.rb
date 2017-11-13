@@ -17,6 +17,86 @@ module MXNet
       # end
     end
 
+    # def infer_type
+
+    # Infers the shape of all arguments and all outputs given the known shapes of some arguments.
+    #
+    # This function takes the known shape of some arguments in either positional way or keyword argument way as input.
+    # It returns a tuple of `nil` values if there is not enough information to deduce the missing shapes.
+    #
+    # Example:
+    #
+    #     > a = MXNet.var(:a)
+    #     > b = MXNet.var(:b)
+    #     > c = a + b
+    #     > arg_shapes, out_shapes, aux_shapes = c.infer_shape(a: [3, 3])
+    #     > arg_shapes
+    #     [[3, 3], [3, 3])
+    #     > out_shapes
+    #     [[3, 3]]
+    #     > aux_shapes
+    #     []
+    #     > c.infer_shape(a: [0, 3])  # 0s in shape means unknown dimension. So, returns nil.
+    #     [nil, nil, nil]
+    #
+    # Inconsistencies in the known shapes will cause an error to be raised.
+    # See the following example:
+    #
+    #     > data = MXNet.var(:data)
+    #     > out = MXNet.FullyConnected(data: data, name: :fc1, num_hidden: 1000)
+    #     > out = MXNet.Activation(data: out, act_type: :relu)
+    #     > out = MXNet.FullyConnected(data: out, name: :fc2, num_hidden: 10)
+    #     > weight_shape = [1, 100]
+    #     > data_shape = [100, 100]
+    #     > out.infer_shape(data: data_shape, fc1_weight: weight_shape)
+    #     Error in operator fc1: Shape inconsistent, Provided=[1, 100], inferred shape=[1000, 100]
+    #
+    # @param *args  Shape of arguments in a positional way. Unknown shape can be marked as nil.
+    # @param **kwargs  Keyword arguments of the knwon shapes.
+    #
+    # @return [Array<Array<Array, nil>>]  Three arrays of argument shapes.
+    #   The first array is array of argument shapes.
+    #   The second array is array of output shapes.
+    #   The third array is array of auxiliary state shapes.
+    #   The order of elements in each array is same as the order of `list_arguments`, `list_outputs`,
+    #   and `list_auxiliary_states`, respectively.
+    def infer_shape(*args, **kwargs)
+      res = infer_shape_impl(false, *args, **kwargs)
+      if res[1].nil?
+        arg_shapes, _, _ = infer_shape_impl(true, *args, **kwargs)
+        arg_names = list_arguments
+        unknowns = []
+        arg_names.lazy.zip(arg_shapes).each do |name, shape|
+          if !shape # TODO: || !_numpy.prod(shape)
+            if unknowns.length >= 10
+              unknowns << '...'
+              break
+            end
+            unknowns << "#{name}: #{shape}"
+          end
+        end
+        warn <<-WARN
+#{caller(1, 1).first}: Cannot decide shape for the following arguments (0s in shape means unknown dimensions). Consider providing them as input:
+\t#{unknowns.join("\n\t")}
+        WARN
+      end
+      return res
+    rescue MXNet::Error
+      puts "infer_shape error. Arguments:"
+      args.each_with_index do |arg, i|
+        puts "  ##{i}: #{arg}"
+      end
+      kwargs.each do |k, v|
+        puts "  #{k}: #{v}"
+      end
+      raise
+    end
+
+    # TODO: documentation
+    def infer_shape_partial(*args, **kwargs)
+      infer_shape_impl(true, *args, **kwargs)
+    end
+
     # Evaluates a symbol given argumens.
     # 
     # The `eval` method combines a call to `bind` (which returns an executer)

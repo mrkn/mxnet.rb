@@ -63,7 +63,7 @@ module MXNet
         expect(arg_shape).to eq([[2, 3], [2, 3]])
         expect(out_shape).to eq([[2, 3]])
 
-        expect { z.infer_shape(x: [2, 3], y: [2, 4]) }.to raise_error(MXNetError, /\AError in operator _plus\d+.+expected \(2,3\), got \(2,4\)/)
+        expect { z.infer_shape(x: [2, 3], y: [2, 4]) }.to raise_error(MXNet::Error, /\AError in operator _plus\d+.+expected \(2,3\), got \(2,4\)/)
       end
     end
 
@@ -76,7 +76,7 @@ module MXNet
         expect(arg_type).to eq([Float, Float])
         expect(out_type).to eq([Float])
 
-        expect { z.infer_type(x: :int32, y: :float32) }.to raise_error(MXNetError, /\AError in operator _plus\d+.+expected int32, got float32/)
+        expect { z.infer_type(x: :int32, y: :float32) }.to raise_error(MXNet::Error, /\AError in operator _plus\d+.+expected int32, got float32/)
       end
     end
 
