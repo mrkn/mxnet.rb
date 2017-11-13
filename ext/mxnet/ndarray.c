@@ -62,7 +62,7 @@ mxnet_dtype_name(VALUE id_or_name)
     dtype_id = mxnet_dtype_name2id(id_or_name);
   }
   if (0 <= dtype_id && dtype_id < NUMBER_OF_DTYPE_IDS)
-    return mxnet_dtype_id2name(NUM2INT(id_or_name));
+    return mxnet_dtype_id2name(dtype_id);
 
   return Qnil;
 }
