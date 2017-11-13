@@ -122,6 +122,7 @@ struct mxnet_api_table {
   int (* MXNDArrayGetDType)(NDArrayHandle handle, int *out_dtype);
   int (* MXNDArraySyncCopyToCPU)(NDArrayHandle handle, void *data, size_t size);
   int (* MXNDArrayAt)(NDArrayHandle handle, mx_uint idx, NDArrayHandle *out);
+  int (* MXNDArraySlice)(NDArrayHandle handle, mx_uint start, mx_uint stop, NDArrayHandle *out);
 
   int (* MXListAllOpNames)(mx_uint *out_size, const char ***out_array);
   int (* NNGetOpHandle)(char const *name, void **p_handle);

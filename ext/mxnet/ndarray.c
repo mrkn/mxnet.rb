@@ -243,6 +243,49 @@ ndarray_at(VALUE obj, VALUE idx_v)
   return mxnet_ndarray_new(out_handle);
 }
 
+static VALUE
+ndarray_slice(VALUE obj, VALUE start_v, VALUE stop_v)
+{
+  NDArrayHandle handle, out_handle;
+  long start, stop, length;
+  VALUE shape;
+
+  shape = mxnet_ndarray_get_shape(obj);
+
+  if (NIL_P(start_v)) {
+    start = 0;
+  }
+  else {
+    start = NUM2LONG(start_v);
+    if (start < 0) {
+      length = NUM2LONG(RARRAY_AREF(shape, 0));
+      start += length;
+      if (start < 0) {
+        rb_raise(rb_eArgError, "Slicing start %ld exceeds limit of %ld", start - length, length);
+      }
+    }
+  }
+
+  if (NIL_P(stop_v)) {
+    stop = NUM2LONG(RARRAY_AREF(shape, 0));
+  }
+  else {
+    stop = NUM2LONG(stop_v);
+    if (stop < 0) {
+      length = NUM2LONG(RARRAY_AREF(shape, 0));
+      stop += length;
+      if (stop < 0) {
+        rb_raise(rb_eArgError, "Slicing stop %ld exceeds limit of %ld", stop - length, length);
+      }
+    }
+  }
+
+  handle = mxnet_get_handle(obj);
+  CHECK_CALL(MXNET_API(MXNDArraySlice)(handle, (mx_uint)start, (mx_uint)stop, &out_handle));
+
+  return mxnet_ndarray_new(out_handle);
+}
+
 /* This function is based on npy_half_to_double and npy_halfbits_to_doublebits in numpy */
 static double
 float16_to_double(uint16_t h)
@@ -394,8 +437,10 @@ mxnet_init_ndarray(void)
   rb_define_method(cNDArray, "dtype_name", ndarray_get_dtype_name, 0);
   rb_define_method(cNDArray, "shape", mxnet_ndarray_get_shape, 0);
   rb_define_method(cNDArray, "reshape", ndarray_reshape, 1);
-  rb_define_method(cNDArray, "_at", ndarray_at, 1);
   rb_define_method(cNDArray, "to_a", ndarray_to_a, 0);
+
+  rb_define_private_method(cNDArray, "_at", ndarray_at, 1);
+  rb_define_private_method(cNDArray, "_slice", ndarray_slice, 2);
 
   mxnet_cNDArray = cNDArray;
 
