@@ -86,6 +86,8 @@ enum DTypeID {
 struct mxnet_api_table {
   const char * (* MXGetLastError)();
 
+  int (* MXRandomSeed)(int seed);
+
   int (* MXExecutorOutputs)(ExecutorHandle handle,
                             mx_uint *out_size,
                             NDArrayHandle **out);
@@ -236,6 +238,8 @@ void mxnet_init_executor(void);
 void mxnet_init_ndarray(void);
 void mxnet_init_symbol(void);
 void mxnet_init_operations(VALUE klass);
+void mxnet_init_random(void);
+
 NORETURN(void mxnet_raise_last_error(void));
 #define CHECK_CALL(expr) if ((expr) != 0) mxnet_raise_last_error()
 

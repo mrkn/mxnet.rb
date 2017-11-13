@@ -5,13 +5,13 @@ module MXNet
     def self.ones(shape, ctx=nil, dtype=:float32, **kwargs)
       ctx ||= Context.default
       dtype = Utils.dtype_id(dtype)
-      Internal._ones(shape, ctx, dtype, **kwargs)
+      Internal._ones(shape: shape, ctx: ctx, dtype: dtype, **kwargs)
     end
 
     def self.zeros(shape, ctx=nil, dtype=:float32, **kwargs)
       ctx ||= Context.default
       dtype = Utils.dtype_id(dtype)
-      Internal._zeros(shape, ctx, dtype, **kwargs)
+      Internal._zeros(shape: shape, ctx: ctx, dtype: dtype, **kwargs)
     end
 
     def self.arange(start, stop=nil, step: 1.0, repeat: 1, ctx: nil, dtype: :float32)
@@ -65,6 +65,16 @@ module MXNet
       end
     end
 
+    def []=(key, value)
+      view = self[key]
+      case key
+      when Numeric
+        Internal._set_value(src: value.to_f, out: view)
+      else
+        raise NotImplementedError
+      end
+    end
+
     def ndim
       shape.length
     end
@@ -75,8 +85,8 @@ module MXNet
     end
     alias length size
 
-    def transpose(axes=nil)
-      Ops.transpose(self, axes)
+    def transpose(axes: nil)
+      Ops.transpose(self, axes: axes)
     end
 
     def as_scalar
@@ -91,7 +101,7 @@ module MXNet
     end
 
     def -@
-      Internal._mul_scalar(self, -1.0)
+      Internal._mul_scalar(self, scalar: -1.0)
     end
 
     def +(other)

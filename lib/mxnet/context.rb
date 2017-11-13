@@ -45,6 +45,10 @@ module MXNet
       @default ||= Context.new(:cpu, 0)
     end
 
+    class << self
+      alias current default
+    end
+
     def self.with(ctx)
       return unless block_given?
       begin

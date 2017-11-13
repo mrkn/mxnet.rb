@@ -13,6 +13,7 @@ module MXNet
   require 'mxnet/ndarray/operation_delegator'
   require 'mxnet/symbol'
   require 'mxnet/symbol/operation_delegator'
+  require 'mxnet/random'
   require 'mxnet/utils'
   require 'mxnet/op_info'
   require 'mxnet.so'

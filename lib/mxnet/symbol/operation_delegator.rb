@@ -1,7 +1,7 @@
 module MXNet
   class Symbol
     module OperationDelegator
-      def self.define_delegator(mod, handle, op_info, fname='(eval)', lineno=1)
+      def self.define_delegator(mod, handle, op_info)
         dtype_name = nil
         ary_name = nil
         signature = []
@@ -16,7 +16,7 @@ module MXNet
           end
           if name == :dtype
             dtype_name = name
-            signature << "#{name}=nil"
+            signature << "#{name}: nil"
           elsif arg.type_info.start_with?('NDArray') || arg.type_info.start_with?('Symbol')
             raise "Op can only have one argument with variable size and it must be the last argument." if ary_name
             if arg.type_info.end_with?('[]')
@@ -27,18 +27,19 @@ module MXNet
               ndarg_names << name
             end
           else
-            signature << "#{name}=nil"
+            signature << "#{name}: nil"
             kwarg_names << name
           end
         end
-        signature << 'name=nil'
-        signature << 'attr=nil'
-        signature << 'out=nil'
+        signature << 'name: nil'
+        signature << 'attr: nil'
+        signature << 'out: nil'
         signature << '**kwargs'
         signature = ndsignature + signature
 
         code = []
         if ary_name
+          lineno = __LINE__ + 2
           code << <<-RUBY
   def #{op_info.func_name}(*#{ary_name}, **kwargs)
     #{ary_name}.each do |i|
@@ -85,6 +86,7 @@ module MXNet
     return LibMXNet.symbol_creator(#{handle}, sym_args, sym_kwargs, keys, vals, name)
           RUBY
         else # if ary_name
+          lineno = __LINE__ + 2
           code << <<-RUBY
   def #{op_info.func_name}(#{signature.join(', ')})
     kwargs.delete_if { |k, v| v.nil? } # TODO: check if this is necessary or not
@@ -135,7 +137,7 @@ module MXNet
   module_function :#{op_info.func_name}
         RUBY
 
-        mod.module_eval(code.join(''), fname, lineno)
+        mod.module_eval(code.join(''), __FILE__, lineno)
       end
     end
   end

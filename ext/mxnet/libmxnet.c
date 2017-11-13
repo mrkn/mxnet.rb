@@ -49,6 +49,7 @@ init_api_table(VALUE handle)
 #define INIT_API_TABLE_ENTRY(api_name) INIT_API_TABLE_ENTRY2(api_name, api_name)
 
   INIT_API_TABLE_ENTRY(MXGetLastError);
+  INIT_API_TABLE_ENTRY(MXRandomSeed);
 
   INIT_API_TABLE_ENTRY(MXExecutorOutputs);
   INIT_API_TABLE_ENTRY(MXExecutorForward);
