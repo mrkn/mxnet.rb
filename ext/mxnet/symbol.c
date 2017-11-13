@@ -145,6 +145,132 @@ mxnet_symbol_list_outputs(VALUE obj)
   return res;
 }
 
+struct infer_type_process_kwargs_params {
+  char const **keys;
+  int *tdata;
+  long i;
+};
+
+static int
+infer_type_process_kwargs_i(VALUE key, VALUE val, VALUE arg)
+{
+  struct infer_type_process_kwargs_params *params = (struct infer_type_process_kwargs_params *)arg;
+  int dtype;
+
+  if (RB_INTEGER_TYPE_P(val)) {
+    dtype = NUM2INT(val);
+  }
+  else {
+    dtype = mxnet_dtype_name2id(val);
+  }
+
+  if (dtype >= 0) {
+    if (RB_TYPE_P(key, T_SYMBOL)) {
+      key = rb_sym_to_s(key);
+    }
+    params->keys[params->i] = StringValueCStr(key);
+    params->tdata[params->i] = dtype;
+    ++params->i;
+  }
+
+  return ST_CONTINUE;
+}
+
+static inline VALUE
+make_type_array(mx_uint size, int const *types)
+{
+  VALUE res;
+  mx_uint i;
+ 
+  res = rb_ary_new_capa(size);
+  for (i = 0; i < size; ++i) {
+    rb_ary_push(res, mxnet_dtype_id2name(types[i]));
+  }
+
+  return res;
+}
+
+/* TODO: document */
+static VALUE
+symbol_infer_type(int argc, VALUE *argv, VALUE obj)
+{
+  SymbolHandle handle;
+  VALUE args, kwargs, tdata_str, keys_str;
+  long i, args_len;
+  int *tdata;
+  char const **keys;
+  mx_uint arg_type_size, out_type_size, aux_type_size;
+  int const *arg_type_data, *out_type_data, *aux_type_data;
+  int complete;
+
+  rb_scan_args(argc, argv, "0*:", &args, &kwargs);
+
+  if (RARRAY_LEN(args) != 0 && RHASH_SIZE(kwargs) != 0) {
+    rb_raise(rb_eArgError, "Can only specify known argument shapes either by positional or kwargs way.");
+  }
+
+  if (RARRAY_LEN(args) != 0) {
+    args_len = RARRAY_LEN(args);
+    tdata_str = rb_str_tmp_new(sizeof(int) * args_len);
+    tdata = (int *)RSTRING_PTR(tdata_str);
+    keys = NULL;
+    for (i = 0; i < args_len; ++i) {
+      VALUE dtype = RARRAY_AREF(args, i);
+      if (!NIL_P(dtype)) {
+        if (RB_INTEGER_TYPE_P(dtype)) {
+          tdata[i] = NUM2INT(dtype);
+        }
+        else {
+          tdata[i] = mxnet_dtype_name2id(dtype);
+        }
+      }
+      else {
+        tdata[i] = -1;
+      }
+    }
+  }
+  else {
+    struct infer_type_process_kwargs_params params;
+
+    args_len = RHASH_SIZE(kwargs);
+    keys_str = rb_str_tmp_new(sizeof(char const *) * args_len);
+    keys = (char const **)RSTRING_PTR(keys_str);
+    tdata_str = rb_str_tmp_new(sizeof(int) * args_len);
+    tdata = (int *)RSTRING_PTR(tdata_str);
+
+    params.keys = keys;
+    params.tdata = tdata;
+    params.i = 0;
+
+    rb_hash_foreach(kwargs, infer_type_process_kwargs_i, (VALUE)&params);
+  }
+
+  handle = mxnet_get_handle(obj);
+  CHECK_CALL(MXNET_API(MXSymbolInferType)(
+        handle,
+        (mx_uint)args_len,
+        keys,
+        tdata,
+        &arg_type_size,
+        &arg_type_data,
+        &out_type_size,
+        &out_type_data,
+        &aux_type_size,
+        &aux_type_data,
+        &complete));
+
+  if (complete) {
+    VALUE arg_types, out_types, aux_types;
+    arg_types = make_type_array(arg_type_size, arg_type_data);
+    out_types = make_type_array(out_type_size, out_type_data);
+    aux_types = make_type_array(aux_type_size, aux_type_data);
+    return rb_ary_new_from_args(3, arg_types, out_types, aux_types);
+  }
+  else {
+    return rb_ary_new_from_args(3, Qnil, Qnil, Qnil);
+  }
+}
+
 /* Helper function to get NDArray arrays handles from various inputs.
  *
  * @param arg_key [char const*]  The name of argument, used for error message.
@@ -638,6 +764,7 @@ mxnet_init_symbol(void)
   rb_define_method(cSymbol, "list_arguments", symbol_list_arguments, 0);
   rb_define_method(cSymbol, "list_auxiliary_states", symbol_list_auxiliary_states, 0);
   rb_define_method(cSymbol, "list_outputs", mxnet_symbol_list_outputs, 0);
+  rb_define_method(cSymbol, "infer_type", symbol_infer_type, -1);
   rb_define_method(cSymbol, "bind", symbol_bind, -1);
   rb_define_method(cSymbol, "dup", symbol_dup, 0);
 

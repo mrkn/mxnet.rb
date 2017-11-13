@@ -73,8 +73,8 @@ module MXNet
         y = MXNet.var(:y)
         z = x + y
         arg_type, out_type, = z.infer_type(x: :float32, y: :float32)
-        expect(arg_type).to eq([Float, Float])
-        expect(out_type).to eq([Float])
+        expect(arg_type).to eq([:float32, :float32])
+        expect(out_type).to eq([:float32])
 
         expect { z.infer_type(x: :int32, y: :float32) }.to raise_error(MXNet::Error, /\AError in operator _plus\d+.+expected int32, got float32/)
       end

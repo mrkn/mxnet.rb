@@ -192,6 +192,17 @@ struct mxnet_api_table {
                                     const mx_uint **aux_shape_ndim,
                                     const mx_uint ***aux_shape_data,
                                     int *complete);
+  int (* MXSymbolInferType)(SymbolHandle sym,
+                            mx_uint num_args,
+                            const char** keys,
+                            const int *arg_type_data,
+                            mx_uint *in_type_size,
+                            const int **in_type_data,
+                            mx_uint *out_type_size,
+                            const int **out_type_data,
+                            mx_uint *aux_type_size,
+                            const int **aux_type_data,
+                            int *complete);
 };
 
 struct mxnet_api_table *mxnet_get_api_table(void);
