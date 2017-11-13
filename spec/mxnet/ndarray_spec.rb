@@ -22,6 +22,13 @@ module MXNet
           expect(x[0].shape).to eq([3])
           expect(x[0][0].as_scalar).to eq(0.0)
         end
+
+        specify do
+          x = MXNet::NDArray.arange(10)
+          expect(x[3...6]).to be_a(MXNet::NDArray)
+          expect(x[3...6].shape).to eq([3])
+          expect(x[3...6].to_a).to eq([3.0, 4.0, 5.0])
+        end
       end
 
       context 'when the array is 2D' do
@@ -34,6 +41,19 @@ module MXNet
     end
 
     describe '#[]=' do
+      context 'when the array  is 1D' do
+        specify do
+          x = MXNet::NDArray.zeros([3])
+          x[1] = 10.0
+          expect(x.to_a).to eq([0.0, 10.0, 0.0])
+        end
+
+        specify do
+          x = MXNet::NDArray.zeros([5])
+          x[1...3] = 10.0
+          expect(x.to_a).to eq([0.0, 10.0, 10.0, 0.0, 0.0])
+        end
+      end
       pending
     end
 

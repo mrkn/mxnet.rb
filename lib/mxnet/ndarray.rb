@@ -68,7 +68,7 @@ module MXNet
     def []=(key, value)
       view = self[key]
       case key
-      when Numeric
+      when Numeric, Range
         Internal._set_value(src: value.to_f, out: view)
       else
         raise NotImplementedError
