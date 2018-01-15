@@ -146,6 +146,8 @@ struct mxnet_api_table {
                                      const char **keys,
                                      const char **vals,
                                      void *out);
+  int (* MXSymbolCreateFromFile)(const char *fname, SymbolHandle *out);
+  int (* MXSymbolCreateFromJSON)(const char *json, SymbolHandle *out);
   int (* NNSymbolCompose)(SymbolHandle sym,
                           const char *name,
                           mx_uint num_args,
@@ -206,6 +208,8 @@ struct mxnet_api_table {
                             mx_uint *aux_type_size,
                             const int **aux_type_data,
                             int *complete);
+  int (* MXSymbolSaveToFile)(SymbolHandle symbol, const char *fname);
+  int (* MXSymbolSaveToJSON)(SymbolHandle symbol, const char **out_json);
 };
 
 struct mxnet_api_table *mxnet_get_api_table(void);

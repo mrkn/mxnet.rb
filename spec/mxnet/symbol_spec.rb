@@ -94,8 +94,16 @@ module MXNet
       end
     end
 
-    describe '#to_json' do
-      pending
+    describe '#to_json and .load_json' do
+      specify do
+        x = MXNet.var(:x)
+        y = MXNet.var(:y)
+        z = x + y
+        Dir.mktmpdir do |tmpdir|
+          z2 = MXNet::Symbol.load_json(z.to_json)
+          expect(z2.to_json).to eq(z.to_json)
+        end
+      end
     end
 
     describe '#+' do

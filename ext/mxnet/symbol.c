@@ -2,11 +2,46 @@
 
 VALUE mxnet_cSymbol;
 
-VALUE
-mxnet_symbol_new(void *symbol_handle)
+static VALUE
+symbol_new_with_klass(VALUE klass, SymbolHandle symbol_handle)
 {
   VALUE handle_v = PTR2NUM(symbol_handle);
-  return rb_class_new_instance(1, &handle_v, mxnet_cSymbol);
+  return rb_class_new_instance(1, &handle_v, klass);
+}
+
+VALUE
+mxnet_symbol_new(SymbolHandle symbol_handle)
+{
+  return symbol_new_with_klass(mxnet_cSymbol, symbol_handle);
+}
+
+static VALUE
+symbol_s_load(VALUE klass, VALUE filename)
+{
+  SymbolHandle handle;
+  char const *fn_cstr;
+  ID const id_to_path = rb_intern_const("to_path");
+
+  if (rb_respond_to(filename, id_to_path)) {
+    filename = rb_funcall(filename, id_to_path, 1, filename);
+  }
+  fn_cstr = StringValueCStr(filename);
+
+  CHECK_CALL(MXNET_API(MXSymbolCreateFromFile)(fn_cstr, &handle));
+  return symbol_new_with_klass(klass, handle);
+}
+
+/* Loads symbol from json string. */
+static VALUE
+symbol_s_load_json(VALUE klass, VALUE json_str)
+{
+  SymbolHandle handle;
+  char const *json_cstr;
+
+  json_cstr = StringValueCStr(json_str);
+
+  CHECK_CALL(MXNET_API(MXSymbolCreateFromJSON)(json_cstr, &handle));
+  return symbol_new_with_klass(klass, handle);
 }
 
 static VALUE
@@ -269,6 +304,37 @@ symbol_infer_type(int argc, VALUE *argv, VALUE obj)
   else {
     return rb_ary_new_from_args(3, Qnil, Qnil, Qnil);
   }
+}
+
+/* Save symbol to a file. */
+static VALUE
+symbol_save(VALUE obj, VALUE filename)
+{
+  SymbolHandle handle;
+  char const *fn_cstr;
+  ID const id_to_path = rb_intern_const("to_path");
+
+  if (rb_respond_to(filename, id_to_path)) {
+    filename = rb_funcall(filename, id_to_path, 1, filename);
+  }
+  fn_cstr = StringValueCStr(filename);
+
+  handle = mxnet_get_handle(obj);
+  CHECK_CALL(MXNET_API(MXSymbolSaveToFile)(handle, fn_cstr));
+
+  return obj;
+}
+
+/* Saves symbol to a JSON string. */
+static VALUE
+symbol_to_json(VALUE obj)
+{
+  SymbolHandle handle;
+  char const *out_json;
+
+  handle = mxnet_get_handle(obj);
+  CHECK_CALL(MXNET_API(MXSymbolSaveToJSON)(handle, &out_json));
+  return rb_str_new2(out_json);
 }
 
 /* Helper function to get NDArray arrays handles from various inputs.
@@ -759,12 +825,17 @@ mxnet_init_symbol(void)
 
   cSymbol = rb_const_get_at(mxnet_mMXNet, rb_intern("Symbol"));
 
+  rb_define_singleton_method(cSymbol, "load", symbol_s_load, 1);
+  rb_define_singleton_method(cSymbol, "load_json", symbol_s_load_json, 1);
+
   rb_define_method(cSymbol, "initialize", symbol_initialize, 1);
   rb_define_method(cSymbol, "name", symbol_get_name, 0);
   rb_define_method(cSymbol, "list_arguments", symbol_list_arguments, 0);
   rb_define_method(cSymbol, "list_auxiliary_states", symbol_list_auxiliary_states, 0);
   rb_define_method(cSymbol, "list_outputs", mxnet_symbol_list_outputs, 0);
   rb_define_method(cSymbol, "infer_type", symbol_infer_type, -1);
+  rb_define_method(cSymbol, "save", symbol_save, 1);
+  rb_define_method(cSymbol, "to_json", symbol_to_json, 0);
   rb_define_method(cSymbol, "bind", symbol_bind, -1);
   rb_define_method(cSymbol, "dup", symbol_dup, 0);
 

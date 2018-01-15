@@ -2,6 +2,9 @@ module MXNet
   class Symbol
     include HandleWrapper
 
+    # NATIVE: self.load
+    # NATIVE: self.load_json
+
     def self.arange(start, stop=nil, step: 1.0, repeat: 1, name: nil, dtype: nil)
       dtype ||= :float32
       Internal._arange(start: start, stop: stop, step: step, repeat: repeat, name: name, dtype: dtype)
@@ -96,6 +99,9 @@ module MXNet
     def infer_shape_partial(*args, **kwargs)
       infer_shape_impl(true, *args, **kwargs)
     end
+
+    # NATIVE: save
+    # NATIVE: to_json
 
     # Evaluates a symbol given argumens.
     # 

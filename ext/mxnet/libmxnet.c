@@ -68,6 +68,8 @@ init_api_table(VALUE handle)
   INIT_API_TABLE_ENTRY(NNGetOpHandle);
   INIT_API_TABLE_ENTRY(MXSymbolGetAtomicSymbolInfo);
   INIT_API_TABLE_ENTRY(MXImperativeInvoke);
+  INIT_API_TABLE_ENTRY(MXSymbolCreateFromFile);
+  INIT_API_TABLE_ENTRY(MXSymbolCreateFromJSON);
   INIT_API_TABLE_ENTRY(MXSymbolCreateAtomicSymbol);
   INIT_API_TABLE_ENTRY(NNSymbolCompose);
   INIT_API_TABLE_ENTRY(MXSymbolCopy);
@@ -79,6 +81,8 @@ init_api_table(VALUE handle)
   INIT_API_TABLE_ENTRY(MXSymbolInferShape);
   INIT_API_TABLE_ENTRY(MXSymbolInferShapePartial);
   INIT_API_TABLE_ENTRY(MXSymbolInferType);
+  INIT_API_TABLE_ENTRY(MXSymbolSaveToFile);
+  INIT_API_TABLE_ENTRY(MXSymbolSaveToJSON);
 }
 
 static VALUE
