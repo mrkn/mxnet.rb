@@ -123,6 +123,14 @@ module MXNet
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones)
         expect(ex[0].reshape([6]).to_a).to eq([2.0] * 6)
       end
+
+      specify do
+        x = MXNet.var(:x)
+        z = 1.0 + x
+        expect(z.name.to_s).to be_start_with('_plusscalar')
+        ex = z.eval(ctx: MXNet.cpu, x: nd_ones)
+        expect(ex[0].reshape([6]).to_a).to eq([2.0] * 6)
+      end
     end
 
     describe '#-' do
@@ -142,6 +150,14 @@ module MXNet
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
         expect(ex[0].reshape([6]).to_a).to eq([2.0] * 6)
       end
+
+      specify do
+        x = MXNet.var(:x)
+        z = 1.0 - x
+        expect(z.name.to_s).to be_start_with('_rminusscalar')
+        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
+        expect(ex[0].reshape([6]).to_a).to eq([-2.0] * 6)
+      end
     end
 
     describe '#*' do
@@ -157,6 +173,14 @@ module MXNet
       specify do
         x = MXNet.var(:x)
         z = x * 2.0
+        expect(z.name.to_s).to be_start_with('_mulscalar')
+        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
+        expect(ex[0].reshape([6]).to_a).to eq([6.0] * 6)
+      end
+
+      specify do
+        x = MXNet.var(:x)
+        z = 2.0 * x
         expect(z.name.to_s).to be_start_with('_mulscalar')
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
         expect(ex[0].reshape([6]).to_a).to eq([6.0] * 6)
@@ -180,6 +204,14 @@ module MXNet
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
         expect(ex[0].reshape([6]).to_a).to eq([1.5] * 6)
       end
+
+      specify do
+        x = MXNet.var(:x)
+        z = 2.0 / x
+        expect(z.name.to_s).to be_start_with('_rdivscalar')
+        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones + nd_ones)
+        expect(ex[0].reshape([6]).to_a).to eq([0.5] * 6)
+      end
     end
 
     describe '#%' do
@@ -196,6 +228,14 @@ module MXNet
         x = MXNet.var(:x)
         z = x % 2.0
         expect(z.name.to_s).to be_start_with('_modscalar')
+        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
+        expect(ex[0].reshape([6]).to_a).to eq([1.0] * 6)
+      end
+
+      specify do
+        x = MXNet.var(:x)
+        z = 4.0 % x
+        expect(z.name.to_s).to be_start_with('_rmodscalar')
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
         expect(ex[0].reshape([6]).to_a).to eq([1.0] * 6)
       end
@@ -217,6 +257,11 @@ module MXNet
         expect(z.name.to_s).to be_start_with('_powerscalar')
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
         expect(ex[0].reshape([6]).to_a).to eq([9.0] * 6)
+      end
+
+      specify do
+        x = MXNet.var(:x)
+        expect { z = 2.0 ** x }.to raise_error(NotImplementedError)
       end
     end
 

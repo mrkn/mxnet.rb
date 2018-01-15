@@ -208,6 +208,36 @@ module MXNet
         raise TypeError, "An instance of #{other.class} class is not supported"
       end
     end
+
+    class SwappedOperationAdapter < Struct.new(:scalar)
+      def +(symbol)
+        symbol + scalar
+      end
+
+      def -(symbol)
+        Internal._RMinusScalar(symbol, scalar: scalar)
+      end
+
+      def *(symbol)
+        symbol * scalar
+      end
+
+      def /(symbol)
+        Internal._RDivScalar(symbol, scalar: scalar)
+      end
+
+      def %(symbol)
+        Internal._RModScalar(symbol, scalar: scalar)
+      end
+
+      def **(symbol)
+        raise NotImplementedError, "Method ** is not implemented for Symbol and only available in NDArray."
+      end
+    end
+
+    def coerce(other)
+      [SwappedOperationAdapter.new(other), self]
+    end
   end
 
   Variable = Symbol # deprecated
