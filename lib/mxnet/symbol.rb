@@ -138,6 +138,7 @@ module MXNet
       self
     end
 
+    # Numerical negative, element-wise.
     def -@
       self * -1.0
     end
@@ -146,9 +147,10 @@ module MXNet
       case other
       when Symbol
         Internal._Plus(self, other)
+      when Numeric
+        Internal._PlusScalar(self, scalar: other)
       else
-        # TODO
-        raise NotImplementedError
+        raise TypeError, "An instance of #{other.class} class is not supported"
       end
     end
 
@@ -156,9 +158,10 @@ module MXNet
       case other
       when Symbol
         Internal._Minus(self, other)
+      when Numeric
+        Internal._MinusScalar(self, scalar: other)
       else
-        # TODO
-        raise NotImplementedError
+        raise TypeError, "An instance of #{other.class} class is not supported"
       end
     end
 
@@ -166,9 +169,10 @@ module MXNet
       case other
       when Symbol
         Internal._Mul(self, other)
+      when Numeric
+        Internal._MulScalar(self, scalar: other)
       else
-        # TODO
-        raise NotImplementedError
+        raise TypeError, "An instance of #{other.class} class is not supported"
       end
     end
 
@@ -176,9 +180,10 @@ module MXNet
       case other
       when Symbol
         Internal._Div(self, other)
+      when Numeric
+        Internal._DivScalar(self, scalar: other)
       else
-        # TODO
-        raise NotImplementedError
+        raise TypeError, "An instance of #{other.class} class is not supported"
       end
     end
 
@@ -186,9 +191,10 @@ module MXNet
       case other
       when Symbol
         Internal._Mod(self, other)
+      when Numeric
+        Internal._ModScalar(self, scalar: other)
       else
-        # TODO
-        raise NotImplementedError
+        raise TypeError, "An instance of #{other.class} class is not supported"
       end
     end
 
@@ -196,9 +202,10 @@ module MXNet
       case other
       when Symbol
         Internal._Power(self, other)
+      when Numeric
+        Internal._PowerScalar(self, scalar: other)
       else
-        # TODO
-        raise NotImplementedError
+        raise TypeError, "An instance of #{other.class} class is not supported"
       end
     end
   end

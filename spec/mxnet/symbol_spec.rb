@@ -115,6 +115,14 @@ module MXNet
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones, y: nd_ones)
         expect(ex[0].reshape([6]).to_a).to eq([2.0] * 6)
       end
+
+      specify do
+        x = MXNet.var(:x)
+        z = x + 1.0
+        expect(z.name.to_s).to be_start_with('_plusscalar')
+        ex = z.eval(ctx: MXNet.cpu, x: nd_ones)
+        expect(ex[0].reshape([6]).to_a).to eq([2.0] * 6)
+      end
     end
 
     describe '#-' do
@@ -124,6 +132,14 @@ module MXNet
         z = x - y
         expect(z.name.to_s).to be_start_with('_minus')
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones)
+        expect(ex[0].reshape([6]).to_a).to eq([2.0] * 6)
+      end
+
+      specify do
+        x = MXNet.var(:x)
+        z = x - 1.0
+        expect(z.name.to_s).to be_start_with('_minusscalar')
+        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
         expect(ex[0].reshape([6]).to_a).to eq([2.0] * 6)
       end
     end
@@ -137,6 +153,14 @@ module MXNet
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones + nd_ones)
         expect(ex[0].reshape([6]).to_a).to eq([6.0] * 6)
       end
+
+      specify do
+        x = MXNet.var(:x)
+        z = x * 2.0
+        expect(z.name.to_s).to be_start_with('_mulscalar')
+        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
+        expect(ex[0].reshape([6]).to_a).to eq([6.0] * 6)
+      end
     end
 
     describe '#/' do
@@ -146,6 +170,14 @@ module MXNet
         z = x / y
         expect(z.name.to_s).to be_start_with('_div')
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones + nd_ones)
+        expect(ex[0].reshape([6]).to_a).to eq([1.5] * 6)
+      end
+
+      specify do
+        x = MXNet.var(:x)
+        z = x / 2.0
+        expect(z.name.to_s).to be_start_with('_divscalar')
+        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
         expect(ex[0].reshape([6]).to_a).to eq([1.5] * 6)
       end
     end
@@ -159,6 +191,14 @@ module MXNet
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones + nd_ones)
         expect(ex[0].reshape([6]).to_a).to eq([1.0] * 6)
       end
+
+      specify do
+        x = MXNet.var(:x)
+        z = x % 2.0
+        expect(z.name.to_s).to be_start_with('_modscalar')
+        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
+        expect(ex[0].reshape([6]).to_a).to eq([1.0] * 6)
+      end
     end
 
     describe '#**' do
@@ -168,6 +208,14 @@ module MXNet
         z = x ** y
         expect(z.name.to_s).to be_start_with('_power')
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones + nd_ones)
+        expect(ex[0].reshape([6]).to_a).to eq([9.0] * 6)
+      end
+
+      specify do
+        x = MXNet.var(:x)
+        z = x ** 2.0
+        expect(z.name.to_s).to be_start_with('_powerscalar')
+        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
         expect(ex[0].reshape([6]).to_a).to eq([9.0] * 6)
       end
     end
@@ -180,7 +228,7 @@ module MXNet
       specify do
         x = MXNet.var(:x)
         z = -x
-        expect(z.name.to_s).to be_begin_with('_mul')
+        expect(z.name.to_s).to be_start_with('_mulscalar')
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
         expect(ex[0].reshape([6]).to_a).to eq([-3] * 6)
       end
