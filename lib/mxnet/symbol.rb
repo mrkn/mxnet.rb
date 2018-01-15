@@ -148,6 +148,7 @@ module MXNet
         Internal._Plus(self, other)
       else
         # TODO
+        raise NotImplementedError
       end
     end
 
@@ -157,6 +158,7 @@ module MXNet
         Internal._Minus(self, other)
       else
         # TODO
+        raise NotImplementedError
       end
     end
 
@@ -166,6 +168,7 @@ module MXNet
         Internal._Mul(self, other)
       else
         # TODO
+        raise NotImplementedError
       end
     end
 
@@ -175,6 +178,7 @@ module MXNet
         Internal._Div(self, other)
       else
         # TODO
+        raise NotImplementedError
       end
     end
 
@@ -184,6 +188,7 @@ module MXNet
         Internal._Mod(self, other)
       else
         # TODO
+        raise NotImplementedError
       end
     end
 
@@ -193,6 +198,7 @@ module MXNet
         Internal._Power(self, other)
       else
         # TODO
+        raise NotImplementedError
       end
     end
   end
