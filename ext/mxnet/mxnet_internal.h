@@ -10,6 +10,11 @@ extern "C" {
 
 #include <ruby.h>
 
+/* Defined only in ruby 2.4.0+. Redefine here for Ruby 2.x backward compatibility */
+#ifndef RB_INTEGER_TYPE_P
+  # define RB_INTEGER_TYPE_P(c) (FIXNUM_P(c) || RB_TYPE_P(c, T_BIGNUM))
+#endif
+
 #include <assert.h>
 #ifdef HAVE_STDINT_H
 # include <stdint.h>
