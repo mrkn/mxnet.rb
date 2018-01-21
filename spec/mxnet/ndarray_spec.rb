@@ -14,13 +14,7 @@ module MXNet
           expect(x[0].as_scalar).to eq(0.0)
           expect(x[1].as_scalar).to eq(0.0)
           expect(x[2].as_scalar).to eq(0.0)
-        end
-
-        specify do
-          x = MXNet::NDArray.zeros([2, 3])
-          expect(x[0]).to be_a(MXNet::NDArray)
-          expect(x[0].shape).to eq([3])
-          expect(x[0][0].as_scalar).to eq(0.0)
+          expect(x.shape).to eq([3])
         end
 
         specify do
@@ -32,11 +26,29 @@ module MXNet
       end
 
       context 'when the array is 2D' do
-        pending
+        specify do
+          x = MXNet::NDArray.zeros([2,3])
+          expect(x[0]).to be_a(MXNet::NDArray)
+          expect(x[1]).to be_a(MXNet::NDArray)
+          expect(x[0][0].as_scalar).to eq(0.0)
+          expect(x[1][2].as_scalar).to eq(0.0)
+          expect(x[1][1].as_scalar).to eq(0.0)
+          expect(x[0].shape).to eq([3])
+          expect(x[1].shape).to eq([3])
+        end
       end
 
       context 'when the array is 3D' do
-        pending
+        specify do
+          x = MXNet::NDArray.zeros([2,3,4])
+          expect(x[0]).to be_a(MXNet::NDArray)
+          expect(x[1]).to be_a(MXNet::NDArray)
+          expect(x[0][0][0].as_scalar).to eq(0.0)
+          expect(x[1][2][3].as_scalar).to eq(0.0)
+          expect(x[1][1][1].as_scalar).to eq(0.0)
+          expect(x[0].shape).to eq([3,4])
+          expect(x[0][1].shape).to eq([4])
+        end
       end
     end
 
@@ -169,6 +181,7 @@ module MXNet
         x = MXNet::NDArray.ones([2, 1, 3])
         expect(x).to be_a(MXNet::NDArray)
         expect(x.shape).to eq([2, 1, 3])
+        expect(x.reshape([6]).to_a).to be_all {|x| x == 1.0 }
       end
     end
 
