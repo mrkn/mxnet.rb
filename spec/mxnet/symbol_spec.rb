@@ -265,7 +265,13 @@ module MXNet
     end
 
     describe '#+@' do
-      pending
+      specify do
+        x = MXNet.var(:x)
+        z = +x
+        expect(z).to be_equal(x)
+        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
+        expect(ex[0].reshape([6]).to_a).to eq([3] * 6)
+      end
     end
 
     describe '#-@' do
