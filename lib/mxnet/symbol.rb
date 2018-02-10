@@ -238,6 +238,60 @@ module MXNet
     def coerce(other)
       [SwappedOperationAdapter.new(other), self]
     end
+
+    def ==(other)
+      case other
+      when Symbol
+        Internal._equal(self, other)
+      else
+        super
+      end
+    end
+
+    def !=(other)
+      case other
+      when Symbol
+        Internal._not_equal(self, other)
+      else
+        super
+      end
+    end
+
+    def <(other)
+      case other
+      when Symbol
+        Internal._lesser(self, other)
+      else
+        super
+      end
+    end
+
+    def <=(other)
+      case other
+      when Symbol
+        Internal._lesser_equal(self, other)
+      else
+        super
+      end
+    end
+
+    def >(other)
+      case other
+      when Symbol
+        Internal._greater(self, other)
+      else
+        super
+      end
+    end
+
+    def >=(other)
+      case other
+      when Symbol
+        Internal._greater_equal(self, other)
+      else
+        super
+      end
+    end
   end
 
   Variable = Symbol # deprecated

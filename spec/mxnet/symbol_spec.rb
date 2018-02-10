@@ -283,5 +283,123 @@ module MXNet
         expect(ex[0].reshape([6]).to_a).to eq([-3] * 6)
       end
     end
+
+    describe '#==' do
+      describe 'symbol == symbol' do
+        specify do
+          x = MXNet.var(:x)
+          y = MXNet.var(:y)
+          z = (x == y)
+          expect(z.name.to_s).to be_start_with('_equal')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones, y: nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([0] * 6)
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones, y: nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([1] * 6)
+        end
+      end
+
+      describe 'symbol == scalar' do
+        pending
+      end
+    end
+
+    describe '#!=' do
+      describe 'symbol != symbol' do
+        specify do
+          x = MXNet.var(:x)
+          y = MXNet.var(:y)
+          z = (x != y)
+          expect(z.name.to_s).to be_start_with('_not_equal')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones, y: nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([1] * 6)
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones, y: nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([0] * 6)
+        end
+      end
+
+      describe 'symbol != scalar' do
+        pending
+      end
+    end
+
+    describe '#<' do
+      describe 'symbol < symbol' do
+        specify do
+          x = MXNet.var(:x)
+          y = MXNet.var(:y)
+          z = (x < y)
+          expect(z.name.to_s).to be_start_with('_lesser')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones, y: nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([1] * 6)
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones, y: nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([0] * 6)
+        end
+      end
+
+      describe 'symbol < scalar' do
+        pending
+      end
+    end
+
+    describe '#<=' do
+      describe 'symbol <= symbol' do
+        specify do
+          x = MXNet.var(:x)
+          y = MXNet.var(:y)
+          z = (x <= y)
+          expect(z.name.to_s).to be_start_with('_lesser_equal')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones, y: nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([1] * 6)
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones, y: nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([1] * 6)
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones, y: nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([0] * 6)
+        end
+      end
+
+      describe 'symbol <= scalar' do
+        pending
+      end
+    end
+
+    describe '#>' do
+      describe 'symbol > symbol' do
+        specify do
+          x = MXNet.var(:x)
+          y = MXNet.var(:y)
+          z = (x > y)
+          expect(z.name.to_s).to be_start_with('_greater')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones, y: nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([1] * 6)
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones, y: nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([0] * 6)
+        end
+      end
+
+      describe 'symbol > scalar' do
+        pending
+      end
+    end
+
+    describe '#>=' do
+      describe 'symbol >= symbol' do
+        specify do
+          x = MXNet.var(:x)
+          y = MXNet.var(:y)
+          z = (x >= y)
+          expect(z.name.to_s).to be_start_with('_greater_equal')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones, y: nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([1] * 6)
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones, y: nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([1] * 6)
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones, y: nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([0] * 6)
+        end
+      end
+
+      describe 'symbol >= scalar' do
+        pending
+      end
+    end
   end
 end
