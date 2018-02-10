@@ -61,9 +61,8 @@ module MXNet
         z = x + y
         arg_shape, out_shape, = z.infer_shape(x: [2, 3], y: [2, 3])
         expect(arg_shape).to eq([[2, 3], [2, 3]])
-        expect(out_shape).to eq([[2, 3]])
 
-        expect { z.infer_shape(x: [2, 3], y: [2, 4]) }.to raise_error(MXNet::Error, /\AError in operator _plus\d+.+expected \(2,3\), got \(2,4\)/)
+        expect { z.infer_shape(x: [2, 3], y: [2, 4]) }.to raise_error(MXNet::Error, /Incompatible attr in node _plus\d+ at \d+-th input: expected \[2,3\], got \[2,4\]/)
       end
     end
 
@@ -76,7 +75,7 @@ module MXNet
         expect(arg_type).to eq([:float32, :float32])
         expect(out_type).to eq([:float32])
 
-        expect { z.infer_type(x: :int32, y: :float32) }.to raise_error(MXNet::Error, /\AError in operator _plus\d+.+expected int32, got float32/)
+        expect { z.infer_type(x: :int32, y: :float32) }.to raise_error(MXNet::Error, /Incompatible attr in node _plus\d+ at \d+-th input: expected int32, got float32/)
       end
     end
 
