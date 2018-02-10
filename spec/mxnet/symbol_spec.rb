@@ -139,134 +139,164 @@ module MXNet
     end
 
     describe '#-' do
-      specify do
-        x = MXNet.var(:x)
-        y = MXNet.var(:y)
-        z = x - y
-        expect(z.name.to_s).to be_start_with('_minus')
-        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones)
-        expect(ex[0].reshape([6]).to_a).to eq([2.0] * 6)
+      describe 'symbol - symbol' do
+        specify do
+          x = MXNet.var(:x)
+          y = MXNet.var(:y)
+          z = x - y
+          expect(z.name.to_s).to be_start_with('_minus')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([2.0] * 6)
+        end
       end
 
-      specify do
-        x = MXNet.var(:x)
-        z = x - 1.0
-        expect(z.name.to_s).to be_start_with('_minusscalar')
-        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
-        expect(ex[0].reshape([6]).to_a).to eq([2.0] * 6)
+      describe 'symbol - scalar' do
+        specify do
+          x = MXNet.var(:x)
+          z = x - 1.0
+          expect(z.name.to_s).to be_start_with('_minusscalar')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([2.0] * 6)
+        end
       end
 
-      specify do
-        x = MXNet.var(:x)
-        z = 1.0 - x
-        expect(z.name.to_s).to be_start_with('_rminusscalar')
-        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
-        expect(ex[0].reshape([6]).to_a).to eq([-2.0] * 6)
+      describe 'scalar - symbol' do
+        specify do
+          x = MXNet.var(:x)
+          z = 1.0 - x
+          expect(z.name.to_s).to be_start_with('_rminusscalar')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([-2.0] * 6)
+        end
       end
     end
 
     describe '#*' do
-      specify do
-        x = MXNet.var(:x)
-        y = MXNet.var(:y)
-        z = x * y
-        expect(z.name.to_s).to be_start_with('_mul')
-        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones + nd_ones)
-        expect(ex[0].reshape([6]).to_a).to eq([6.0] * 6)
+      describe 'symbol * symbol' do
+        specify do
+          x = MXNet.var(:x)
+          y = MXNet.var(:y)
+          z = x * y
+          expect(z.name.to_s).to be_start_with('_mul')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([6.0] * 6)
+        end
       end
 
-      specify do
-        x = MXNet.var(:x)
-        z = x * 2.0
-        expect(z.name.to_s).to be_start_with('_mulscalar')
-        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
-        expect(ex[0].reshape([6]).to_a).to eq([6.0] * 6)
+      describe 'symbol * scalar' do
+        specify do
+          x = MXNet.var(:x)
+          z = x * 2.0
+          expect(z.name.to_s).to be_start_with('_mulscalar')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([6.0] * 6)
+        end
       end
 
-      specify do
-        x = MXNet.var(:x)
-        z = 2.0 * x
-        expect(z.name.to_s).to be_start_with('_mulscalar')
-        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
-        expect(ex[0].reshape([6]).to_a).to eq([6.0] * 6)
+      describe 'scalar * symbol' do
+        specify do
+          x = MXNet.var(:x)
+          z = 2.0 * x
+          expect(z.name.to_s).to be_start_with('_mulscalar')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([6.0] * 6)
+        end
       end
     end
 
     describe '#/' do
-      specify do
-        x = MXNet.var(:x)
-        y = MXNet.var(:y)
-        z = x / y
-        expect(z.name.to_s).to be_start_with('_div')
-        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones + nd_ones)
-        expect(ex[0].reshape([6]).to_a).to eq([1.5] * 6)
+      describe 'symbol / symbol' do
+        specify do
+          x = MXNet.var(:x)
+          y = MXNet.var(:y)
+          z = x / y
+          expect(z.name.to_s).to be_start_with('_div')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([1.5] * 6)
+        end
       end
 
-      specify do
-        x = MXNet.var(:x)
-        z = x / 2.0
-        expect(z.name.to_s).to be_start_with('_divscalar')
-        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
-        expect(ex[0].reshape([6]).to_a).to eq([1.5] * 6)
+      describe 'symbol / scalar' do
+        specify do
+          x = MXNet.var(:x)
+          z = x / 2.0
+          expect(z.name.to_s).to be_start_with('_divscalar')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([1.5] * 6)
+        end
       end
 
-      specify do
-        x = MXNet.var(:x)
-        z = 2.0 / x
-        expect(z.name.to_s).to be_start_with('_rdivscalar')
-        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones + nd_ones)
-        expect(ex[0].reshape([6]).to_a).to eq([0.5] * 6)
+      describe 'scalar / symbol' do
+        specify do
+          x = MXNet.var(:x)
+          z = 2.0 / x
+          expect(z.name.to_s).to be_start_with('_rdivscalar')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([0.5] * 6)
+        end
       end
     end
 
     describe '#%' do
-      specify do
-        x = MXNet.var(:x)
-        y = MXNet.var(:y)
-        z = x % y
-        expect(z.name.to_s).to be_start_with('_mod')
-        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones + nd_ones)
-        expect(ex[0].reshape([6]).to_a).to eq([1.0] * 6)
+      describe 'symbol % symbol' do
+	specify do
+	  x = MXNet.var(:x)
+	  y = MXNet.var(:y)
+	  z = x % y
+	  expect(z.name.to_s).to be_start_with('_mod')
+	  ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones + nd_ones)
+	  expect(ex[0].reshape([6]).to_a).to eq([1.0] * 6)
+	end
       end
 
-      specify do
-        x = MXNet.var(:x)
-        z = x % 2.0
-        expect(z.name.to_s).to be_start_with('_modscalar')
-        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
-        expect(ex[0].reshape([6]).to_a).to eq([1.0] * 6)
+      describe 'symbol % scalar' do
+	specify do
+	  x = MXNet.var(:x)
+	  z = x % 2.0
+	  expect(z.name.to_s).to be_start_with('_modscalar')
+	  ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
+	  expect(ex[0].reshape([6]).to_a).to eq([1.0] * 6)
+	end
       end
 
-      specify do
-        x = MXNet.var(:x)
-        z = 4.0 % x
-        expect(z.name.to_s).to be_start_with('_rmodscalar')
-        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
-        expect(ex[0].reshape([6]).to_a).to eq([1.0] * 6)
+      describe 'scalar % symbol' do
+	specify do
+	  x = MXNet.var(:x)
+	  z = 4.0 % x
+	  expect(z.name.to_s).to be_start_with('_rmodscalar')
+	  ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
+	  expect(ex[0].reshape([6]).to_a).to eq([1.0] * 6)
+	end
       end
     end
 
     describe '#**' do
-      specify do
-        x = MXNet.var(:x)
-        y = MXNet.var(:y)
-        z = x ** y
-        expect(z.name.to_s).to be_start_with('_power')
-        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones + nd_ones)
-        expect(ex[0].reshape([6]).to_a).to eq([9.0] * 6)
+      describe 'symbol ** symbol' do
+        specify do
+          x = MXNet.var(:x)
+          y = MXNet.var(:y)
+          z = x ** y
+          expect(z.name.to_s).to be_start_with('_power')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([9.0] * 6)
+        end
       end
 
-      specify do
-        x = MXNet.var(:x)
-        z = x ** 2.0
-        expect(z.name.to_s).to be_start_with('_powerscalar')
-        ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
-        expect(ex[0].reshape([6]).to_a).to eq([9.0] * 6)
+      describe 'symbol ** scalar' do
+        specify do
+          x = MXNet.var(:x)
+          z = x ** 2.0
+          expect(z.name.to_s).to be_start_with('_powerscalar')
+          ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
+          expect(ex[0].reshape([6]).to_a).to eq([9.0] * 6)
+        end
       end
 
-      specify do
-        x = MXNet.var(:x)
-        expect { z = 2.0 ** x }.to raise_error(NotImplementedError)
+      describe 'scalar ** symbol' do
+        specify do
+          x = MXNet.var(:x)
+          expect { z = 2.0 ** x }.to raise_error(NotImplementedError)
+        end
       end
     end
 
