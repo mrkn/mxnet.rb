@@ -479,7 +479,7 @@ module MXNet
       end
     end
 
-    describe '#@-' do
+    describe '#@+' do
       specify do
         x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
         z = +(x + x)
