@@ -243,6 +243,8 @@ module MXNet
       case other
       when Symbol
         Internal._equal(self, other)
+      when Numeric
+        Internal._equal_scalar(self, scalar: other)
       else
         super
       end
@@ -252,6 +254,8 @@ module MXNet
       case other
       when Symbol
         Internal._not_equal(self, other)
+      when Numeric
+        Internal._not_equal_scalar(self, scalar: other)
       else
         super
       end
@@ -261,6 +265,8 @@ module MXNet
       case other
       when Symbol
         Internal._lesser(self, other)
+      when Numeric
+        Internal._lesser_scalar(self, scalar: other)
       else
         super
       end
@@ -270,6 +276,8 @@ module MXNet
       case other
       when Symbol
         Internal._lesser_equal(self, other)
+      when Numeric
+        Internal._lesser_equal_scalar(self, scalar: other)
       else
         super
       end
@@ -279,6 +287,8 @@ module MXNet
       case other
       when Symbol
         Internal._greater(self, other)
+      when Numeric
+        Internal._greater_scalar(self, scalar: other)
       else
         super
       end
@@ -288,6 +298,8 @@ module MXNet
       case other
       when Symbol
         Internal._greater_equal(self, other)
+      when Numeric
+        Internal._greater_equal_scalar(self, scalar: other)
       else
         super
       end
