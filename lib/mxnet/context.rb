@@ -10,14 +10,21 @@ module MXNet
     end
 
     def initialize(device_type, device_id=0)
-      case device_type
-      when Context
-        @device_type_id = device_type.device_type_id
-        @device_id = device_type.device_id
-      else
-        @device_type_id = Context.device_type_id_from_name(device_type)
-        @device_id = device_id
+      if device_type.kind_of? Context
+        device_type = device_type.device_type_id
+        device_id = device_type.device_id
       end
+      case device_type
+      when String, ::Symbol
+        @device_type_id = Context.device_type_id_from_name(device_type)
+      when Integer
+        @device_type_id = device_type
+      else
+        raise ArgumentError,
+          "Invalid type of device_type: #{device_type.class} " +
+          "for MXNet::Context, String, Symbol, or Integer"
+      end
+      @device_id = device_id
     end
 
     attr_reader :device_type_id
@@ -36,6 +43,8 @@ module MXNet
       return device_type_id == other.device_type_id &&
              device_id == other.device_id
     end
+
+    alias_method :==, :eql?
 
     def to_s
       "#{device_type}(#{device_id})"
