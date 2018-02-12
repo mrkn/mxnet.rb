@@ -43,10 +43,22 @@ handle_wrapper_initialize(VALUE obj, VALUE handle)
   return obj;
 }
 
+static inline VALUE
+get_mxnet_handle(VALUE obj)
+{
+  return rb_ivar_get(obj, rb_intern("mxnet_handle"));
+}
+
+static VALUE
+handle_wrapper_get_mxnet_handle(VALUE obj)
+{
+  return get_mxnet_handle(obj);
+}
+
 void *
 mxnet_get_handle(VALUE obj)
 {
-  VALUE handle_v = rb_ivar_get(obj, rb_intern("mxnet_handle"));
+  VALUE handle_v = get_mxnet_handle(obj);
   if (NIL_P(handle_v)) return NULL;
   return NUM2PTR(handle_v);
 }
@@ -88,6 +100,7 @@ Init_mxnet(void)
 
   mHandleWrapper = rb_const_get_at(mxnet_mMXNet, rb_intern("HandleWrapper"));
   rb_define_method(mHandleWrapper, "initialize", handle_wrapper_initialize, 1);
+  rb_define_private_method(mHandleWrapper, "__mxnet_handle__", handle_wrapper_get_mxnet_handle, 0);
 
   init_grad_req_map();
   mxnet_init_libmxnet();
