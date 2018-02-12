@@ -114,4 +114,5 @@ Init_mxnet(void)
   mxnet_init_operations(mxnet_cSymbol);
 
   mxnet_init_random();
+  mxnet_init_utils();
 }
