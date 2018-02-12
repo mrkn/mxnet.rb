@@ -36,9 +36,13 @@ module MXNet
           raise IndexError, "index #{key} is out of bounds for axis 0 with size #{shape[0]}"
         end
         _at(key)
-      when Range
-        if key.begin || key.end
-          _slice(key.begin, key.end)
+      when Range, Enumerator
+        start, stop, step = MXNet::Utils.decompose_slice(key)
+        if step && step != 1
+          raise ArgumentError, 'slice step cannot be zero' if step == 0
+          Ops.slice(self, begin: [start], end: [stop], step: [step])
+        elsif start || stop
+          _slice(start, stop)
         else
           self
         end
@@ -73,12 +77,58 @@ module MXNet
     def []=(key, value)
       view = self[key]
       case key
-      when Numeric, Range
+      when Numeric
         Internal._set_value(src: value.to_f, out: view)
+      when Range, Enumerator
+        start, stop, step = MXNet::Utils.decompose_slice(key)
+        if step.nil? || step == 1
+          unless start == 0 && (stop.nil? || stop == shape[0])
+            sliced_arr = _slice(start, stop)
+            sliced_arr[0..-1] = value
+            return value
+          end
+          _fill_by(value)
+          return value
+        end
+        # non-trivial step, use _slice_assign or _slice_assign_scalar
+        raise NotImplementedError
       else
         raise NotImplementedError
       end
     end
+
+    def _fill_by(value)
+      case value
+      when NDArray
+        if __mxnet_handle__ != value.send(:__mxnet_handle__)
+          Internal._copyto(value, out: self)
+        end
+      when Numeric
+        Internal._full(shape: self.shape, ctx: self.context,
+                       dtype: self.dtype, value: value.to_f, out: self)
+      else
+        case
+        when value.is_a?(Array)
+          raise NotImplementedError, "Array is not supported yet"
+        when defined?(Numo::NArray) && value.is_a?(Numo::NArray)
+          # require 'mxnet/narray_helper'
+          # TODO: _sync_copyfrom_narray(value)
+          raise NotImplementedError, "NMatrix is not supported yet"
+        when defined?(NMatrix) && value.is_a?(NMatrix)
+          # require 'mxnet/mxnet_helper'
+          # TODO: _sync_copyfrom_nmatrix(value)
+          raise NotImplementedError, "NMatrix is not supported yet"
+        when defined?(Vector) && value.is_a?(Vector)
+          raise NotImplementedError, "Vector is not supported yet"
+        when defined?(Matrix) && value.is_a?(Matrix)
+          raise NotImplementedError, "Matrix is not supported yet"
+        else
+          raise TypeError, "NDArray does not support assignment with non-array-like " +
+            "object #{value.to_s} of #{value.class} class"
+        end
+      end
+    end
+    private :_fill_by
 
     def ndim
       shape.length

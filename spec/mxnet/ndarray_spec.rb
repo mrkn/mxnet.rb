@@ -23,6 +23,15 @@ module MXNet
           expect(x[3...6].shape).to eq([3])
           expect(x[3...6].to_a).to eq([3.0, 4.0, 5.0])
         end
+
+        specify do
+          x = MXNet::NDArray.arange(11)
+          expect(x[(1...9).step(2)]).to be_a(MXNet::NDArray)
+          expect(x[(1...9).step(2)].shape).to eq([4])
+          expect(x[(1...9).step(2)].to_a).to eq([1.0, 3.0, 5.0, 7.0])
+          expect(x[(1...10).step(2)].to_a).to eq([1.0, 3.0, 5.0, 7.0, 9.0])
+          expect(x[(9...1).step(-2)].to_a).to eq([9.0, 7.0, 5.0, 3.0])
+        end
       end
 
       context 'when the array is 2D' do
@@ -66,7 +75,26 @@ module MXNet
           expect(x.to_a).to eq([0.0, 10.0, 10.0, 0.0, 0.0])
         end
       end
-      pending
+
+      context 'when the array is 2D' do
+        specify do
+          x = MXNet::NDArray.arange(0, 9).reshape([3, 3])
+          x[1][1] = 100.0
+          expect(x.reshape([9]).to_a).to eq([0.0, 1.0, 2.0, 3.0, 100.0, 5.0, 6.0, 7.0, 8.0])
+        end
+
+        specify do
+          x = MXNet::NDArray.arange(0, 9).reshape([3, 3])
+          x[1][0..-1] = 200.0
+          expect(x.reshape([9]).to_a).to eq([0.0, 1.0, 2.0, 200.0, 200.0, 200.0, 6.0, 7.0, 8.0])
+        end
+
+        specify do
+          x = MXNet::NDArray.arange(0, 9).reshape([3, 3])
+          x[1][0..-1] = MXNet::NDArray.arange(10, 13)
+          expect(x.reshape([9]).to_a).to eq([0.0, 1.0, 2.0, 10.0, 11.0, 12.0, 6.0, 7.0, 8.0])
+        end
+      end
     end
 
     describe '#reshape' do
