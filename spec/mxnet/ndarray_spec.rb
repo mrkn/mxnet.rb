@@ -115,7 +115,15 @@ module MXNet
     end
 
     describe '#context' do
-      pending
+      specify do
+        x = MXNet::NDArray.ones([2, 3])
+        expect(x.context).to eq(MXNet.current_context)
+      end
+
+      specify do
+        x = MXNet::NDArray.ones([2, 3], ctx: MXNet.cpu)
+        expect(x.context).to eq(MXNet.cpu)
+      end
     end
 
     describe '#dtype' do

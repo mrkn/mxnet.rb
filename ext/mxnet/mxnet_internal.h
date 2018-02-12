@@ -122,6 +122,7 @@ struct mxnet_api_table {
                             int dtype, NDArrayHandle *out);
   int (* MXNDArrayReshape)(NDArrayHandle handle, int ndim, int *dims,
                            NDArrayHandle *out);
+  int (* MXNDArrayGetContext)(NDArrayHandle handle, int *out_dev_type, int *out_dev_id);
   int (* MXNDArrayGetShape)(NDArrayHandle handle, mx_uint *out_dim,
                             const mx_uint **out_pdata);
   int (* MXNDArrayGetDType)(NDArrayHandle handle, int *out_dtype);

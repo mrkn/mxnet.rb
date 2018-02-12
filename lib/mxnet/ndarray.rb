@@ -20,6 +20,11 @@ module MXNet
       Internal._arange(start: start, stop: stop, step: step, repeat: repeat, dtype: dtype, ctx: ctx)
     end
 
+    def context
+      dev_typeid, dev_id = _get_context_params
+      Context.new(dev_typeid, dev_id)
+    end
+
     # Returns a sliced view of this array.
     #
     # @param [Integer, Range, Array] key  Indexing key.

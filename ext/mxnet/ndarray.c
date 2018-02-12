@@ -181,6 +181,19 @@ ndarray_reshape(VALUE obj, VALUE shape_v)
   return mxnet_ndarray_new(out_handle);
 }
 
+static VALUE
+ndarray_get_context_params(VALUE obj)
+{
+  NDArrayHandle handle;
+  int dev_typeid, dev_id;
+
+  handle = mxnet_get_handle(obj);
+
+  CHECK_CALL(MXNET_API(MXNDArrayGetContext)(handle, &dev_typeid, &dev_id));
+
+  return rb_assoc_new(INT2NUM(dev_typeid), INT2NUM(dev_id));
+}
+
 static int
 ndarray_get_dtype_id(VALUE obj)
 {
@@ -439,6 +452,7 @@ mxnet_init_ndarray(void)
   rb_define_method(cNDArray, "reshape", ndarray_reshape, 1);
   rb_define_method(cNDArray, "to_a", ndarray_to_a, 0);
 
+  rb_define_private_method(cNDArray, "_get_context_params", ndarray_get_context_params, 0);
   rb_define_private_method(cNDArray, "_at", ndarray_at, 1);
   rb_define_private_method(cNDArray, "_slice", ndarray_slice, 2);
 
