@@ -126,6 +126,7 @@ struct mxnet_api_table {
   int (* MXNDArrayGetShape)(NDArrayHandle handle, mx_uint *out_dim,
                             const mx_uint **out_pdata);
   int (* MXNDArrayGetDType)(NDArrayHandle handle, int *out_dtype);
+  int (* MXNDArraySyncCopyFromCPU)(NDArrayHandle handle, const void *data, size_t size);
   int (* MXNDArraySyncCopyToCPU)(NDArrayHandle handle, void *data, size_t size);
   int (* MXNDArrayAt)(NDArrayHandle handle, mx_uint idx, NDArrayHandle *out);
   int (* MXNDArraySlice)(NDArrayHandle handle, mx_uint start, mx_uint stop, NDArrayHandle *out);
@@ -238,6 +239,8 @@ void mxnet_executor_set_arg_arrays(VALUE obj, VALUE args);
 void mxnet_executor_set_grad_arrays(VALUE obj, VALUE args_grad);
 void mxnet_executor_set_aux_arrays(VALUE obj, VALUE aux_states);
 
+void mxnet_check_type(VALUE obj, VALUE klass);
+
 VALUE mxnet_ndarray_new(NDArrayHandle ndarray_handle);
 VALUE mxnet_ndarray_get_shape(VALUE obj);
 
@@ -266,6 +269,18 @@ extern VALUE mxnet_sOpInfo;
 extern VALUE mxnet_sOpArgInfo;
 
 extern VALUE mxnet_eError;
+
+static inline int
+mxnet_is_ndarray(VALUE obj)
+{
+  return RTEST(rb_obj_is_kind_of(obj, mxnet_cNDArray));
+}
+
+static inline void
+mxnet_check_ndarray(VALUE obj)
+{
+  mxnet_check_type(obj, mxnet_cNDArray);
+}
 
 #ifdef __cplusplus
 #if 0

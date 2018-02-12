@@ -63,9 +63,38 @@ ndarray_to_narray(VALUE obj)
   return nary;
 }
 
+static VALUE
+m_sync_copyfrom(VALUE mod, VALUE nd_obj, VALUE nary)
+{
+  NDArrayHandle handle;
+  narray_t *na;
+  void *data;
+  size_t size;
+
+  mxnet_check_ndarray(nd_obj);
+
+  if (!RTEST(nary_check_contiguous(nary))) {
+    nary = nary_dup(nary);
+  }
+
+  GetNArray(nary, na);
+  data = NA_DATA_PTR(na);
+  size = NA_SIZE(na);
+
+  handle = mxnet_get_handle(nd_obj);
+  CHECK_CALL(MXNET_API(MXNDArraySyncCopyFromCPU)(handle, data, size));
+
+  return nd_obj;
+}
+
 void
 Init_narray_helper(void)
 {
+  VALUE mHelper;
+
   rb_undef_method(mxnet_cNDArray, "to_narray");
   rb_define_method(mxnet_cNDArray, "to_narray", ndarray_to_narray, 0);
+
+  mHelper = rb_define_module_under(mxnet_mMXNet, "NArrayHelper");
+  rb_define_module_function(mHelper, "sync_copyfrom", m_sync_copyfrom, 2);
 }

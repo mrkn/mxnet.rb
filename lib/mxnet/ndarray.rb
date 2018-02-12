@@ -112,8 +112,8 @@ module MXNet
           raise NotImplementedError, "Array is not supported yet"
         when defined?(Numo::NArray) && value.is_a?(Numo::NArray)
           # require 'mxnet/narray_helper'
-          # TODO: _sync_copyfrom_narray(value)
-          raise NotImplementedError, "NMatrix is not supported yet"
+          # TODO: MXNet::NArrayHelper.sync_copyfrom(self, value)
+          raise NotImplementedError, "NArray is not supported yet"
         when defined?(NMatrix) && value.is_a?(NMatrix)
           # require 'mxnet/mxnet_helper'
           # TODO: _sync_copyfrom_nmatrix(value)
@@ -281,5 +281,21 @@ module MXNet
         end
       end
     end
+  end
+
+  NDArray::CONVERTER = []
+
+  def self.NDArray(array_like, ctx: nil, dtype: :float32)
+    ctx ||= MXNet.current_context
+    for type, converter in NDArray::CONVERTER
+      if array_like.is_a?(type)
+        if converter.respond_to? :to_ndarray
+          return converter.to_ndarray(array_like, ctx: ctx, dtype: dtype)
+        elsif converter.respond_to? :call
+          return converter.call(array_like, ctx: ctx, dtype: dtype)
+        end
+      end
+    end
+    raise TypeError, "Unable convert #{array_like.class} to MXNet::NDArray"
   end
 end
