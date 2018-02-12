@@ -267,6 +267,12 @@ module MXNet
       end
     end
 
+    # Returns a Numo::NArray object with value copied from this array.
+    def to_narray
+      require 'mxnet/narray_helper'
+      self.to_narray
+    end
+
     module Ops
       def self._import_ndarray_operations
         LibMXNet._each_op_names do |op_name|
