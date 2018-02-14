@@ -34,6 +34,22 @@ mxnet_raise_last_error(void)
   rb_raise(mxnet_eError, "%s", last_error);
 }
 
+NORETURN(static void mxnet_unexpected_type(VALUE obj, char const *expected_type_name));
+
+static void
+mxnet_unexpected_type(VALUE obj, char const *expected_type_name)
+{
+  rb_raise(rb_eTypeError, "wrong argument type %s (expected %s)",
+      rb_obj_classname(obj), expected_type_name);
+}
+
+void
+mxnet_check_type(VALUE obj, VALUE klass)
+{
+  if (rb_obj_is_kind_of(obj, klass)) return;
+  mxnet_unexpected_type(obj, rb_class2name(klass));
+}
+
 /* ==== Handle ==== */
 
 static VALUE
