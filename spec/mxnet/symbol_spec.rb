@@ -4,6 +4,12 @@ module MXNet
   ::RSpec.describe Symbol do
     let(:nd_ones) { MXNet::NDArray.ones([2, 3]) }
 
+    describe '.new' do
+      specify do
+        expect { MXNet::Symbol.new(0) }.to raise_error(NoMethodError, /private method/)
+      end
+    end
+
     describe '.var' do
       specify do
         x = MXNet::Symbol.var(:x)
