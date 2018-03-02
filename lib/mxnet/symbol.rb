@@ -2,6 +2,8 @@ module MXNet
   class Symbol
     include HandleWrapper
 
+    private_class_method :new
+
     # NATIVE: self.load
     # NATIVE: self.load_json
 
@@ -304,51 +306,53 @@ module MXNet
         super
       end
     end
-  end
 
-  Variable = Symbol # deprecated
-
-  # Creates a symbolic variable with specified name.
-  #
-  # @param name
-  # @param attr
-  # @param shape
-  # @param lr_mult
-  # @param wd_mult
-  # @param dtype
-  # @param init
-  # @param stype
-  # @param kwarg  Additinoal attribute variables
-  #
-  # @return [Symbol]  A symbol corresponding to an input to the computation graph.
-  def self.var(name, attr: nil, shape: nil, lr_mult: nil, wd_mult: nil, dtype: nil,
-               init: nil, stype: nil, **kwargs)
-    unless name.is_a?(String) || name.is_a?(::Symbol)
-      raise TypeError, 'Expect a String or a Symbol for variable `name`'
-    end
-    handle = LibMXNet.create_variable(name)
-    sym = MXNet::Symbol.new(handle)
-    attr = AttrScope.current.get(attr)
-    attr ||= {}
-    attr[:__shape__] = shape.to_s if shape
-    attr[:__lr_mult__] = lr_mult if lr_mult
-    attr[:__wd_mult__] = wd_mult if wd_mult
-    attr[:__dtype__] = MXNet::DType.name(dtype) if dtype
-    if init
-      init = init.to_json unless init.is_a?(String) || init.is_a?(::Symbol)
-      attr[:__init__] = init
-    end
-    # attr[:__storage_type__] = str(_STORAGE_TYPE_STR_TO_ID[stype] if stype
-    kwargs.each do |k, v|
-      if k.start_with?('__') && k.end_with?('__')
-        attr[k] = v
-      else
-        raise ArgumentError, "Attribute name=#{k} is not supported." +
-          ' Additional attributes must start and end with double underscores,' +
-          ' e.g., __yourattr__'
+    # Creates a symbolic variable with specified name.
+    #
+    # @param name
+    # @param attr
+    # @param shape
+    # @param lr_mult
+    # @param wd_mult
+    # @param dtype
+    # @param init
+    # @param stype
+    # @param kwarg  Additinoal attribute variables
+    #
+    # @return [Symbol]  A symbol corresponding to an input to the computation graph.
+    def self.var(name, attr: nil, shape: nil, lr_mult: nil, wd_mult: nil, dtype: nil,
+                 init: nil, stype: nil, **kwargs)
+      unless name.is_a?(String) || name.is_a?(::Symbol)
+        raise TypeError, 'Expect a String or a Symbol for variable `name`'
       end
+      handle = LibMXNet.create_variable(name)
+      sym = new(handle)
+      attr = AttrScope.current.get(attr)
+      attr ||= {}
+      attr[:__shape__] = shape.to_s if shape
+      attr[:__lr_mult__] = lr_mult if lr_mult
+      attr[:__wd_mult__] = wd_mult if wd_mult
+      attr[:__dtype__] = MXNet::DType.name(dtype) if dtype
+      if init
+        init = init.to_json unless init.is_a?(String) || init.is_a?(::Symbol)
+        attr[:__init__] = init
+      end
+      # attr[:__storage_type__] = str(_STORAGE_TYPE_STR_TO_ID[stype] if stype
+      kwargs.each do |k, v|
+        if k.start_with?('__') && k.end_with?('__')
+          attr[k] = v
+        else
+          raise ArgumentError, "Attribute name=#{k} is not supported." +
+            ' Additional attributes must start and end with double underscores,' +
+            ' e.g., __yourattr__'
+        end
+      end
+      sym._set_attr(**attr)
+      return sym
     end
-    sym._set_attr(**attr)
-    return sym
+
+    class << self
+      alias_method :Variable, :var
+    end
   end
 end

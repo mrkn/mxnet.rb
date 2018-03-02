@@ -3,10 +3,26 @@ require 'spec_helper'
 module MXNet
   ::RSpec.describe Symbol do
     let(:nd_ones) { MXNet::NDArray.ones([2, 3]) }
+
+    describe '.var' do
+      specify do
+        x = MXNet::Symbol.var(:x)
+        expect(x).to be_a(MXNet::Symbol)
+        expect(x.name).to eq(:x)
+      end
+    end
+
+    describe '.Variable' do
+      specify do
+        expect(MXNet::Symbol).to be_respond_to(:Variable)
+        expect(MXNet::Symbol.method(:Variable)).to eq(MXNet::Symbol.method(:var))
+      end
+    end
+
     describe '#bind' do
       specify do
-        x = MXNet.var(:x)
-        y = MXNet.var(:y)
+        x = MXNet::Symbol.var(:x)
+        y = MXNet::Symbol.var(:y)
         z = x + y
         ex = z.bind(MXNet.cpu, { x: nd_ones, y: nd_ones })
         ex.forward
@@ -14,7 +30,7 @@ module MXNet
       end
 
       specify do
-        x = MXNet.var(:x)
+        x = MXNet::Symbol.var(:x)
         expect { x.bind(MXNet.cpu, x: nd_ones) }.not_to raise_error
         expect { x.bind(MXNet.cpu, a: nd_ones) }.to raise_error(ArgumentError, /key `x` is missing in `args`/)
       end
@@ -26,8 +42,8 @@ module MXNet
 
     describe '#eval' do
       specify do
-        x = MXNet.var(:x)
-        y = MXNet.var(:y)
+        x = MXNet::Symbol.var(:x)
+        y = MXNet::Symbol.var(:y)
         z = x + y
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones, y: nd_ones)
         expect(ex[0].reshape([6]).to_a).to eq([2] * 6)
@@ -36,8 +52,8 @@ module MXNet
 
     describe '#list_arguments' do
       specify do
-        x = MXNet.var(:x)
-        y = MXNet.var(:y)
+        x = MXNet::Symbol.var(:x)
+        y = MXNet::Symbol.var(:y)
         z = x + y
         expect(x.list_arguments).to eq([:x])
         expect(z.list_arguments).to eq([:x, :y])
@@ -46,8 +62,8 @@ module MXNet
 
     describe '#list_outputs' do
       specify do
-        x = MXNet.var(:x)
-        y = MXNet.var(:y)
+        x = MXNet::Symbol.var(:x)
+        y = MXNet::Symbol.var(:y)
         z = x + y
         expect(x.list_outputs).to eq([:x])
         expect(z.list_outputs[0].to_s).to match(/\A_plus\d+_output/)
@@ -56,8 +72,8 @@ module MXNet
 
     describe '#infer_shape' do
       specify do
-        x = MXNet.var(:x)
-        y = MXNet.var(:y)
+        x = MXNet::Symbol.var(:x)
+        y = MXNet::Symbol.var(:y)
         z = x + y
         arg_shape, out_shape, = z.infer_shape(x: [2, 3], y: [2, 3])
         expect(arg_shape).to eq([[2, 3], [2, 3]])
@@ -68,8 +84,8 @@ module MXNet
 
     describe '#infer_type' do
       specify do
-        x = MXNet.var(:x)
-        y = MXNet.var(:y)
+        x = MXNet::Symbol.var(:x)
+        y = MXNet::Symbol.var(:y)
         z = x + y
         arg_type, out_type, = z.infer_type(x: :float32, y: :float32)
         expect(arg_type).to eq([:float32, :float32])
@@ -81,8 +97,8 @@ module MXNet
 
     describe '#save and .load' do
       specify do
-        x = MXNet.var(:x)
-        y = MXNet.var(:y)
+        x = MXNet::Symbol.var(:x)
+        y = MXNet::Symbol.var(:y)
         z = x + y
         Dir.mktmpdir do |tmpdir|
           fn = File.join(tmpdir, 'symbol-z.json')
@@ -95,8 +111,8 @@ module MXNet
 
     describe '#to_json and .load_json' do
       specify do
-        x = MXNet.var(:x)
-        y = MXNet.var(:y)
+        x = MXNet::Symbol.var(:x)
+        y = MXNet::Symbol.var(:y)
         z = x + y
         Dir.mktmpdir do |tmpdir|
           z2 = MXNet::Symbol.load_json(z.to_json)
@@ -108,8 +124,8 @@ module MXNet
     describe '#+' do
       describe 'symbol + symbol' do
         specify do
-          x = MXNet.var(:x)
-          y = MXNet.var(:y)
+          x = MXNet::Symbol.var(:x)
+          y = MXNet::Symbol.var(:y)
           z = x + y
           expect(z.name.to_s).to be_start_with('_plus')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones, y: nd_ones)
@@ -119,7 +135,7 @@ module MXNet
 
       describe 'symbol + scalar' do
         specify do
-          x = MXNet.var(:x)
+          x = MXNet::Symbol.var(:x)
           z = x + 1.0
           expect(z.name.to_s).to be_start_with('_plusscalar')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones)
@@ -129,7 +145,7 @@ module MXNet
 
       describe 'scalar + symbol' do
         specify do
-          x = MXNet.var(:x)
+          x = MXNet::Symbol.var(:x)
           z = 1.0 + x
           expect(z.name.to_s).to be_start_with('_plusscalar')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones)
@@ -141,8 +157,8 @@ module MXNet
     describe '#-' do
       describe 'symbol - symbol' do
         specify do
-          x = MXNet.var(:x)
-          y = MXNet.var(:y)
+          x = MXNet::Symbol.var(:x)
+          y = MXNet::Symbol.var(:y)
           z = x - y
           expect(z.name.to_s).to be_start_with('_minus')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones)
@@ -152,7 +168,7 @@ module MXNet
 
       describe 'symbol - scalar' do
         specify do
-          x = MXNet.var(:x)
+          x = MXNet::Symbol.var(:x)
           z = x - 1.0
           expect(z.name.to_s).to be_start_with('_minusscalar')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
@@ -162,7 +178,7 @@ module MXNet
 
       describe 'scalar - symbol' do
         specify do
-          x = MXNet.var(:x)
+          x = MXNet::Symbol.var(:x)
           z = 1.0 - x
           expect(z.name.to_s).to be_start_with('_rminusscalar')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
@@ -174,8 +190,8 @@ module MXNet
     describe '#*' do
       describe 'symbol * symbol' do
         specify do
-          x = MXNet.var(:x)
-          y = MXNet.var(:y)
+          x = MXNet::Symbol.var(:x)
+          y = MXNet::Symbol.var(:y)
           z = x * y
           expect(z.name.to_s).to be_start_with('_mul')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones + nd_ones)
@@ -185,7 +201,7 @@ module MXNet
 
       describe 'symbol * scalar' do
         specify do
-          x = MXNet.var(:x)
+          x = MXNet::Symbol.var(:x)
           z = x * 2.0
           expect(z.name.to_s).to be_start_with('_mulscalar')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
@@ -195,7 +211,7 @@ module MXNet
 
       describe 'scalar * symbol' do
         specify do
-          x = MXNet.var(:x)
+          x = MXNet::Symbol.var(:x)
           z = 2.0 * x
           expect(z.name.to_s).to be_start_with('_mulscalar')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
@@ -207,8 +223,8 @@ module MXNet
     describe '#/' do
       describe 'symbol / symbol' do
         specify do
-          x = MXNet.var(:x)
-          y = MXNet.var(:y)
+          x = MXNet::Symbol.var(:x)
+          y = MXNet::Symbol.var(:y)
           z = x / y
           expect(z.name.to_s).to be_start_with('_div')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones + nd_ones)
@@ -218,7 +234,7 @@ module MXNet
 
       describe 'symbol / scalar' do
         specify do
-          x = MXNet.var(:x)
+          x = MXNet::Symbol.var(:x)
           z = x / 2.0
           expect(z.name.to_s).to be_start_with('_divscalar')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
@@ -228,7 +244,7 @@ module MXNet
 
       describe 'scalar / symbol' do
         specify do
-          x = MXNet.var(:x)
+          x = MXNet::Symbol.var(:x)
           z = 2.0 / x
           expect(z.name.to_s).to be_start_with('_rdivscalar')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones + nd_ones)
@@ -240,8 +256,8 @@ module MXNet
     describe '#%' do
       describe 'symbol % symbol' do
 	specify do
-	  x = MXNet.var(:x)
-	  y = MXNet.var(:y)
+	  x = MXNet::Symbol.var(:x)
+	  y = MXNet::Symbol.var(:y)
 	  z = x % y
 	  expect(z.name.to_s).to be_start_with('_mod')
 	  ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones + nd_ones)
@@ -251,7 +267,7 @@ module MXNet
 
       describe 'symbol % scalar' do
 	specify do
-	  x = MXNet.var(:x)
+	  x = MXNet::Symbol.var(:x)
 	  z = x % 2.0
 	  expect(z.name.to_s).to be_start_with('_modscalar')
 	  ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
@@ -261,7 +277,7 @@ module MXNet
 
       describe 'scalar % symbol' do
 	specify do
-	  x = MXNet.var(:x)
+	  x = MXNet::Symbol.var(:x)
 	  z = 4.0 % x
 	  expect(z.name.to_s).to be_start_with('_rmodscalar')
 	  ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
@@ -273,8 +289,8 @@ module MXNet
     describe '#**' do
       describe 'symbol ** symbol' do
         specify do
-          x = MXNet.var(:x)
-          y = MXNet.var(:y)
+          x = MXNet::Symbol.var(:x)
+          y = MXNet::Symbol.var(:y)
           z = x ** y
           expect(z.name.to_s).to be_start_with('_power')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones, y: nd_ones + nd_ones)
@@ -284,7 +300,7 @@ module MXNet
 
       describe 'symbol ** scalar' do
         specify do
-          x = MXNet.var(:x)
+          x = MXNet::Symbol.var(:x)
           z = x ** 2.0
           expect(z.name.to_s).to be_start_with('_powerscalar')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
@@ -294,7 +310,7 @@ module MXNet
 
       describe 'scalar ** symbol' do
         specify do
-          x = MXNet.var(:x)
+          x = MXNet::Symbol.var(:x)
           expect { z = 2.0 ** x }.to raise_error(NotImplementedError)
         end
       end
@@ -302,7 +318,7 @@ module MXNet
 
     describe '#+@' do
       specify do
-        x = MXNet.var(:x)
+        x = MXNet::Symbol.var(:x)
         z = +x
         expect(z).to be_equal(x)
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
@@ -312,7 +328,7 @@ module MXNet
 
     describe '#-@' do
       specify do
-        x = MXNet.var(:x)
+        x = MXNet::Symbol.var(:x)
         z = -x
         expect(z.name.to_s).to be_start_with('_mulscalar')
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
@@ -323,8 +339,8 @@ module MXNet
     describe '#==' do
       describe 'symbol == symbol' do
         specify do
-          x = MXNet.var(:x)
-          y = MXNet.var(:y)
+          x = MXNet::Symbol.var(:x)
+          y = MXNet::Symbol.var(:y)
           z = (x == y)
           expect(z.name.to_s).to be_start_with('_equal')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones, y: nd_ones + nd_ones)
@@ -336,7 +352,7 @@ module MXNet
 
       describe 'symbol == scalar' do
         specify do
-          x = MXNet.var(:x)
+          x = MXNet::Symbol.var(:x)
           z = (x == 1.0)
           expect(z.name.to_s).to be_start_with('_equal_scalar')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones)
@@ -350,8 +366,8 @@ module MXNet
     describe '#!=' do
       describe 'symbol != symbol' do
         specify do
-          x = MXNet.var(:x)
-          y = MXNet.var(:y)
+          x = MXNet::Symbol.var(:x)
+          y = MXNet::Symbol.var(:y)
           z = (x != y)
           expect(z.name.to_s).to be_start_with('_not_equal')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones, y: nd_ones + nd_ones)
@@ -363,7 +379,7 @@ module MXNet
 
       describe 'symbol != scalar' do
         specify do
-          x = MXNet.var(:x)
+          x = MXNet::Symbol.var(:x)
           z = (x != 1.0)
           expect(z.name.to_s).to be_start_with('_not_equal_scalar')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones)
@@ -377,8 +393,8 @@ module MXNet
     describe '#<' do
       describe 'symbol < symbol' do
         specify do
-          x = MXNet.var(:x)
-          y = MXNet.var(:y)
+          x = MXNet::Symbol.var(:x)
+          y = MXNet::Symbol.var(:y)
           z = (x < y)
           expect(z.name.to_s).to be_start_with('_lesser')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones, y: nd_ones + nd_ones)
@@ -390,7 +406,7 @@ module MXNet
 
       describe 'symbol < scalar' do
         specify do
-          x = MXNet.var(:x)
+          x = MXNet::Symbol.var(:x)
           z = (x < 2.0)
           expect(z.name.to_s).to be_start_with('_lesser_scalar')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones)
@@ -404,8 +420,8 @@ module MXNet
     describe '#<=' do
       describe 'symbol <= symbol' do
         specify do
-          x = MXNet.var(:x)
-          y = MXNet.var(:y)
+          x = MXNet::Symbol.var(:x)
+          y = MXNet::Symbol.var(:y)
           z = (x <= y)
           expect(z.name.to_s).to be_start_with('_lesser_equal')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones, y: nd_ones + nd_ones)
@@ -419,7 +435,7 @@ module MXNet
 
       describe 'symbol <= scalar' do
         specify do
-          x = MXNet.var(:x)
+          x = MXNet::Symbol.var(:x)
           z = (x <= 2.0)
           expect(z.name.to_s).to be_start_with('_lesser_equal_scalar')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones)
@@ -435,8 +451,8 @@ module MXNet
     describe '#>' do
       describe 'symbol > symbol' do
         specify do
-          x = MXNet.var(:x)
-          y = MXNet.var(:y)
+          x = MXNet::Symbol.var(:x)
+          y = MXNet::Symbol.var(:y)
           z = (x > y)
           expect(z.name.to_s).to be_start_with('_greater')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones, y: nd_ones)
@@ -448,7 +464,7 @@ module MXNet
 
       describe 'symbol > scalar' do
         specify do
-          x = MXNet.var(:x)
+          x = MXNet::Symbol.var(:x)
           z = (x > 1.0)
           expect(z.name.to_s).to be_start_with('_greater_scalar')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones)
@@ -462,8 +478,8 @@ module MXNet
     describe '#>=' do
       describe 'symbol >= symbol' do
         specify do
-          x = MXNet.var(:x)
-          y = MXNet.var(:y)
+          x = MXNet::Symbol.var(:x)
+          y = MXNet::Symbol.var(:y)
           z = (x >= y)
           expect(z.name.to_s).to be_start_with('_greater_equal')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones, y: nd_ones + nd_ones)
@@ -477,7 +493,7 @@ module MXNet
 
       describe 'symbol >= scalar' do
         specify do
-          x = MXNet.var(:x)
+          x = MXNet::Symbol.var(:x)
           z = (x >= 2.0)
           expect(z.name.to_s).to be_start_with('_greater_equal_scalar')
           ex = z.eval(ctx: MXNet.cpu, x: nd_ones + nd_ones + nd_ones)
