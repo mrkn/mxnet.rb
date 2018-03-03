@@ -17,10 +17,6 @@ module MXNet
       Internal._zeros(shape: shape, dtype: dtype, **kwargs)
     end
 
-    def self.zeros_like(*args, **kwargs, &block)
-      Ops.zeros_like(*args, **kwargs, &block)
-    end
-
     # Returns a new symbol of given shape and type, filled with ones.
     #
     # @param shape
@@ -29,10 +25,6 @@ module MXNet
     def self.ones(shape, dtype: nil, **kwargs)
       dtype ||= :float32
       Internal._ones(shape: shape, dtype: dtype, **kwargs)
-    end
-
-    def self.ones_like(*args, **kwargs, &block)
-      Ops.ones_like(*args, **kwargs, &block)
     end
 
     # Returns a new symbol of given shape and type, filled with the given value +val+.

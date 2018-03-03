@@ -17,4 +17,6 @@ module MXNet
   require 'mxnet/utils'
   require 'mxnet/op_info'
   require 'mxnet.so'
+  require 'mxnet/ndarray/operations'
+  require 'mxnet/symbol/operations'
 end
