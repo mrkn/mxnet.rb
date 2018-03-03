@@ -7,18 +7,22 @@ static ID id_handles;
 static ID id_descriptions;
 
 static VALUE
-get_m_description(VALUE mod, VALUE name)
+lookup_op_info(VALUE klass, VALUE mod, VALUE name)
 {
-  VALUE hash;
+  VALUE hash, op_info;
   hash = rb_ivar_get(mod, id_descriptions);
   if (NIL_P(hash)) {
-    return Qnil;
+    rb_raise(rb_eTypeError, "unsupported module");
   }
   if (!RB_TYPE_P(name, T_SYMBOL)) {
     StringValue(name);
     name = rb_to_symbol(name);
   }
-  return rb_hash_aref(hash, name);
+  op_info = rb_hash_lookup2(hash, name, Qundef);
+  if (op_info == Qundef) {
+    rb_raise(rb_eArgError, "unknown operation name");
+  }
+  return op_info;
 }
 
 static void
@@ -144,14 +148,10 @@ mxnet_init_operations(VALUE klass)
   mLinalg = rb_define_module_under(klass, "Linalg");
   mSparse = rb_define_module_under(klass, "Sparse");
 
-  rb_define_module_function(mOps, "description", get_m_description, 1);
-  rb_define_module_function(mInternal, "description", get_m_description, 1);
-  rb_define_module_function(mContrib, "description", get_m_description, 1);
-  rb_define_module_function(mLinalg, "description", get_m_description, 1);
-  rb_define_module_function(mSparse, "description", get_m_description, 1);
-
   mxnet_sOpInfo = rb_const_get_at(mxnet_mMXNet, rb_intern("OpInfo"));
   mxnet_sOpArgInfo = rb_const_get_at(mxnet_mMXNet, rb_intern("OpArgInfo"));
+
+  rb_define_singleton_method(mxnet_sOpInfo, "lookup", lookup_op_info, 2);
 
   id_handles = rb_intern("handles");
   id_descriptions = rb_intern("descriptions");
