@@ -7,6 +7,45 @@ module MXNet
     # NATIVE: self.load
     # NATIVE: self.load_json
 
+    # Returns a new symbol of given shape and type, filled with zeros.
+    #
+    # @param shape
+    # @param dtype
+    # @return [MXNet::Symbol] The created symbol.
+    def self.zeros(shape, dtype: nil, **kwargs)
+      dtype ||= :float32
+      Internal._zeros(shape: shape, dtype: dtype, **kwargs)
+    end
+
+    def self.zeros_like(*args, **kwargs, &block)
+      Ops.zeros_like(*args, **kwargs, &block)
+    end
+
+    # Returns a new symbol of given shape and type, filled with ones.
+    #
+    # @param shape
+    # @param dtype
+    # @return [MXNet::Symbol] The created symbol.
+    def self.ones(shape, dtype: nil, **kwargs)
+      dtype ||= :float32
+      Internal._ones(shape: shape, dtype: dtype, **kwargs)
+    end
+
+    def self.ones_like(*args, **kwargs, &block)
+      Ops.ones_like(*args, **kwargs, &block)
+    end
+
+    # Returns a new symbol of given shape and type, filled with the given value +val+.
+    #
+    # @param shape
+    # @param val
+    # @param dtype
+    # @return [MXNet::Symbol] The created symbol.
+    def self.full(shape, val, dtype: nil, **kwargs)
+      dtype ||= :float32
+      Internal._full(shape: shape, dtype: dtype, value: Float(val), **kwargs)
+    end
+
     def self.arange(start, stop=nil, step: 1.0, repeat: 1, name: nil, dtype: nil)
       dtype ||= :float32
       Internal._arange(start: start, stop: stop, step: step, repeat: repeat, name: name, dtype: dtype)

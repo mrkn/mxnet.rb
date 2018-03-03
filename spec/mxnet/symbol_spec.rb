@@ -25,6 +25,54 @@ module MXNet
       end
     end
 
+    describe '.zeros' do
+      specify do
+        x = MXNet::Symbol.zeros([2, 3], dtype: :float32)
+        ex = x.eval(ctx: MXNet.cpu)
+        expect(ex[0].reshape([6]).to_a).to eq([0.0] * 6)
+      end
+    end
+
+    describe '.zeros_like' do
+      specify do
+        x = MXNet::Symbol.var(:x)
+        y = MXNet::Symbol.zeros_like(x, dtype: :float32)
+        ex = y.eval(ctx: MXNet.cpu, x: nd_ones)
+        expect(ex[0].shape).to eq([2, 3])
+        expect(ex[0].reshape([6]).to_a).to eq([0.0] * 6)
+      end
+    end
+
+    describe '.ones' do
+      specify do
+        x = MXNet::Symbol.ones([2, 3], dtype: :float32)
+        ex = x.eval(ctx: MXNet.cpu)
+        expect(ex[0].reshape([6]).to_a).to eq([1.0] * 6)
+      end
+    end
+
+    describe '.ones_like' do
+      specify do
+        x = MXNet::Symbol.var(:x)
+        y = MXNet::Symbol.ones_like(x, dtype: :float32)
+        ex = y.eval(ctx: MXNet.cpu, x: nd_ones)
+        expect(ex[0].shape).to eq([2, 3])
+        expect(ex[0].reshape([6]).to_a).to eq([1.0] * 6)
+      end
+    end
+
+    describe '.full' do
+      specify do
+        x = MXNet::Symbol.full([2, 3], 3.14, dtype: :float64)
+        ex = x.eval(ctx: MXNet.cpu)
+        expect(ex[0].reshape([6]).to_a).to eq([3.14] * 6)
+      end
+    end
+
+    describe '.arange' do
+      pending
+    end
+
     describe '#bind' do
       specify do
         x = MXNet::Symbol.var(:x)
