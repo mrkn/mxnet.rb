@@ -73,6 +73,20 @@ module MXNet
       pending
     end
 
+    describe '#attributes' do
+      specify do
+        data = MXNet::Symbol.var(:data, attr: { mood: 'angry' })
+        op = MXNet::Symbol.Convolution(data: data, name: 'conv', kernel: [1, 1],
+                                       num_filter: 1, attr: { __mood__: 'so so' }, lr_mult: 1)
+        expect(op.attributes).to be_a(Hash)
+        expect(op.attributes).to include(data: a_hash_including(mood: 'angry'),
+                                         conv_weight: a_hash_including(__mood__: 'so so'),
+                                         conv: a_hash_including(kernel: '[1, 1]', __mood__: 'so so',
+                                                                num_filter: '1', lr_mult: '1', __lr_mult__: '1'),
+                                         conv_bias: a_hash_including(__mood__: 'so so'))
+      end
+    end
+
     describe '#bind' do
       specify do
         x = MXNet::Symbol.var(:x)

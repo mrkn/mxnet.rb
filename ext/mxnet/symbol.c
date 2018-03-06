@@ -180,6 +180,84 @@ mxnet_symbol_list_outputs(VALUE obj)
   return res;
 }
 
+/* Recursively gets all attributes from the symbol and its children.
+ *
+ * @return [Hash{Symbol => Hash}] There is a key in the returned hash for
+ *   every child with non-empty attribute set.  For each symbol, the name
+ *   of the symbol is its key in the hash and the correspond value is that
+ *   symbol's attribute list (itself a hash).
+ */
+static VALUE
+symbol_attributes(VALUE obj)
+{
+  SymbolHandle handle;
+  mx_uint i, size;
+  char const **pairs;
+  VALUE ret;
+
+  handle = mxnet_get_handle(obj);
+  CHECK_CALL(MXNET_API(MXSymbolListAttr)(handle, &size, &pairs));
+
+  ret = rb_hash_new();
+  for (i = 0; i < size; ++i) {
+    char const *p;
+    VALUE name, key, val, dict;
+
+    p = strchr(pairs[i*2], '$');
+    name = rb_str_intern(rb_str_new(pairs[i*2], p - pairs[i*2]));
+    dict = rb_hash_lookup2(ret, name, Qundef);
+    if (dict == Qundef) {
+      dict = rb_hash_new();
+      rb_hash_aset(ret, name, dict);
+    }
+    key  = rb_str_intern(rb_str_new2(p + 1));
+    val  = rb_str_new2(pairs[i*2 + 1]);
+    rb_hash_aset(dict, key, val);
+  }
+
+  return ret;
+}
+
+static VALUE
+symbol_set_attributes_i(VALUE key, VALUE value, VALUE arg)
+{
+  SymbolHandle handle = (SymbolHandle)arg;
+  char const *key_cstr, *value_cstr;
+
+  if (RB_TYPE_P(key, T_SYMBOL)) {
+    key = rb_sym_to_s(key);
+  }
+  key_cstr = StringValueCStr(key);
+  value_cstr = StringValueCStr(value);
+
+  CHECK_CALL(MXNET_API(MXSymbolSetAttr)(handle, key_cstr, value_cstr));
+
+  return ST_CONTINUE;
+}
+
+/* Sets an attribute of the symbol.
+ *
+ * For example.  `A.send :_set_attr(foo: 'bar')` adds the mapping `"{foo: bar}"`
+ * to the symbol's attribute dictionary.
+ *
+ * @param kwargs [Hash{Symbol => #to_str}] The attributes to set
+ */
+static VALUE
+symbol_set_attributes(int argc, VALUE *argv, VALUE obj)
+{
+  VALUE kwargs;
+  SymbolHandle handle;
+
+  rb_scan_args(argc, argv, ":", &kwargs);
+
+  if (!NIL_P(kwargs)) {
+    handle = mxnet_get_handle(obj);
+    rb_hash_foreach(kwargs, symbol_set_attributes_i, (VALUE)handle);
+  }
+
+  return Qnil;
+}
+
 struct infer_type_process_kwargs_params {
   char const **keys;
   int *tdata;
@@ -833,12 +911,14 @@ mxnet_init_symbol(void)
   rb_define_method(cSymbol, "list_arguments", symbol_list_arguments, 0);
   rb_define_method(cSymbol, "list_auxiliary_states", symbol_list_auxiliary_states, 0);
   rb_define_method(cSymbol, "list_outputs", mxnet_symbol_list_outputs, 0);
+  rb_define_method(cSymbol, "attributes", symbol_attributes, 0);
   rb_define_method(cSymbol, "infer_type", symbol_infer_type, -1);
   rb_define_method(cSymbol, "save", symbol_save, 1);
   rb_define_method(cSymbol, "to_json", symbol_to_json, 0);
   rb_define_method(cSymbol, "bind", symbol_bind, -1);
   rb_define_method(cSymbol, "dup", symbol_dup, 0);
 
+  rb_define_private_method(cSymbol, "set_attributes", symbol_set_attributes, -1);
   rb_define_private_method(cSymbol, "infer_shape_impl", symbol_infer_shape_impl, -1);
 
   mxnet_cSymbol = cSymbol;

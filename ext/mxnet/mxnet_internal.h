@@ -165,6 +165,12 @@ struct mxnet_api_table {
   int (* MXSymbolGetName)(SymbolHandle symbol,
                           const char** out,
                           int *success);
+  int (* MXSymbolSetAttr)(SymbolHandle symbol,
+                          const char* key,
+                          const char* value);
+  int (* MXSymbolListAttr)(SymbolHandle symbol,
+                           mx_uint *out_size,
+                           const char ***out);
   int (* MXSymbolListArguments)(SymbolHandle symbol,
                                 mx_uint *out_size,
                                 const char ***out_str_array);

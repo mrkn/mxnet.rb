@@ -43,16 +43,6 @@ module MXNet
       Internal._arange(start: start, stop: stop, step: step, repeat: repeat, name: name, dtype: dtype)
     end
 
-    # Sets an attribute of the symbol.
-    #
-    # @param kwargs  The attributes to set
-    def _set_attr(**kwargs)
-      # TODO
-      # kwargs.each do |k, v|
-      #   raise ArgumentError, 'Set Attr only accepts string value' unless v.is_a?(String)
-      # end
-    end
-
     # def infer_type
 
     # Infers the shape of all arguments and all outputs given the known shapes of some arguments.
@@ -378,7 +368,7 @@ module MXNet
             ' e.g., __yourattr__'
         end
       end
-      sym._set_attr(**attr)
+      sym.send :set_attributes, **attr
       return sym
     end
 
