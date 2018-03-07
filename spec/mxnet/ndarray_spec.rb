@@ -283,7 +283,11 @@ module MXNet
       end
 
       describe 'ndarray + scalar' do
-        pending
+        specify do
+          x = MXNet::NDArray.arange(3)
+          y = x + 1
+          expect(y.to_a).to eq([1, 2, 3])
+        end
       end
 
       describe 'scalar + ndarray' do
@@ -302,7 +306,11 @@ module MXNet
       end
 
       describe 'ndarray - scalar' do
-        pending
+        specify do
+          x = MXNet::NDArray.arange(3)
+          y = x - 1
+          expect(y.to_a).to eq([-1, 0, 1])
+        end
       end
 
       describe 'scalar - ndarray' do
@@ -321,7 +329,11 @@ module MXNet
       end
 
       describe 'ndarray * scalar' do
-        pending
+        specify do
+          x = MXNet::NDArray.arange(3)
+          y = x * 10
+          expect(y.to_a).to eq([0, 10, 20])
+        end
       end
 
       describe 'scalar * ndarray' do
@@ -339,7 +351,11 @@ module MXNet
       end
 
       describe 'ndarray / scalar' do
-        pending
+        specify do
+          x = MXNet::NDArray.arange(3, dtype: :float64)
+          y = x / 10
+          expect(y.to_a).to eq([0, 0.1, 0.2])
+        end
       end
 
       describe 'scalar / ndarray' do
@@ -357,7 +373,11 @@ module MXNet
       end
 
       describe 'ndarray % scalar' do
-        pending
+        specify do
+          x = MXNet::NDArray.arange(3)
+          y = (x + 2) % 3
+          expect(y.to_a).to eq([2, 0, 1])
+        end
       end
 
       describe 'scalar % ndarray' do
@@ -375,7 +395,11 @@ module MXNet
       end
 
       describe 'ndarray ** scalar' do
-        pending
+        specify do
+          x = MXNet::NDArray.arange(3)
+          y = x ** 2
+          expect(y.to_a).to eq([0, 1, 4])
+        end
       end
 
       describe 'scalar ** ndarray' do

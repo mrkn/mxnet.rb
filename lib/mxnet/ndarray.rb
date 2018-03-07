@@ -169,8 +169,10 @@ module MXNet
       case other
       when NDArray
         Ops.broadcast_add(self, other)
+      when Numeric
+        Internal._plus_scalar(self, scalar: other)
       else
-        super
+        raise TypeError, "#{other.class} is not supported"
       end
     end
 
@@ -178,8 +180,10 @@ module MXNet
       case other
       when NDArray
         Ops.broadcast_sub(self, other)
+      when Numeric
+        Internal._minus_scalar(self, scalar: other)
       else
-        super
+        raise TypeError, "#{other.class} is not supported"
       end
     end
 
@@ -187,8 +191,10 @@ module MXNet
       case other
       when NDArray
         Ops.broadcast_mul(self, other)
+      when Numeric
+        Internal._mul_scalar(self, scalar: other)
       else
-        super
+        raise TypeError, "#{other.class} is not supported"
       end
     end
 
@@ -196,8 +202,10 @@ module MXNet
       case other
       when NDArray
         Ops.broadcast_div(self, other)
+      when Numeric
+        Internal._div_scalar(self, scalar: other)
       else
-        super
+        raise TypeError, "#{other.class} is not supported"
       end
     end
 
@@ -205,8 +213,10 @@ module MXNet
       case other
       when NDArray
         Ops.broadcast_mod(self, other)
+      when Numeric
+        Internal._mod_scalar(self, scalar: other)
       else
-        super
+        raise TypeError, "#{other.class} is not supported"
       end
     end
 
@@ -214,8 +224,10 @@ module MXNet
       case other
       when NDArray
         Ops.broadcast_power(self, other)
+      when Numeric
+        Internal._power_scalar(self, scalar: other)
       else
-        super
+        raise TypeError, "#{other.class} is not supported"
       end
     end
 
