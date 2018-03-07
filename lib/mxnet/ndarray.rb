@@ -20,6 +20,12 @@ module MXNet
       Internal._arange(start: start, stop: stop, step: step, repeat: repeat, dtype: dtype, ctx: ctx)
     end
 
+    def inspect
+      shape_info = shape.join('x')
+      ary = to_narray.inspect.lines[1..-1].join
+      "\n#{ary}\n<#{self.class} #{shape_info} @#{context}>"
+    end
+
     def context
       dev_typeid, dev_id = _get_context_params
       Context.new(dev_typeid, dev_id)
