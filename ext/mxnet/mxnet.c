@@ -123,6 +123,8 @@ Init_mxnet(void)
 
   mxnet_init_executor();
 
+  mxnet_init_io();
+
   mxnet_init_ndarray();
   mxnet_init_operations(mxnet_cNDArray);
 

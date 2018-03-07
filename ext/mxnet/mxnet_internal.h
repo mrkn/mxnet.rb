@@ -71,6 +71,8 @@ typedef unsigned LONG_LONG uint64_t;
 typedef unsigned int mx_uint;
 typedef float mx_float;
 typedef void *ExecutorHandle;
+typedef void *DataIterCreator;
+typedef void *DataIterHandle;
 typedef void *NDArrayHandle;
 typedef void *SymbolHandle;
 
@@ -147,6 +149,33 @@ struct mxnet_api_table {
       int num_params,
       const char **param_keys,
       const char **param_vals);
+
+  int (* MXListDataIters)(mx_uint *out_size, DataIterCreator **out_array);
+  int (* MXDataIterCreateIter)(DataIterCreator handle,
+                               mx_uint num_param,
+                               const char **keys,
+                               const char **vals,
+                               DataIterHandle *out);
+  int (* MXDataIterGetIterInfo)(DataIterCreator creator,
+                                const char **name,
+                                const char **description,
+                                mx_uint *num_args,
+                                const char ***arg_names,
+                                const char ***arg_type_infos,
+                                const char ***arg_descriptions);
+  int (* MXDataIterFree)(DataIterHandle handle);
+  int (* MXDataIterNext)(DataIterHandle handle,
+                        int *out);
+  int (* MXDataIterBeforeFirst)(DataIterHandle handle);
+  int (* MXDataIterGetData)(DataIterHandle handle,
+                            NDArrayHandle *out);
+  int (* MXDataIterGetIndex)(DataIterHandle handle,
+                             uint64_t **out_index,
+                             uint64_t *out_size);
+  int (* MXDataIterGetPadNum)(DataIterHandle handle,
+                              int *pad);
+  int (* MXDataIterGetLabel)(DataIterHandle handle,
+                             NDArrayHandle *out);
 
   int (* MXSymbolCreateAtomicSymbol)(void *creator,
                                      mx_uint num_param,
@@ -255,6 +284,7 @@ VALUE mxnet_symbol_list_outputs(VALUE obj);
 
 void mxnet_init_libmxnet(void);
 void mxnet_init_executor(void);
+void mxnet_init_io(void);
 void mxnet_init_ndarray(void);
 void mxnet_init_symbol(void);
 void mxnet_init_operations(VALUE klass);
@@ -268,6 +298,7 @@ extern VALUE mxnet_mMXNet;
 extern VALUE mxnet_mUtils;
 extern VALUE mxnet_cContext;
 extern VALUE mxnet_cExecutor;
+extern VALUE mxnet_cMXDataIter;
 extern VALUE mxnet_cNDArray;
 extern VALUE mxnet_cSymbol;
 

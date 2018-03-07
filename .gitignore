@@ -8,6 +8,8 @@
 /spec/reports/
 /tmp/
 
+/spec/fixture/mnist/*
+
 *.bundle
 *.so
 *.dll

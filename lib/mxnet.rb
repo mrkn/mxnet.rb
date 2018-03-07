@@ -9,6 +9,7 @@ module MXNet
   require 'mxnet/context'
   require 'mxnet/name_manager'
   require 'mxnet/executor'
+  require 'mxnet/io'
   require 'mxnet/ndarray'
   require 'mxnet/ndarray/operation_delegator'
   require 'mxnet/symbol'

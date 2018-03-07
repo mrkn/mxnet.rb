@@ -70,6 +70,18 @@ init_api_table(VALUE handle)
   INIT_API_TABLE_ENTRY(NNGetOpHandle);
   INIT_API_TABLE_ENTRY(MXSymbolGetAtomicSymbolInfo);
   INIT_API_TABLE_ENTRY(MXImperativeInvoke);
+
+  INIT_API_TABLE_ENTRY(MXListDataIters);
+  INIT_API_TABLE_ENTRY(MXDataIterCreateIter);
+  INIT_API_TABLE_ENTRY(MXDataIterGetIterInfo);
+  INIT_API_TABLE_ENTRY(MXDataIterFree);
+  INIT_API_TABLE_ENTRY(MXDataIterNext);
+  INIT_API_TABLE_ENTRY(MXDataIterBeforeFirst);
+  INIT_API_TABLE_ENTRY(MXDataIterGetData);
+  INIT_API_TABLE_ENTRY(MXDataIterGetIndex);
+  INIT_API_TABLE_ENTRY(MXDataIterGetPadNum);
+  INIT_API_TABLE_ENTRY(MXDataIterGetLabel);
+
   INIT_API_TABLE_ENTRY(MXSymbolCreateFromFile);
   INIT_API_TABLE_ENTRY(MXSymbolCreateFromJSON);
   INIT_API_TABLE_ENTRY(MXSymbolCreateAtomicSymbol);
