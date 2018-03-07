@@ -231,6 +231,36 @@ module MXNet
       end
     end
 
+    class SwappedOperationAdapter < Struct.new(:scalar)
+      def +(ndary)
+        ndary + scalar
+      end
+
+      def -(ndary)
+        Internal._rminus_scalar(ndary, scalar: scalar)
+      end
+
+      def *(ndary)
+        ndary * scalar
+      end
+
+      def /(ndary)
+        Internal._rdiv_scalar(ndary, scalar: scalar)
+      end
+
+      def %(ndary)
+        Internal._rmod_scalar(ndary, scalar: scalar)
+      end
+
+      def **(ndary)
+        Internal._rpower_scalar(ndary, scalar: scalar)
+      end
+    end
+
+    def coerce(other)
+      [SwappedOperationAdapter.new(other), self]
+    end
+
     def ==(other)
       case other
       when NDArray
