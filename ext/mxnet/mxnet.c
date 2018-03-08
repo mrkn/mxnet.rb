@@ -121,6 +121,8 @@ Init_mxnet(void)
   init_grad_req_map();
   mxnet_init_libmxnet();
 
+  mxnet_init_autograd();
+
   mxnet_init_executor();
 
   mxnet_init_io();

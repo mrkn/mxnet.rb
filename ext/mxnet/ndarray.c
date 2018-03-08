@@ -305,6 +305,89 @@ ndarray_slice(VALUE obj, VALUE start_v, VALUE stop_v)
   return mxnet_ndarray_new(out_handle);
 }
 
+static VALUE
+ndarray_attach_grad(VALUE obj, VALUE grad_req_v, VALUE grad)
+{
+  mx_uint grad_req;
+  NDArrayHandle self_handle, grad_handle;
+
+  self_handle = mxnet_get_handle(obj);
+  grad_req = NUM2UINT(grad_req_v);
+  grad_handle = mxnet_get_handle(grad);
+
+  CHECK_CALL(MXNET_API(MXAutogradMarkVariables)(1, &self_handle, &grad_req, &grad_handle));
+
+  return Qnil;
+}
+
+static VALUE
+ndarray_grad(VALUE obj)
+{
+  NDArrayHandle handle, grad_handle;
+  VALUE grad;
+
+  handle = mxnet_get_handle(obj);
+  CHECK_CALL(MXNET_API(MXNDArrayGetGrad)(handle, &grad_handle));
+  if (grad_handle == NULL) {
+    return Qnil;
+  }
+  grad = mxnet_ndarray_new(grad_handle);
+  return grad;
+}
+
+/* Compute the gradients of this NDARray w.r.t variables.
+ *
+ * @param out_grad [MXNet::NDArray] Gradient with respect to head.
+ * @param retain_graph [true, false]
+ *   Whether to retain the computation graph for another backward
+ *   pass on the same graph.  By default the computation history
+ *   is cleared.
+ * @param train_mode [true, false]
+ *   Whether to compute gradient for training or inference.
+ */
+static VALUE
+ndarray_backward(int argc, VALUE *argv, VALUE obj)
+{
+  VALUE opts;
+  NDArrayHandle self_handle, ograd_handle = NULL;
+  int retain_graph = 0, is_train = 1;
+
+  rb_scan_args(argc, argv, ":", &opts);
+  if (!NIL_P(opts)) {
+    static ID keywords[3];
+    VALUE kwargs[3];
+    if (!keywords[0]) {
+      keywords[0] = rb_intern("out_grad");
+      keywords[1] = rb_intern("retain_graph");
+      keywords[2] = rb_intern("train_mode");
+    }
+    rb_get_kwargs(opts, keywords, 0, 3, kwargs);
+    /* out_grad */
+    if (kwargs[0] != Qundef) {
+      if (!rb_obj_is_kind_of(kwargs[0], mxnet_cNDArray)) {
+        rb_raise(rb_eArgError, "out_grad must be a NDArray");
+      }
+      ograd_handle = mxnet_get_handle(kwargs[0]);
+    }
+    /* retain_graph */
+    if (kwargs[1] != Qundef) {
+      retain_graph = RTEST(kwargs[1]);
+    }
+    /* train_mode */
+    if (kwargs[2] != Qundef) {
+      is_train = RTEST(kwargs[2]);
+    }
+  }
+
+  self_handle = mxnet_get_handle(obj);
+  CHECK_CALL(MXNET_API(MXAutogradBackwardEx)(
+        1, &self_handle, &ograd_handle,
+        0, NULL,
+        retain_graph, 0, is_train, NULL, NULL));
+
+  return Qnil;
+}
+
 /* This function is based on npy_half_to_double and npy_halfbits_to_doublebits in numpy */
 static double
 float16_to_double(uint16_t h)
@@ -456,11 +539,14 @@ mxnet_init_ndarray(void)
   rb_define_method(cNDArray, "dtype_name", ndarray_get_dtype_name, 0);
   rb_define_method(cNDArray, "shape", mxnet_ndarray_get_shape, 0);
   rb_define_method(cNDArray, "reshape", ndarray_reshape, 1);
+  rb_define_method(cNDArray, "grad", ndarray_grad, 0);
+  rb_define_method(cNDArray, "backward", ndarray_backward, -1);
   rb_define_method(cNDArray, "to_a", ndarray_to_a, 0);
 
   rb_define_private_method(cNDArray, "_get_context_params", ndarray_get_context_params, 0);
   rb_define_private_method(cNDArray, "_at", ndarray_at, 1);
   rb_define_private_method(cNDArray, "_slice", ndarray_slice, 2);
+  rb_define_private_method(cNDArray, "_attach_grad", ndarray_attach_grad, 2);
 
   mxnet_cNDArray = cNDArray;
 

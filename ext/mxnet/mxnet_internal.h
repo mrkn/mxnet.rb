@@ -19,6 +19,8 @@ extern "C" {
 #ifdef HAVE_STDINT_H
 # include <stdint.h>
 #endif
+/* We assume that <stdbool.h> is available as MXNet uses it. */
+#include <stdbool.h>
 
 #ifndef HAVE_INT8_T
 typedef char int8_t;
@@ -132,6 +134,26 @@ struct mxnet_api_table {
   int (* MXNDArraySyncCopyToCPU)(NDArrayHandle handle, void *data, size_t size);
   int (* MXNDArrayAt)(NDArrayHandle handle, mx_uint idx, NDArrayHandle *out);
   int (* MXNDArraySlice)(NDArrayHandle handle, mx_uint start, mx_uint stop, NDArrayHandle *out);
+  int (* MXNDArrayGetGrad)(NDArrayHandle handle, NDArrayHandle *out);
+
+  int (* MXAutogradSetIsRecording)(int is_recording, int* prev);
+  int (* MXAutogradSetIsTraining)(int is_training, int* prev);
+  int (* MXAutogradIsRecording)(bool* curr);
+  int (* MXAutogradIsTraining)(bool* curr);
+  int (* MXAutogradMarkVariables)(mx_uint num_var,
+                                  NDArrayHandle *var_handles,
+                                  mx_uint *reqs_array,
+                                  NDArrayHandle *grad_handles);
+  int (* MXAutogradBackwardEx)(mx_uint num_output,
+                               NDArrayHandle *output_handles,
+                               NDArrayHandle *ograd_handles,
+                               mx_uint num_variables,
+                               NDArrayHandle *var_handles,
+                               int retain_graph,
+                               int create_graph,
+                               int is_train,
+                               NDArrayHandle **grad_handles,
+                               int **grad_stypes);
 
   int (* MXListAllOpNames)(mx_uint *out_size, const char ***out_array);
   int (* NNGetOpHandle)(char const *name, void **p_handle);
@@ -283,6 +305,7 @@ VALUE mxnet_symbol_new(SymbolHandle mxsymbol_handle);
 VALUE mxnet_symbol_list_outputs(VALUE obj);
 
 void mxnet_init_libmxnet(void);
+void mxnet_init_autograd(void);
 void mxnet_init_executor(void);
 void mxnet_init_io(void);
 void mxnet_init_ndarray(void);

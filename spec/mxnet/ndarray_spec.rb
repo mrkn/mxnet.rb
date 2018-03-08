@@ -635,6 +635,22 @@ module MXNet
       end
     end
 
+    describe '#attach_grad' do
+      context 'default stype' do
+        specify do
+          x = MXNet::NDArray.zeros([10, 10])
+          expect(x.grad).to eq(nil)
+          x.attach_grad
+          MXNet::Autograd.record do
+            y = x * 2
+            expect(y.grad).to eq(nil)
+            y.backward(out_grad: MXNet::NDArray.ones_like(y))
+          end
+          expect(x.grad.reshape([100]).to_a).to be_all {|a| a == 2.0 }
+        end
+      end
+    end
+
     describe '.concat' do
       pending
     end

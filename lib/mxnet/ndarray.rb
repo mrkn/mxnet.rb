@@ -477,6 +477,36 @@ module MXNet
       end
     end
 
+    GRAD_REQ_MAP = {
+      null: 0,
+      write: 1,
+      add: 3
+    }.freeze
+    private_constant :GRAD_REQ_MAP
+
+    # Attach a gradient buffer to this NDArray, so that `backward`
+    # can compute gradient with respect to it.
+    #
+    # @param grad_req [:write, :add, :null]
+    #   How gradient will be accumulated.
+    #   - `:write`: gradient will be overwritten on every backward.
+    #   - `:add`: gradient will be add to existing value on every backward.
+    #   - `:null`: do not compute gradient for this NDArray.
+    # @param stype [Symbol, String]
+    #   The storage type of the gradient array.
+    #   Defaults to the same stype of this NDArray.
+    def attach_grad(grad_req: :write, stype: nil)
+      if stype
+        # TODO: support stype
+        #grad = MXNet::NDArray.zeros(self.shape, stype: self.stype)
+        raise NotImplementedError
+      else
+        grad = Ops.zeros_like(self)
+      end
+      grad_req = GRAD_REQ_MAP[grad_req]
+      _attach_grad(grad_req, grad)
+    end
+
     # Broadcasts the input array to a new shape.
     #
     # Broadcasting is only allowed on axes with size 1.

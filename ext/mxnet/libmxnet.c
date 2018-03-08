@@ -65,6 +65,14 @@ init_api_table(VALUE handle)
   INIT_API_TABLE_ENTRY(MXNDArraySyncCopyToCPU);
   INIT_API_TABLE_ENTRY(MXNDArrayAt);
   INIT_API_TABLE_ENTRY(MXNDArraySlice);
+  INIT_API_TABLE_ENTRY(MXNDArrayGetGrad);
+
+  INIT_API_TABLE_ENTRY(MXAutogradSetIsRecording);
+  INIT_API_TABLE_ENTRY(MXAutogradSetIsTraining);
+  INIT_API_TABLE_ENTRY(MXAutogradIsRecording);
+  INIT_API_TABLE_ENTRY(MXAutogradIsTraining);
+  INIT_API_TABLE_ENTRY(MXAutogradMarkVariables);
+  INIT_API_TABLE_ENTRY(MXAutogradBackwardEx);
 
   INIT_API_TABLE_ENTRY(MXListAllOpNames);
   INIT_API_TABLE_ENTRY(NNGetOpHandle);

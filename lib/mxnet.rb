@@ -14,6 +14,7 @@ module MXNet
 
   require 'mxnet/libmxnet'
   require 'mxnet/attribute'
+  require 'mxnet/autograd'
   require 'mxnet/context'
   require 'mxnet/name_manager'
   require 'mxnet/executor'
