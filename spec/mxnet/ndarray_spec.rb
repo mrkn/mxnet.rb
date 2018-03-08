@@ -45,6 +45,13 @@ module MXNet
           expect(x[0].shape).to eq([3])
           expect(x[1].shape).to eq([3])
         end
+
+        specify do
+          x = MXNet::NDArray.ones([6, 100])
+          expect(x[0..-1, 0]).to be_a(MXNet::NDArray)
+          expect(x[0..-1, 1]).to be_a(MXNet::NDArray)
+          expect(x[0..-1, 0].shape).to eq([6])
+        end
       end
 
       context 'when the array is 3D' do

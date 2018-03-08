@@ -4,6 +4,14 @@ module MXNet
   module HandleWrapper
   end
 
+  None = Object.new
+  def None.to_s
+    'None'
+  end
+  def None.inspect
+    'None'
+  end
+
   require 'mxnet/libmxnet'
   require 'mxnet/attribute'
   require 'mxnet/context'

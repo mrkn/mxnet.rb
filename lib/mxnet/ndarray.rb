@@ -1,6 +1,7 @@
 module MXNet
   class NDArray
     include HandleWrapper
+    include Enumerable
 
     def self.ones(shape, ctx=nil, dtype=:float32, **kwargs)
       ctx ||= Context.default
@@ -31,11 +32,23 @@ module MXNet
       Context.new(dev_typeid, dev_id)
     end
 
+    def each
+      return enum_for unless block_given?
+
+      i = 0
+      n = shape[0]
+      while i < n
+        yield self[i]
+        i += 1
+      end
+    end
+
     # Returns a sliced view of this array.
     #
     # @param [Integer, Range, Array] key  Indexing key.
     # @return [NDArray] a sliced view of this array.
-    def [](key)
+    def [](*key)
+      key = key[0] if key.length == 1
       case key
       when Integer
         if key > shape[0] - 1
@@ -54,27 +67,48 @@ module MXNet
         end
       when Array
         keys = key
+        raise ArgumentError, "index cannot be an empty array" if keys.empty?
         shape = self.shape
         unless shape.length >= keys.length
           raise IndexError, "Slicing dimensions exceeds array dimensions, #{keys.length} vs #{shape.length}"
         end
-        out_shape, begins, ends = [], [], []
-        keys.each_with_index do |key, idx|
-          case key
+        begins, ends, steps, kept_axes = [], [], [], []
+        keys.each_with_index do |slice_i, idx|
+          case slice_i
           when Integer
-            begins << key
-            ends << key + 1
-          when Range
-            begins << (key.begin.nil? || key.begin == -Float::INFINITY) ? 0 : key.begin
-            ends << (key.end.nil? || key.end == Float::INFINITY) ? shape[i] : key.end
-            out_shape << ends.last - begins.last
+            begins << slice_i
+            ends << slice_i + 1
+            steps << 1
+          when Range, Enumerator
+            start, stop, step = MXNet::Utils.decompose_slice(slice_i)
+            if step == 0
+              raise ArgumentError, "index=#{keys} cannot have slice=#{slice_i} with step=0"
+            end
+            begins << (start || MXNet::None)
+            ends << (stop || MXNet::None)
+            steps << (step || MXNet::None)
+            kept_axes << idx
           else
-            raise IndexError, "NDArray does not support slicing with key #{key} of type #{key.class}"
+            raise IndexError, "NDArray does not support slicing with index=#{slice_i} of type #{slice_i.class}"
           end
         end
-        out_shape.concat(shape[keys.length..-1])
-        out_shape << 1 if out_shape.empty?
-        return slice(begins, ends).reshape(out_shape)
+        kept_axes.concat([*(keys.length) ... shape.length])
+        sliced_nd = Ops.slice(self, begin: begins, end: ends, step: steps)
+        return sliced_nd if kept_axes.length == shape.length
+
+        # squeeze sliced_shape to remove the axes indexed by integers
+        out_shape = []
+        sliced_shape = sliced_nd.shape
+        kept_axes.each do |axis|
+          out_shape << sliced_shape[axis]
+        end
+        # if key is an array of integers, still need to keep 1 dim
+        # while in Numpy, the output will become an value instead of an ndarray
+        out_shape << 1 if out_shape.length == 0
+        if out_shape.inject(:*) != sliced_shape.inject(:*)
+          raise "out_shape=#{out_shape} has different size than sliced_shape=#{sliced_shape}"
+        end
+        sliced_nd.reshape(out_shape)
       else
         raise IndexError, "NDArray does not support slicing with key #{key} of type #{key.class}"
       end
