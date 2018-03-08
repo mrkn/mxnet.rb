@@ -129,7 +129,7 @@ module MXNet
       shape = self.shape
       case key
       when Integer
-        Internal._set_value(src: value.to_f, out: _at(key))
+        self[key][0..-1] = value
         return value
       when Range, Enumerator
         start, stop, step = MXNet::Utils.decompose_slice(key)

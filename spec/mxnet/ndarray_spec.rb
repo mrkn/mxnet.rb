@@ -109,6 +109,12 @@ module MXNet
         end
 
         specify do
+          x = MXNet::NDArray.zeros(3)
+          x[1] += 1
+          expect(x.to_a).to eq([0, 1, 0])
+        end
+
+        specify do
           x = MXNet::NDArray.ones([4, 4])
           y = MXNet::NDArray.zeros([2, 2])
           x[1..2, 1..2] = y
