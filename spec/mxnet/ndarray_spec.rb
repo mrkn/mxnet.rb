@@ -635,6 +635,10 @@ module MXNet
       end
     end
 
+    describe '#tile' do
+      pending
+    end
+
     describe '#attach_grad' do
       context 'default stype' do
         specify do

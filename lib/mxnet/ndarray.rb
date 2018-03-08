@@ -477,6 +477,10 @@ module MXNet
       end
     end
 
+    def tile(*args, **kwargs)
+      Ops.tile(self, *args, **kwargs)
+    end
+
     GRAD_REQ_MAP = {
       null: 0,
       write: 1,
