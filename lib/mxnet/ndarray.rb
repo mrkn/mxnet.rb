@@ -32,6 +32,18 @@ module MXNet
       Context.new(dev_typeid, dev_id)
     end
 
+    # Returns an array on the target device with the same value as this array.
+    #
+    # If the target context is the same as `self.context`, then `self` is returned.
+    # Otherwise, a copy is made.
+    #
+    # @param context [MXNet::Context] The target context.
+    # @return [NDArray, CSRNDArray, RowSparseNDArray] The target array.
+    def as_in_context(context)
+      return self if self.context == context
+      copy_to(context)
+    end
+
     def each
       return enum_for unless block_given?
 
@@ -81,9 +93,7 @@ module MXNet
             steps << 1
           when Range, Enumerator
             start, stop, step = MXNet::Utils.decompose_slice(slice_i)
-            if step == 0
-              raise ArgumentError, "index=#{keys} cannot have slice=#{slice_i} with step=0"
-            end
+            raise ArgumentError, "index=#{keys} cannot have slice=#{slice_i} with step=0" if step == 0
             begins << (start || MXNet::None)
             ends << (stop || MXNet::None)
             steps << (step || MXNet::None)
@@ -114,11 +124,13 @@ module MXNet
       end
     end
 
-    def []=(key, value)
-      view = self[key]
+    def []=(*key, value)
+      key = key[0] if key.length == 1
+      shape = self.shape
       case key
-      when Numeric
-        Internal._set_value(src: value.to_f, out: view)
+      when Integer
+        Internal._set_value(src: value.to_f, out: _at(key))
+        return value
       when Range, Enumerator
         start, stop, step = MXNet::Utils.decompose_slice(key)
         if step.nil? || step == 1
@@ -131,10 +143,76 @@ module MXNet
           return value
         end
         # non-trivial step, use _slice_assign or _slice_assign_scalar
-        raise NotImplementedError
-      else
-        raise NotImplementedError
+        key = [key]
       end
+      unless key.is_a? Array
+        raise TypeError, "key=#{key} must be an array of slices and integers"
+      end
+      if key.length > shape.length
+        raise ArgumentError, "Indexing dimensions exceed array dimensions, #{key.length} vs #{shape.length}"
+      end
+      begins, ends, steps = [], [], []
+      out_shape, value_shape = [], []
+      key.each_with_index do |slice_i, idx|
+        dim_size = 1
+        case slice_i
+        when Integer
+          begins << slice_i
+          ends << slice_i + 1
+          steps << 1
+        when Range, Enumerator
+          start, stop, step = MXNet::Utils.decompose_slice(slice_i)
+          raise ArgumentError, "index=#{keys} cannot have slice=#{slice_i} with step=0" if step == 0
+          begins << (start || MXNet::None)
+          ends << (stop || MXNet::None)
+          steps << (step || MXNet::None)
+
+          # noremalize slice components
+          len = shape[idx]
+          step ||= 1
+          if start.nil?
+            start = step > 0 ? 0 : len - 1
+          elsif start < 0
+            start += len
+            raise IndexError, "slicing start #{start - len} exceeds limit of #{len}" if start < 0
+          elsif start >= len
+            raise IndexError, "slicing start #{start} exceeds limit of #{len}"
+          end
+          if stop.nil?
+            stop = step > 0 ? len : -1
+          elsif stop < 0
+            stop += len
+            raise IndexError, "slicing stop #{stop - len} exceeds limit of #{len}" if stop < 0
+          elsif stop >= len
+            raise IndexError, "slicing stop #{stop} exceeds limit of #{len}"
+          end
+
+          dim_size = if step > 0
+                       (stop - start - 1).div(step) + 1
+                     else
+                       (start - stop - 1).div(-step) + 1
+                     end
+           value_shape << dim_size
+        else
+          raise ArgumentError, "NDArray does not support index=#{slice_i} of type #{slice_i.class}"
+        end
+        out_shape << dim_size
+      end
+      out_shape.concat(shape[key.length..-1])
+      value_shape.concat(shape[key.length..-1])
+      # if key contains all integers, value_shape should be [1]
+      value_shape << 1 if value_shape.empty?
+
+      case value
+      when Numeric
+        Internal._slice_assign_scalar(self, scalar: Float(value), begin: begins, end: ends, step: steps, out: self)
+      else
+        value_nd = _prepare_value_nd(value, value_shape)
+        value_nd = value_nd.reshape(out_shape) if value_shape != out_shape
+        Internal._slice_assign(self, value_nd, begin: begins, end: ends, step: steps, out: self)
+      end
+
+      return value
     end
 
     def _fill_by(value)
@@ -169,6 +247,24 @@ module MXNet
       end
     end
     private :_fill_by
+
+    private def _prepare_value_nd(value, value_shape)
+      case value
+      when Numeric
+        value_nd = NDArray.full(shape: value_shape, val: value, ctx: self.context, dtype: self.dtype)
+      when NDArray
+        value_nd = value.as_in_context(self.context)
+        value_nd = value_nd.as_type(self.dtype) if value_nd.dtype != self.dtype
+      else
+        begin
+          value_nd = NDArray.array(value, ctx: self.context, dtype: self.dtype)
+        rescue Exception
+          raise TypeError, "NDArray does not support assignment with non-array-like object #{value} of type #{value.class}"
+        end
+      end
+      value_nd = value_nd.broadcast_to(value_shape) if value_nd.shape != value_shape
+      return value_nd
+    end
 
     def ndim
       shape.length
@@ -347,6 +443,17 @@ module MXNet
       else
         super
       end
+    end
+
+    # Broadcasts the input array to a new shape.
+    #
+    # Broadcasting is only allowed on axes with size 1.
+    # The new shape cannot change the number of dimensions.
+    # For example, you could broadcast from shape [2, 1] to [2, 3], but not from
+    # shape [2, 3] to [2, 3, 3].
+    def broadcast_to(shape)
+      # TODO
+      raise NotImplementedError
     end
 
     # Returns a Numo::NArray object with value copied from this array.

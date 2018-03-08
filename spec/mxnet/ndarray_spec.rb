@@ -101,6 +101,32 @@ module MXNet
           x[1][0..-1] = MXNet::NDArray.arange(10, 13)
           expect(x.reshape([9]).to_a).to eq([0.0, 1.0, 2.0, 10.0, 11.0, 12.0, 6.0, 7.0, 8.0])
         end
+
+        specify do
+          x = MXNet::NDArray.ones([3, 3])
+          x[0..-1, 1] = 10
+          expect(x.reshape([9]).to_a).to eq([1.0, 10.0, 1.0, 1.0, 10.0, 1.0, 1.0, 10.0, 1.0])
+        end
+
+        specify do
+          x = MXNet::NDArray.ones([4, 4])
+          y = MXNet::NDArray.zeros([2, 2])
+          x[1..2, 1..2] = y
+          expect(x.reshape([16]).to_a).to eq([1.0, 1.0, 1.0, 1.0,
+                                              1.0, 0.0, 0.0, 1.0,
+                                              1.0, 0.0, 0.0, 1.0,
+                                              1.0, 1.0, 1.0, 1.0])
+        end
+
+        xspecify do
+          x = MXNet::NDArray.ones([4, 4])
+          y = MXNet::NDArray.zeros([1])
+          x[1..2, 1..2] = y
+          expect(x.reshape([16]).to_a).to eq([1.0, 1.0, 1.0, 1.0,
+                                              1.0, 0.0, 0.0, 1.0,
+                                              1.0, 0.0, 0.0, 1.0,
+                                              1.0, 1.0, 1.0, 1.0])
+        end
       end
     end
 
