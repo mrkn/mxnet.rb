@@ -655,6 +655,10 @@ module MXNet
       end
     end
 
+    describe '.maximum' do
+      pending
+    end
+
     describe '.concat' do
       pending
     end

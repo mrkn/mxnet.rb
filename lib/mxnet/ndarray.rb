@@ -536,6 +536,25 @@ module MXNet
         end
       end
     end
+
+    # Returns element-wise maximum of the input arrays with broadcasting.
+    #
+    # Equivalent to `MXNet::NDArray.broadcast_maximum(lhs, rhs)`.
+    def self.maximum(lhs, rhs)
+      if lhs.is_a? Numeric
+        if rhs.is_a? Numeric
+          return [lhs, rhs].max
+        else
+          Internal._maximum_scalar(rhs, scalar: Float(lhs))
+        end
+      elsif rhs.is_a? Numeric
+        Internal._maximum_scalar(lhs, scalar: Float(rhs))
+      elsif rhs.is_a? NDArray
+        Ops.broadcast_maximum(lhs, rhs)
+      else
+        raise TypeError, "type #{rhs.class} not supported"
+      end
+    end
   end
 
   NDArray::CONVERTER = []
