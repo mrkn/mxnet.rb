@@ -16,3 +16,6 @@
 
 # rspec failure tracking
 .rspec_status
+
+# jupyter notebook checkpoint
+.ipynb_checkpoints/

@@ -1,0 +1,12 @@
+source 'https://rubygems.org'
+
+git_source(:github) {|repo_name| "https://github.com/#{repo_name}" }
+
+gem 'mxnet', path: '..'
+
+gem 'pry'
+gem 'cztop'
+gem 'iruby'
+gem 'numo-narray'
+gem 'rbplotly'
+gem 'chunky_png'
