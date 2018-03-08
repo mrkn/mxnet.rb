@@ -297,7 +297,10 @@ module MXNet
     end
 
     describe '.full' do
-      pending
+      specify do
+        x = MXNet::NDArray.full([3], 3.14, dtype: :float64)
+        expect(x.to_a).to eq([3.14, 3.14, 3.14])
+      end
     end
 
     describe '.array' do

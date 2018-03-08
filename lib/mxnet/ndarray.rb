@@ -21,6 +21,13 @@ module MXNet
       Internal._arange(start: start, stop: stop, step: step, repeat: repeat, dtype: dtype, ctx: ctx)
     end
 
+    def self.full(shape, val, ctx: nil, dtype: :float32, out: nil)
+      ctx ||= Context.default
+      out ||= empty(shape, ctx: ctx, dtype: dtype)
+      out[0..-1] = val
+      return out
+    end
+
     def inspect
       shape_info = shape.join('x')
       ary = to_narray.inspect.lines[1..-1].join
