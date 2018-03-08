@@ -294,6 +294,14 @@ module MXNet
       to_a[0]
     end
 
+    def to_i
+      as_scalar.to_i
+    end
+
+    def to_f
+      as_scalar.to_f
+    end
+
     def +@
       self
     end

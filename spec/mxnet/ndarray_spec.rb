@@ -621,6 +621,20 @@ module MXNet
       end
     end
 
+    describe '#to_i' do
+      specify do
+        x = MXNet::NDArray.full([1], 3.14, dtype: :float64)
+        expect(x.to_i).to eq(3)
+      end
+    end
+
+    describe '#to_f' do
+      specify do
+        x = MXNet::NDArray.full([1], 3.14, dtype: :float64)
+        expect(x.to_f).to eq(3.14)
+      end
+    end
+
     describe '.concat' do
       pending
     end
