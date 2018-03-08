@@ -448,7 +448,7 @@ get_ndarray_inputs(char const *arg_key, VALUE args, VALUE arg_names, int allow_m
       if (!rb_obj_is_kind_of(ndary, mxnet_cNDArray)) {
         rb_raise(rb_eTypeError, "Only accept Array of NDArrays or Hash of Symbol to NDArray");
       }
-      arg_handles[i] = mxnet_get_handle(ndary);
+      arg_handles[i] = mxnet_ndarray_get_handle(ndary);
     }
     arg_arrays = args;
   }
@@ -464,7 +464,7 @@ get_ndarray_inputs(char const *arg_key, VALUE args, VALUE arg_names, int allow_m
         if (!rb_obj_is_kind_of(ndary, mxnet_cNDArray)) {
           rb_raise(rb_eTypeError, "Only accept array of NDArrays or hash of Symbol to NDArray");
         }
-        arg_handles[i] = mxnet_get_handle(ndary);
+        arg_handles[i] = mxnet_ndarray_get_handle(ndary);
         rb_ary_push(arg_arrays, ndary);
       }
       else if (allow_missing) {

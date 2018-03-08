@@ -1,6 +1,5 @@
 module MXNet
   class NDArray
-    include HandleWrapper
     include Enumerable
 
     def self.ones(shape, ctx=nil, dtype=:float32, **kwargs)

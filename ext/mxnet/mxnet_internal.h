@@ -124,6 +124,7 @@ struct mxnet_api_table {
   int (* MXNDArrayCreateEx)(const mx_uint *shape, mx_uint ndim,
                             int dev_type, int dev_id, int delay_alloc,
                             int dtype, NDArrayHandle *out);
+  int (* MXNDArrayFree)(NDArrayHandle handle);
   int (* MXNDArrayReshape)(NDArrayHandle handle, int ndim, int *dims,
                            NDArrayHandle *out);
   int (* MXNDArrayGetContext)(NDArrayHandle handle, int *out_dev_type, int *out_dev_id);
@@ -299,6 +300,7 @@ void mxnet_executor_set_aux_arrays(VALUE obj, VALUE aux_states);
 void mxnet_check_type(VALUE obj, VALUE klass);
 
 VALUE mxnet_ndarray_new(NDArrayHandle ndarray_handle);
+NDArrayHandle mxnet_ndarray_get_handle(VALUE obj);
 VALUE mxnet_ndarray_get_shape(VALUE obj);
 
 VALUE mxnet_symbol_new(SymbolHandle mxsymbol_handle);

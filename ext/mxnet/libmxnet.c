@@ -57,6 +57,7 @@ init_api_table(VALUE handle)
   INIT_API_TABLE_ENTRY(MXExecutorBindEX);
 
   INIT_API_TABLE_ENTRY(MXNDArrayCreateEx);
+  INIT_API_TABLE_ENTRY(MXNDArrayFree);
   INIT_API_TABLE_ENTRY(MXNDArrayReshape);
   INIT_API_TABLE_ENTRY(MXNDArrayGetContext);
   INIT_API_TABLE_ENTRY(MXNDArrayGetShape);
@@ -129,7 +130,7 @@ imperative_invoke(VALUE mod, VALUE handle, VALUE ndargs, VALUE keys, VALUE vals,
   inputs_str = rb_str_tmp_new(sizeof(void *)*num_inputs);
   inputs = (void **)RSTRING_PTR(inputs_str);
   for (i = 0; i < num_inputs; ++i) {
-    inputs[i] = mxnet_get_handle(RARRAY_AREF(ndargs, i));
+    inputs[i] = mxnet_ndarray_get_handle(RARRAY_AREF(ndargs, i));
   }
 
   num_params = (int)RARRAY_LEN(keys);
@@ -155,7 +156,7 @@ imperative_invoke(VALUE mod, VALUE handle, VALUE ndargs, VALUE keys, VALUE vals,
       num_outputs = 1;
       outputs_str = rb_str_tmp_new(sizeof(void *));
       outputs = (void **)RSTRING_PTR(outputs_str);
-      outputs[0] = mxnet_get_handle(out);
+      outputs[0] = mxnet_ndarray_get_handle(out);
     }
     else {
       out = rb_check_convert_type(out, T_ARRAY, "Array", "to_ary");
@@ -167,7 +168,7 @@ imperative_invoke(VALUE mod, VALUE handle, VALUE ndargs, VALUE keys, VALUE vals,
       outputs = (void **)RSTRING_PTR(outputs_str);
       for (i = 0; i < num_outputs; ++i) {
         VALUE v = RARRAY_AREF(out, i);
-        outputs[i] = mxnet_get_handle(v);
+        outputs[i] = mxnet_ndarray_get_handle(v);
       }
     }
   }

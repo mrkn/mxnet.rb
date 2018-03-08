@@ -14,7 +14,7 @@ ndarray_to_narray(VALUE obj)
   size_t *na_shape, na_size;
   char *na_ptr;
 
-  handle = mxnet_get_handle(obj);
+  handle = mxnet_ndarray_get_handle(obj);
   CHECK_CALL(MXNET_API(MXNDArrayGetShape)(handle, &mx_ndim, &mx_shape));
   CHECK_CALL(MXNET_API(MXNDArrayGetDType)(handle, &mx_dtype_id));
 
@@ -81,7 +81,7 @@ m_sync_copyfrom(VALUE mod, VALUE nd_obj, VALUE nary)
   data = NA_DATA_PTR(na);
   size = NA_SIZE(na);
 
-  handle = mxnet_get_handle(nd_obj);
+  handle = mxnet_ndarray_get_handle(nd_obj);
   CHECK_CALL(MXNET_API(MXNDArraySyncCopyFromCPU)(handle, data, size));
 
   return nd_obj;
