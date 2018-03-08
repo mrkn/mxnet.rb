@@ -99,6 +99,12 @@ ndarray_allocate_handle(VALUE shape_v, VALUE ctx_v, VALUE delay_alloc, VALUE dty
   dev_id = mxnet_context_get_device_id(ctx_v);
   if (NIL_P(dtype_v))
     dtype = kFloat32;
+  else if (RB_INTEGER_TYPE_P(dtype_v)) {
+    dtype = NUM2INT(dtype_v);
+    if (NIL_P(mxnet_dtype_id2name(dtype))) {
+      rb_raise(rb_eArgError, "invalid id of dtype: %d", dtype);
+    }
+  }
   else
     dtype = mxnet_dtype_name2id(dtype_v);
 

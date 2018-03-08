@@ -51,6 +51,23 @@ module MXNet
       copy_to(context)
     end
 
+    def copy_to(other)
+      case other
+      when NDArray
+        # TODO: check handle identity
+        return Internal._copyto(self, out: other)
+      when Context
+        res = NDArray.empty(self.shape, ctx: other, dtype: dtype)
+        return Internal._copyto(self, out: res)
+      else
+        raise TypeError, "copy_to does not support type #{other.class}"
+      end
+    end
+
+    def dup
+      copy_to(self.context)
+    end
+
     def each
       return enum_for unless block_given?
 
