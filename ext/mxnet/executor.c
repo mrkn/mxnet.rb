@@ -191,7 +191,7 @@ executor_backward(int argc, VALUE *argv, VALUE obj)
   ndarray_handles = (void **)RSTRING_PTR(ndarray_handles_str);
   for (i = 0; i < RARRAY_LEN(out_grads); ++i) {
     VALUE ndary = RARRAY_AREF(out_grads, i);
-    ndarray_handles[i] = mxnet_get_handle(ndary);
+    ndarray_handles[i] = mxnet_ndarray_get_handle(ndary);
   }
 
   handle = mxnet_get_handle(obj);

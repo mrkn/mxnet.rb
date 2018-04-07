@@ -10,10 +10,17 @@ extern "C" {
 
 #include <ruby.h>
 
+/* Defined only in ruby 2.4.0+. Redefine here for Ruby 2.x backward compatibility */
+#ifndef RB_INTEGER_TYPE_P
+  # define RB_INTEGER_TYPE_P(c) (FIXNUM_P(c) || RB_TYPE_P(c, T_BIGNUM))
+#endif
+
 #include <assert.h>
 #ifdef HAVE_STDINT_H
 # include <stdint.h>
 #endif
+/* We assume that <stdbool.h> is available as MXNet uses it. */
+#include <stdbool.h>
 
 #ifndef HAVE_INT8_T
 typedef char int8_t;
@@ -66,6 +73,8 @@ typedef unsigned LONG_LONG uint64_t;
 typedef unsigned int mx_uint;
 typedef float mx_float;
 typedef void *ExecutorHandle;
+typedef void *DataIterCreator;
+typedef void *DataIterHandle;
 typedef void *NDArrayHandle;
 typedef void *SymbolHandle;
 
@@ -115,14 +124,37 @@ struct mxnet_api_table {
   int (* MXNDArrayCreateEx)(const mx_uint *shape, mx_uint ndim,
                             int dev_type, int dev_id, int delay_alloc,
                             int dtype, NDArrayHandle *out);
+  int (* MXNDArrayFree)(NDArrayHandle handle);
   int (* MXNDArrayReshape)(NDArrayHandle handle, int ndim, int *dims,
                            NDArrayHandle *out);
+  int (* MXNDArrayGetContext)(NDArrayHandle handle, int *out_dev_type, int *out_dev_id);
   int (* MXNDArrayGetShape)(NDArrayHandle handle, mx_uint *out_dim,
                             const mx_uint **out_pdata);
   int (* MXNDArrayGetDType)(NDArrayHandle handle, int *out_dtype);
+  int (* MXNDArraySyncCopyFromCPU)(NDArrayHandle handle, const void *data, size_t size);
   int (* MXNDArraySyncCopyToCPU)(NDArrayHandle handle, void *data, size_t size);
   int (* MXNDArrayAt)(NDArrayHandle handle, mx_uint idx, NDArrayHandle *out);
   int (* MXNDArraySlice)(NDArrayHandle handle, mx_uint start, mx_uint stop, NDArrayHandle *out);
+  int (* MXNDArrayGetGrad)(NDArrayHandle handle, NDArrayHandle *out);
+
+  int (* MXAutogradSetIsRecording)(int is_recording, int* prev);
+  int (* MXAutogradSetIsTraining)(int is_training, int* prev);
+  int (* MXAutogradIsRecording)(bool* curr);
+  int (* MXAutogradIsTraining)(bool* curr);
+  int (* MXAutogradMarkVariables)(mx_uint num_var,
+                                  NDArrayHandle *var_handles,
+                                  mx_uint *reqs_array,
+                                  NDArrayHandle *grad_handles);
+  int (* MXAutogradBackwardEx)(mx_uint num_output,
+                               NDArrayHandle *output_handles,
+                               NDArrayHandle *ograd_handles,
+                               mx_uint num_variables,
+                               NDArrayHandle *var_handles,
+                               int retain_graph,
+                               int create_graph,
+                               int is_train,
+                               NDArrayHandle **grad_handles,
+                               int **grad_stypes);
 
   int (* MXListAllOpNames)(mx_uint *out_size, const char ***out_array);
   int (* NNGetOpHandle)(char const *name, void **p_handle);
@@ -141,6 +173,33 @@ struct mxnet_api_table {
       const char **param_keys,
       const char **param_vals);
 
+  int (* MXListDataIters)(mx_uint *out_size, DataIterCreator **out_array);
+  int (* MXDataIterCreateIter)(DataIterCreator handle,
+                               mx_uint num_param,
+                               const char **keys,
+                               const char **vals,
+                               DataIterHandle *out);
+  int (* MXDataIterGetIterInfo)(DataIterCreator creator,
+                                const char **name,
+                                const char **description,
+                                mx_uint *num_args,
+                                const char ***arg_names,
+                                const char ***arg_type_infos,
+                                const char ***arg_descriptions);
+  int (* MXDataIterFree)(DataIterHandle handle);
+  int (* MXDataIterNext)(DataIterHandle handle,
+                        int *out);
+  int (* MXDataIterBeforeFirst)(DataIterHandle handle);
+  int (* MXDataIterGetData)(DataIterHandle handle,
+                            NDArrayHandle *out);
+  int (* MXDataIterGetIndex)(DataIterHandle handle,
+                             uint64_t **out_index,
+                             uint64_t *out_size);
+  int (* MXDataIterGetPadNum)(DataIterHandle handle,
+                              int *pad);
+  int (* MXDataIterGetLabel)(DataIterHandle handle,
+                             NDArrayHandle *out);
+
   int (* MXSymbolCreateAtomicSymbol)(void *creator,
                                      mx_uint num_param,
                                      const char **keys,
@@ -158,6 +217,12 @@ struct mxnet_api_table {
   int (* MXSymbolGetName)(SymbolHandle symbol,
                           const char** out,
                           int *success);
+  int (* MXSymbolSetAttr)(SymbolHandle symbol,
+                          const char* key,
+                          const char* value);
+  int (* MXSymbolListAttr)(SymbolHandle symbol,
+                           mx_uint *out_size,
+                           const char ***out);
   int (* MXSymbolListArguments)(SymbolHandle symbol,
                                 mx_uint *out_size,
                                 const char ***out_str_array);
@@ -232,18 +297,24 @@ void mxnet_executor_set_arg_arrays(VALUE obj, VALUE args);
 void mxnet_executor_set_grad_arrays(VALUE obj, VALUE args_grad);
 void mxnet_executor_set_aux_arrays(VALUE obj, VALUE aux_states);
 
+void mxnet_check_type(VALUE obj, VALUE klass);
+
 VALUE mxnet_ndarray_new(NDArrayHandle ndarray_handle);
+NDArrayHandle mxnet_ndarray_get_handle(VALUE obj);
 VALUE mxnet_ndarray_get_shape(VALUE obj);
 
 VALUE mxnet_symbol_new(SymbolHandle mxsymbol_handle);
 VALUE mxnet_symbol_list_outputs(VALUE obj);
 
 void mxnet_init_libmxnet(void);
+void mxnet_init_autograd(void);
 void mxnet_init_executor(void);
+void mxnet_init_io(void);
 void mxnet_init_ndarray(void);
 void mxnet_init_symbol(void);
 void mxnet_init_operations(VALUE klass);
 void mxnet_init_random(void);
+void mxnet_init_utils(void);
 
 NORETURN(void mxnet_raise_last_error(void));
 #define CHECK_CALL(expr) if ((expr) != 0) mxnet_raise_last_error()
@@ -252,6 +323,7 @@ extern VALUE mxnet_mMXNet;
 extern VALUE mxnet_mUtils;
 extern VALUE mxnet_cContext;
 extern VALUE mxnet_cExecutor;
+extern VALUE mxnet_cMXDataIter;
 extern VALUE mxnet_cNDArray;
 extern VALUE mxnet_cSymbol;
 
@@ -259,6 +331,18 @@ extern VALUE mxnet_sOpInfo;
 extern VALUE mxnet_sOpArgInfo;
 
 extern VALUE mxnet_eError;
+
+static inline int
+mxnet_is_ndarray(VALUE obj)
+{
+  return RTEST(rb_obj_is_kind_of(obj, mxnet_cNDArray));
+}
+
+static inline void
+mxnet_check_ndarray(VALUE obj)
+{
+  mxnet_check_type(obj, mxnet_cNDArray);
+}
 
 #ifdef __cplusplus
 #if 0

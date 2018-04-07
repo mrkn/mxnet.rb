@@ -14,13 +14,7 @@ module MXNet
           expect(x[0].as_scalar).to eq(0.0)
           expect(x[1].as_scalar).to eq(0.0)
           expect(x[2].as_scalar).to eq(0.0)
-        end
-
-        specify do
-          x = MXNet::NDArray.zeros([2, 3])
-          expect(x[0]).to be_a(MXNet::NDArray)
-          expect(x[0].shape).to eq([3])
-          expect(x[0][0].as_scalar).to eq(0.0)
+          expect(x.shape).to eq([3])
         end
 
         specify do
@@ -29,14 +23,48 @@ module MXNet
           expect(x[3...6].shape).to eq([3])
           expect(x[3...6].to_a).to eq([3.0, 4.0, 5.0])
         end
+
+        specify do
+          x = MXNet::NDArray.arange(11)
+          expect(x[(1...9).step(2)]).to be_a(MXNet::NDArray)
+          expect(x[(1...9).step(2)].shape).to eq([4])
+          expect(x[(1...9).step(2)].to_a).to eq([1.0, 3.0, 5.0, 7.0])
+          expect(x[(1...10).step(2)].to_a).to eq([1.0, 3.0, 5.0, 7.0, 9.0])
+          expect(x[(9...1).step(-2)].to_a).to eq([9.0, 7.0, 5.0, 3.0])
+        end
       end
 
       context 'when the array is 2D' do
-        pending
+        specify do
+          x = MXNet::NDArray.zeros([2,3])
+          expect(x[0]).to be_a(MXNet::NDArray)
+          expect(x[1]).to be_a(MXNet::NDArray)
+          expect(x[0][0].as_scalar).to eq(0.0)
+          expect(x[1][2].as_scalar).to eq(0.0)
+          expect(x[1][1].as_scalar).to eq(0.0)
+          expect(x[0].shape).to eq([3])
+          expect(x[1].shape).to eq([3])
+        end
+
+        specify do
+          x = MXNet::NDArray.ones([6, 100])
+          expect(x[0..-1, 0]).to be_a(MXNet::NDArray)
+          expect(x[0..-1, 1]).to be_a(MXNet::NDArray)
+          expect(x[0..-1, 0].shape).to eq([6])
+        end
       end
 
       context 'when the array is 3D' do
-        pending
+        specify do
+          x = MXNet::NDArray.zeros([2,3,4])
+          expect(x[0]).to be_a(MXNet::NDArray)
+          expect(x[1]).to be_a(MXNet::NDArray)
+          expect(x[0][0][0].as_scalar).to eq(0.0)
+          expect(x[1][2][3].as_scalar).to eq(0.0)
+          expect(x[1][1][1].as_scalar).to eq(0.0)
+          expect(x[0].shape).to eq([3,4])
+          expect(x[0][1].shape).to eq([4])
+        end
       end
     end
 
@@ -54,7 +82,58 @@ module MXNet
           expect(x.to_a).to eq([0.0, 10.0, 10.0, 0.0, 0.0])
         end
       end
-      pending
+
+      context 'when the array is 2D' do
+        specify do
+          x = MXNet::NDArray.arange(0, 9).reshape([3, 3])
+          x[1][1] = 100.0
+          expect(x.reshape([9]).to_a).to eq([0.0, 1.0, 2.0, 3.0, 100.0, 5.0, 6.0, 7.0, 8.0])
+        end
+
+        specify do
+          x = MXNet::NDArray.arange(0, 9).reshape([3, 3])
+          x[1][0..-1] = 200.0
+          expect(x.reshape([9]).to_a).to eq([0.0, 1.0, 2.0, 200.0, 200.0, 200.0, 6.0, 7.0, 8.0])
+        end
+
+        specify do
+          x = MXNet::NDArray.arange(0, 9).reshape([3, 3])
+          x[1][0..-1] = MXNet::NDArray.arange(10, 13)
+          expect(x.reshape([9]).to_a).to eq([0.0, 1.0, 2.0, 10.0, 11.0, 12.0, 6.0, 7.0, 8.0])
+        end
+
+        specify do
+          x = MXNet::NDArray.ones([3, 3])
+          x[0..-1, 1] = 10
+          expect(x.reshape([9]).to_a).to eq([1.0, 10.0, 1.0, 1.0, 10.0, 1.0, 1.0, 10.0, 1.0])
+        end
+
+        specify do
+          x = MXNet::NDArray.zeros(3)
+          x[1] += 1
+          expect(x.to_a).to eq([0, 1, 0])
+        end
+
+        specify do
+          x = MXNet::NDArray.ones([4, 4])
+          y = MXNet::NDArray.zeros([2, 2])
+          x[1..2, 1..2] = y
+          expect(x.reshape([16]).to_a).to eq([1.0, 1.0, 1.0, 1.0,
+                                              1.0, 0.0, 0.0, 1.0,
+                                              1.0, 0.0, 0.0, 1.0,
+                                              1.0, 1.0, 1.0, 1.0])
+        end
+
+        xspecify do
+          x = MXNet::NDArray.ones([4, 4])
+          y = MXNet::NDArray.zeros([1])
+          x[1..2, 1..2] = y
+          expect(x.reshape([16]).to_a).to eq([1.0, 1.0, 1.0, 1.0,
+                                              1.0, 0.0, 0.0, 1.0,
+                                              1.0, 0.0, 0.0, 1.0,
+                                              1.0, 1.0, 1.0, 1.0])
+        end
+      end
     end
 
     describe '#reshape' do
@@ -103,7 +182,15 @@ module MXNet
     end
 
     describe '#context' do
-      pending
+      specify do
+        x = MXNet::NDArray.ones([2, 3])
+        expect(x.context).to eq(MXNet.current_context)
+      end
+
+      specify do
+        x = MXNet::NDArray.ones([2, 3], ctx: MXNet.cpu)
+        expect(x.context).to eq(MXNet.cpu)
+      end
     end
 
     describe '#dtype' do
@@ -169,6 +256,7 @@ module MXNet
         x = MXNet::NDArray.ones([2, 1, 3])
         expect(x).to be_a(MXNet::NDArray)
         expect(x.shape).to eq([2, 1, 3])
+        expect(x.reshape([6]).to_a).to be_all {|x| x == 1.0 }
       end
     end
 
@@ -209,7 +297,10 @@ module MXNet
     end
 
     describe '.full' do
-      pending
+      specify do
+        x = MXNet::NDArray.full([3], 3.14, dtype: :float64)
+        expect(x.to_a).to eq([3.14, 3.14, 3.14])
+      end
     end
 
     describe '.array' do
@@ -224,53 +315,161 @@ module MXNet
     end
 
     describe '#+' do
-      specify do
-        x = MXNet::NDArray.ones([2, 3, 4])
-        y = MXNet::NDArray.ones([2, 3, 4])
-        z = x + y
-        expect(z.reshape([24]).to_a).to eq([2.0] * 24)
+      describe 'ndarray + ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4])
+          y = MXNet::NDArray.ones([2, 3, 4])
+          z = x + y
+          expect(z.reshape([24]).to_a).to eq([2.0] * 24)
+        end
+      end
+
+      describe 'ndarray + scalar' do
+        specify do
+          x = MXNet::NDArray.arange(3)
+          y = x + 1
+          expect(y.to_a).to eq([1, 2, 3])
+        end
+      end
+
+      describe 'scalar + ndarray' do
+        specify do
+          x = MXNet::NDArray.arange(3)
+          y = 1 + x
+          expect(y.to_a).to eq([1, 2, 3])
+        end
       end
     end
 
     describe '#-' do
-      specify do
-        x = MXNet::NDArray.ones([2, 3, 4])
-        y = MXNet::NDArray.ones([2, 3, 4])
-        z = x - y
-        expect(z.reshape([24]).to_a).to eq([0.0] * 24)
+      describe 'ndarray - ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4])
+          y = MXNet::NDArray.ones([2, 3, 4])
+          z = x - y
+          expect(z.reshape([24]).to_a).to eq([0.0] * 24)
+        end
+      end
+
+      describe 'ndarray - scalar' do
+        specify do
+          x = MXNet::NDArray.arange(3)
+          y = x - 1
+          expect(y.to_a).to eq([-1, 0, 1])
+        end
+      end
+
+      describe 'scalar - ndarray' do
+        specify do
+          x = MXNet::NDArray.arange(3)
+          y = 2 - x
+          expect(y.to_a).to eq([2, 1, 0])
+        end
       end
     end
 
     describe '#*' do
-      specify do
-        x = MXNet::NDArray.ones([2, 3, 4])
-        y = x + x
-        z = y * y
-        expect(z.reshape([24]).to_a).to eq([4.0] * 24)
+      describe 'ndarray * ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4])
+          y = x + x
+          z = y * y
+          expect(z.reshape([24]).to_a).to eq([4.0] * 24)
+        end
+      end
+
+      describe 'ndarray * scalar' do
+        specify do
+          x = MXNet::NDArray.arange(3)
+          y = x * 10
+          expect(y.to_a).to eq([0, 10, 20])
+        end
+      end
+
+      describe 'scalar * ndarray' do
+        specify do
+          x = MXNet::NDArray.arange(3)
+          y = 10 * x
+          expect(y.to_a).to eq([0, 10, 20])
+        end
       end
     end
 
     describe '#/' do
-      specify do
-        x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
-        z = (x + x) / (x + x + x)
-        expect(z.reshape([24]).to_a).to eq([2.0 / 3.0] * 24)
+      describe 'ndarray / ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
+          z = (x + x) / (x + x + x)
+          expect(z.reshape([24]).to_a).to eq([2.0 / 3.0] * 24)
+        end
+      end
+
+      describe 'ndarray / scalar' do
+        specify do
+          x = MXNet::NDArray.arange(3, dtype: :float64)
+          y = x / 10
+          expect(y.to_a).to eq([0, 0.1, 0.2])
+        end
+      end
+
+      describe 'scalar / ndarray' do
+        specify do
+          x = MXNet::NDArray.arange(3)
+          y = 12 / (x + 1)
+          expect(y.to_a).to eq([12, 6, 4])
+        end
       end
     end
 
     describe '#%' do
-      specify do
-        x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
-        z = (x + x + x) % (x + x)
-        expect(z.reshape([24]).to_a).to eq([1.0] * 24)
+      describe 'ndarray % ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
+          z = (x + x + x) % (x + x)
+          expect(z.reshape([24]).to_a).to eq([1.0] * 24)
+        end
+      end
+
+      describe 'ndarray % scalar' do
+        specify do
+          x = MXNet::NDArray.arange(3)
+          y = (x + 2) % 3
+          expect(y.to_a).to eq([2, 0, 1])
+        end
+      end
+
+      describe 'scalar % ndarray' do
+        specify do
+          x = MXNet::NDArray.arange(3)
+          y = 11 % (x + 1)
+          expect(y.to_a).to eq([0, 1, 2])
+        end
       end
     end
 
     describe '#**' do
-      specify do
-        x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
-        z = (x + x + x) ** (x + x)
-        expect(z.reshape([24]).to_a).to eq([9.0] * 24)
+      describe 'ndarray ** ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
+          z = (x + x + x) ** (x + x)
+          expect(z.reshape([24]).to_a).to eq([9.0] * 24)
+        end
+      end
+
+      describe 'ndarray ** scalar' do
+        specify do
+          x = MXNet::NDArray.arange(3)
+          y = x ** 2
+          expect(y.to_a).to eq([0, 1, 4])
+        end
+      end
+
+      describe 'scalar ** ndarray' do
+        specify do
+          x = MXNet::NDArray.arange(3)
+          y = 3 ** x
+          expect(y.to_a).to eq([1, 3, 9])
+        end
       end
     end
 
@@ -283,70 +482,130 @@ module MXNet
     end
 
     describe '#==' do
-      specify do
-        x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
-        z = (x + x + x) == (x + x)
-        expect(z.reshape([24]).to_a).to eq([0.0] * 24)
-        z = (x + x) == (x + x)
-        expect(z.reshape([24]).to_a).to eq([1.0] * 24)
+      describe 'ndarray == ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
+          z = (x + x + x) == (x + x)
+          expect(z.reshape([24]).to_a).to eq([0.0] * 24)
+          z = (x + x) == (x + x)
+          expect(z.reshape([24]).to_a).to eq([1.0] * 24)
+        end
+      end
+
+      describe 'ndarray == scalar' do
+        pending
+      end
+
+      describe 'scalar == ndarray' do
+        pending
       end
     end
 
     describe '#!=' do
-      specify do
-        x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
-        z = (x + x + x) != (x + x)
-        expect(z.reshape([24]).to_a).to eq([1.0] * 24)
-        z = (x + x) != (x + x)
-        expect(z.reshape([24]).to_a).to eq([0.0] * 24)
+      describe 'ndarray != ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
+          z = (x + x + x) != (x + x)
+          expect(z.reshape([24]).to_a).to eq([1.0] * 24)
+          z = (x + x) != (x + x)
+          expect(z.reshape([24]).to_a).to eq([0.0] * 24)
+        end
+      end
+
+      describe 'ndarray != scalar' do
+        pending
+      end
+
+      describe 'scalar != ndarray' do
+        pending
       end
     end
 
     describe '#>' do
-      specify do
-        x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
-        z = (x + x + x) > (x + x)
-        expect(z.reshape([24]).to_a).to eq([1.0] * 24)
-        z = (x + x) > (x + x)
-        expect(z.reshape([24]).to_a).to eq([0.0] * 24)
+      describe 'ndarray > ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
+          z = (x + x + x) > (x + x)
+          expect(z.reshape([24]).to_a).to eq([1.0] * 24)
+          z = (x + x) > (x + x)
+          expect(z.reshape([24]).to_a).to eq([0.0] * 24)
+        end
+      end
+
+      describe 'ndarray > scalar' do
+        pending
+      end
+
+      describe 'scalar > ndarray' do
+        pending
       end
     end
 
     describe '#>=' do
-      specify do
-        x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
-        z = (x + x + x) >= (x + x)
-        expect(z.reshape([24]).to_a).to eq([1.0] * 24)
-        z = (x + x) >= (x + x)
-        expect(z.reshape([24]).to_a).to eq([1.0] * 24)
-        z = x >= (x + x)
-        expect(z.reshape([24]).to_a).to eq([0.0] * 24)
+      describe 'ndarray >= ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
+          z = (x + x + x) >= (x + x)
+          expect(z.reshape([24]).to_a).to eq([1.0] * 24)
+          z = (x + x) >= (x + x)
+          expect(z.reshape([24]).to_a).to eq([1.0] * 24)
+          z = x >= (x + x)
+          expect(z.reshape([24]).to_a).to eq([0.0] * 24)
+        end
+      end
+
+      describe 'ndarray >= scalar' do
+        pending
+      end
+
+      describe 'scalar >= ndarray' do
+        pending
       end
     end
 
     describe '#<' do
-      specify do
-        x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
-        z = (x + x) < (x + x + x)
-        expect(z.reshape([24]).to_a).to eq([1.0] * 24)
-        z = (x + x) < (x + x)
-        expect(z.reshape([24]).to_a).to eq([0.0] * 24)
+      describe 'ndarray < ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
+          z = (x + x) < (x + x + x)
+          expect(z.reshape([24]).to_a).to eq([1.0] * 24)
+          z = (x + x) < (x + x)
+          expect(z.reshape([24]).to_a).to eq([0.0] * 24)
+        end
+      end
+
+      describe 'ndarray < scalar' do
+        pending
+      end
+
+      describe 'scalar < ndarray' do
+        pending
       end
     end
 
     describe '#<=' do
-      specify do
-        x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
-        z = (x + x) <= (x + x + x)
-        expect(z.reshape([24]).to_a).to eq([1.0] * 24)
-        z = (x + x) <= (x + x)
-        expect(z.reshape([24]).to_a).to eq([1.0] * 24)
-        z = (x + x) <= x
-        expect(z.reshape([24]).to_a).to eq([0.0] * 24)
+      describe 'ndarray <= ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
+          z = (x + x) <= (x + x + x)
+          expect(z.reshape([24]).to_a).to eq([1.0] * 24)
+          z = (x + x) <= (x + x)
+          expect(z.reshape([24]).to_a).to eq([1.0] * 24)
+          z = (x + x) <= x
+          expect(z.reshape([24]).to_a).to eq([0.0] * 24)
+        end
+      end
+
+      describe 'ndarray <= scalar' do
+        pending
+      end
+
+      describe 'scalar <= ndarray' do
+        pending
       end
     end
 
-    describe '#@-' do
+    describe '#@+' do
       specify do
         x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
         z = +(x + x)
@@ -360,6 +619,44 @@ module MXNet
         z = -(x + x)
         expect(z.reshape([24]).to_a).to eq([-2.0] * 24)
       end
+    end
+
+    describe '#to_i' do
+      specify do
+        x = MXNet::NDArray.full([1], 3.14, dtype: :float64)
+        expect(x.to_i).to eq(3)
+      end
+    end
+
+    describe '#to_f' do
+      specify do
+        x = MXNet::NDArray.full([1], 3.14, dtype: :float64)
+        expect(x.to_f).to eq(3.14)
+      end
+    end
+
+    describe '#tile' do
+      pending
+    end
+
+    describe '#attach_grad' do
+      context 'default stype' do
+        specify do
+          x = MXNet::NDArray.zeros([10, 10])
+          expect(x.grad).to eq(nil)
+          x.attach_grad
+          MXNet::Autograd.record do
+            y = x * 2
+            expect(y.grad).to eq(nil)
+            y.backward(out_grad: MXNet::NDArray.ones_like(y))
+          end
+          expect(x.grad.reshape([100]).to_a).to be_all {|a| a == 2.0 }
+        end
+      end
+    end
+
+    describe '.maximum' do
+      pending
     end
 
     describe '.concat' do

@@ -34,6 +34,22 @@ mxnet_raise_last_error(void)
   rb_raise(mxnet_eError, "%s", last_error);
 }
 
+NORETURN(static void mxnet_unexpected_type(VALUE obj, char const *expected_type_name));
+
+static void
+mxnet_unexpected_type(VALUE obj, char const *expected_type_name)
+{
+  rb_raise(rb_eTypeError, "wrong argument type %s (expected %s)",
+      rb_obj_classname(obj), expected_type_name);
+}
+
+void
+mxnet_check_type(VALUE obj, VALUE klass)
+{
+  if (rb_obj_is_kind_of(obj, klass)) return;
+  mxnet_unexpected_type(obj, rb_class2name(klass));
+}
+
 /* ==== Handle ==== */
 
 static VALUE
@@ -43,10 +59,22 @@ handle_wrapper_initialize(VALUE obj, VALUE handle)
   return obj;
 }
 
+static inline VALUE
+get_mxnet_handle(VALUE obj)
+{
+  return rb_ivar_get(obj, rb_intern("mxnet_handle"));
+}
+
+static VALUE
+handle_wrapper_get_mxnet_handle(VALUE obj)
+{
+  return get_mxnet_handle(obj);
+}
+
 void *
 mxnet_get_handle(VALUE obj)
 {
-  VALUE handle_v = rb_ivar_get(obj, rb_intern("mxnet_handle"));
+  VALUE handle_v = get_mxnet_handle(obj);
   if (NIL_P(handle_v)) return NULL;
   return NUM2PTR(handle_v);
 }
@@ -88,11 +116,16 @@ Init_mxnet(void)
 
   mHandleWrapper = rb_const_get_at(mxnet_mMXNet, rb_intern("HandleWrapper"));
   rb_define_method(mHandleWrapper, "initialize", handle_wrapper_initialize, 1);
+  rb_define_private_method(mHandleWrapper, "__mxnet_handle__", handle_wrapper_get_mxnet_handle, 0);
 
   init_grad_req_map();
   mxnet_init_libmxnet();
 
+  mxnet_init_autograd();
+
   mxnet_init_executor();
+
+  mxnet_init_io();
 
   mxnet_init_ndarray();
   mxnet_init_operations(mxnet_cNDArray);
@@ -101,4 +134,5 @@ Init_mxnet(void)
   mxnet_init_operations(mxnet_cSymbol);
 
   mxnet_init_random();
+  mxnet_init_utils();
 }

@@ -73,14 +73,53 @@ dtype_m_name(VALUE mod, VALUE id_or_name)
   return mxnet_dtype_name(id_or_name);
 }
 
-VALUE
-mxnet_ndarray_new(void *ndarray_handle)
+static void
+ndarray_free(void *ptr)
 {
-  VALUE handle_v = PTR2NUM(ndarray_handle);
-  return rb_class_new_instance(1, &handle_v, mxnet_cNDArray);
+  if (ptr != NULL) {
+    CHECK_CALL(MXNET_API(MXNDArrayFree)((NDArrayHandle)ptr));
+  }
+}
+
+static size_t
+ndarray_memsize(void const *ptr)
+{
+  return 0;
+}
+
+static const rb_data_type_t ndarray_data_type = {
+  "MXNet::NDArray",
+  {
+    NULL,
+    ndarray_free,
+    ndarray_memsize,
+  },
+  0, 0, RUBY_TYPED_FREE_IMMEDIATELY
+};
+
+NDArrayHandle
+mxnet_ndarray_get_handle(VALUE obj)
+{
+  NDArrayHandle handle;
+  TypedData_Get_Struct(obj, void, &ndarray_data_type, handle);
+  return handle;
 }
 
 static VALUE
+ndarray_allocate(VALUE klass)
+{
+  return TypedData_Wrap_Struct(klass, &ndarray_data_type, NULL);
+}
+
+VALUE
+mxnet_ndarray_new(NDArrayHandle ndarray_handle)
+{
+  VALUE obj = rb_class_new_instance(0, NULL, mxnet_cNDArray);
+  DATA_PTR(obj) = ndarray_handle;
+  return obj;
+}
+
+static NDArrayHandle
 ndarray_allocate_handle(VALUE shape_v, VALUE ctx_v, VALUE delay_alloc, VALUE dtype_v)
 {
   mx_uint *shape;
@@ -99,6 +138,12 @@ ndarray_allocate_handle(VALUE shape_v, VALUE ctx_v, VALUE delay_alloc, VALUE dty
   dev_id = mxnet_context_get_device_id(ctx_v);
   if (NIL_P(dtype_v))
     dtype = kFloat32;
+  else if (RB_INTEGER_TYPE_P(dtype_v)) {
+    dtype = NUM2INT(dtype_v);
+    if (NIL_P(mxnet_dtype_id2name(dtype))) {
+      rb_raise(rb_eArgError, "invalid id of dtype: %d", dtype);
+    }
+  }
   else
     dtype = mxnet_dtype_name2id(dtype_v);
 
@@ -107,13 +152,14 @@ ndarray_allocate_handle(VALUE shape_v, VALUE ctx_v, VALUE delay_alloc, VALUE dty
     mxnet_raise_last_error();
   }
 
-  return PTR2NUM(handle);
+  return handle;
 }
 
 static VALUE
 ndarray_s_empty(int argc, VALUE *argv, VALUE klass)
 {
-  VALUE shape_v, opts, ctx_v, dtype_v, handle_v, obj;
+  VALUE shape_v, opts, ctx_v, dtype_v;
+  NDArrayHandle handle;
 
   rb_scan_args(argc, argv, "1:", &shape_v, &opts);
   shape_v = rb_convert_type(shape_v, T_ARRAY, "Array", "to_ary");
@@ -137,19 +183,8 @@ ndarray_s_empty(int argc, VALUE *argv, VALUE klass)
     dtype_v = Qnil;
   }
 
-  handle_v = ndarray_allocate_handle(shape_v, ctx_v, Qfalse, dtype_v);
-
-  obj = rb_obj_alloc(klass);
-  rb_obj_call_init(obj, 1, &handle_v);
-
-  return obj;
-}
-
-static VALUE
-ndarray_initialize(VALUE obj, VALUE handle_v)
-{
-  rb_call_super(1, &handle_v);
-  return obj;
+  handle = ndarray_allocate_handle(shape_v, ctx_v, Qfalse, dtype_v);
+  return mxnet_ndarray_new(handle);
 }
 
 /* Returns a **view**  of this array with a new shape without altering any data.
@@ -164,7 +199,7 @@ ndarray_reshape(VALUE obj, VALUE shape_v)
   VALUE dims_str;
   int ndim, *dims, i;
 
-  handle = mxnet_get_handle(obj);
+  handle = mxnet_ndarray_get_handle(obj);
   shape_v = rb_check_convert_type(shape_v, T_ARRAY, "Array", "to_ary");
 
   /* TODO: check INT_MAX */
@@ -181,13 +216,33 @@ ndarray_reshape(VALUE obj, VALUE shape_v)
   return mxnet_ndarray_new(out_handle);
 }
 
+static VALUE
+ndarray_get_mxnet_handle(VALUE obj)
+{
+  NDArrayHandle handle = mxnet_ndarray_get_handle(obj);
+  return PTR2NUM(handle);
+}
+
+static VALUE
+ndarray_get_context_params(VALUE obj)
+{
+  NDArrayHandle handle;
+  int dev_typeid, dev_id;
+
+  handle = mxnet_ndarray_get_handle(obj);
+
+  CHECK_CALL(MXNET_API(MXNDArrayGetContext)(handle, &dev_typeid, &dev_id));
+
+  return rb_assoc_new(INT2NUM(dev_typeid), INT2NUM(dev_id));
+}
+
 static int
 ndarray_get_dtype_id(VALUE obj)
 {
-  void *handle;
+  NDArrayHandle handle;
   int dtype_id;
 
-  handle = mxnet_get_handle(obj);
+  handle = mxnet_ndarray_get_handle(obj);
   CHECK_CALL(MXNET_API(MXNDArrayGetDType)(handle, &dtype_id));
   return dtype_id;
 }
@@ -213,7 +268,7 @@ mxnet_ndarray_get_shape(VALUE obj)
   mx_uint const* shape;
   VALUE ary;
 
-  handle = mxnet_get_handle(obj);
+  handle = mxnet_ndarray_get_handle(obj);
   CHECK_CALL(MXNET_API(MXNDArrayGetShape)(handle, &ndim, &shape));
 
   ary = rb_ary_new_capa(ndim);
@@ -236,7 +291,7 @@ ndarray_at(VALUE obj, VALUE idx_v)
   void *handle, *out_handle;
   mx_uint idx;
   
-  handle = mxnet_get_handle(obj);
+  handle = mxnet_ndarray_get_handle(obj);
   idx = NUM2MXUINT(idx_v);
   CHECK_CALL(MXNET_API(MXNDArrayAt)(handle, idx, &out_handle));
 
@@ -280,10 +335,93 @@ ndarray_slice(VALUE obj, VALUE start_v, VALUE stop_v)
     }
   }
 
-  handle = mxnet_get_handle(obj);
+  handle = mxnet_ndarray_get_handle(obj);
   CHECK_CALL(MXNET_API(MXNDArraySlice)(handle, (mx_uint)start, (mx_uint)stop, &out_handle));
 
   return mxnet_ndarray_new(out_handle);
+}
+
+static VALUE
+ndarray_attach_grad(VALUE obj, VALUE grad_req_v, VALUE grad)
+{
+  mx_uint grad_req;
+  NDArrayHandle self_handle, grad_handle;
+
+  self_handle = mxnet_ndarray_get_handle(obj);
+  grad_req = NUM2UINT(grad_req_v);
+  grad_handle = mxnet_ndarray_get_handle(grad);
+
+  CHECK_CALL(MXNET_API(MXAutogradMarkVariables)(1, &self_handle, &grad_req, &grad_handle));
+
+  return Qnil;
+}
+
+static VALUE
+ndarray_grad(VALUE obj)
+{
+  NDArrayHandle handle, grad_handle;
+  VALUE grad;
+
+  handle = mxnet_ndarray_get_handle(obj);
+  CHECK_CALL(MXNET_API(MXNDArrayGetGrad)(handle, &grad_handle));
+  if (grad_handle == NULL) {
+    return Qnil;
+  }
+  grad = mxnet_ndarray_new(grad_handle);
+  return grad;
+}
+
+/* Compute the gradients of this NDARray w.r.t variables.
+ *
+ * @param out_grad [MXNet::NDArray] Gradient with respect to head.
+ * @param retain_graph [true, false]
+ *   Whether to retain the computation graph for another backward
+ *   pass on the same graph.  By default the computation history
+ *   is cleared.
+ * @param train_mode [true, false]
+ *   Whether to compute gradient for training or inference.
+ */
+static VALUE
+ndarray_backward(int argc, VALUE *argv, VALUE obj)
+{
+  VALUE opts;
+  NDArrayHandle self_handle, ograd_handle = NULL;
+  int retain_graph = 0, is_train = 1;
+
+  rb_scan_args(argc, argv, ":", &opts);
+  if (!NIL_P(opts)) {
+    static ID keywords[3];
+    VALUE kwargs[3];
+    if (!keywords[0]) {
+      keywords[0] = rb_intern("out_grad");
+      keywords[1] = rb_intern("retain_graph");
+      keywords[2] = rb_intern("train_mode");
+    }
+    rb_get_kwargs(opts, keywords, 0, 3, kwargs);
+    /* out_grad */
+    if (kwargs[0] != Qundef) {
+      if (!rb_obj_is_kind_of(kwargs[0], mxnet_cNDArray)) {
+        rb_raise(rb_eArgError, "out_grad must be a NDArray");
+      }
+      ograd_handle = mxnet_ndarray_get_handle(kwargs[0]);
+    }
+    /* retain_graph */
+    if (kwargs[1] != Qundef) {
+      retain_graph = RTEST(kwargs[1]);
+    }
+    /* train_mode */
+    if (kwargs[2] != Qundef) {
+      is_train = RTEST(kwargs[2]);
+    }
+  }
+
+  self_handle = mxnet_ndarray_get_handle(obj);
+  CHECK_CALL(MXNET_API(MXAutogradBackwardEx)(
+        1, &self_handle, &ograd_handle,
+        0, NULL,
+        retain_graph, 0, is_train, NULL, NULL));
+
+  return Qnil;
 }
 
 /* This function is based on npy_half_to_double and npy_halfbits_to_doublebits in numpy */
@@ -336,7 +474,7 @@ ndarray_to_a(VALUE obj)
   mx_uint const* shape;
   VALUE data_str, ary;
 
-  handle = mxnet_get_handle(obj);
+  handle = mxnet_ndarray_get_handle(obj);
 
   CHECK_CALL(MXNET_API(MXNDArrayGetShape)(handle, &ndim, &shape));
   if (ndim > 1) {
@@ -430,17 +568,23 @@ mxnet_init_ndarray(void)
 
   cNDArray = rb_const_get_at(mxnet_mMXNet, rb_intern("NDArray"));
 
+  rb_define_alloc_func(cNDArray, ndarray_allocate);
+
   rb_define_singleton_method(cNDArray, "empty", ndarray_s_empty, -1);
 
-  rb_define_method(cNDArray, "initialize", ndarray_initialize, 1);
   rb_define_method(cNDArray, "dtype", ndarray_get_dtype, 0);
   rb_define_method(cNDArray, "dtype_name", ndarray_get_dtype_name, 0);
   rb_define_method(cNDArray, "shape", mxnet_ndarray_get_shape, 0);
   rb_define_method(cNDArray, "reshape", ndarray_reshape, 1);
+  rb_define_method(cNDArray, "grad", ndarray_grad, 0);
+  rb_define_method(cNDArray, "backward", ndarray_backward, -1);
   rb_define_method(cNDArray, "to_a", ndarray_to_a, 0);
 
+  rb_define_private_method(cNDArray, "__mxnet_handle__", ndarray_get_mxnet_handle, 0);
+  rb_define_private_method(cNDArray, "_get_context_params", ndarray_get_context_params, 0);
   rb_define_private_method(cNDArray, "_at", ndarray_at, 1);
   rb_define_private_method(cNDArray, "_slice", ndarray_slice, 2);
+  rb_define_private_method(cNDArray, "_attach_grad", ndarray_attach_grad, 2);
 
   mxnet_cNDArray = cNDArray;
 

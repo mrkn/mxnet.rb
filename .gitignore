@@ -8,9 +8,14 @@
 /spec/reports/
 /tmp/
 
+/spec/fixture/mnist/*
+
 *.bundle
 *.so
 *.dll
 
 # rspec failure tracking
 .rspec_status
+
+# jupyter notebook checkpoint
+.ipynb_checkpoints/

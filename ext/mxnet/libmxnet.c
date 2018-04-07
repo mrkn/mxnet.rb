@@ -57,17 +57,40 @@ init_api_table(VALUE handle)
   INIT_API_TABLE_ENTRY(MXExecutorBindEX);
 
   INIT_API_TABLE_ENTRY(MXNDArrayCreateEx);
+  INIT_API_TABLE_ENTRY(MXNDArrayFree);
   INIT_API_TABLE_ENTRY(MXNDArrayReshape);
+  INIT_API_TABLE_ENTRY(MXNDArrayGetContext);
   INIT_API_TABLE_ENTRY(MXNDArrayGetShape);
   INIT_API_TABLE_ENTRY(MXNDArrayGetDType);
+  INIT_API_TABLE_ENTRY(MXNDArraySyncCopyFromCPU);
   INIT_API_TABLE_ENTRY(MXNDArraySyncCopyToCPU);
   INIT_API_TABLE_ENTRY(MXNDArrayAt);
   INIT_API_TABLE_ENTRY(MXNDArraySlice);
+  INIT_API_TABLE_ENTRY(MXNDArrayGetGrad);
+
+  INIT_API_TABLE_ENTRY(MXAutogradSetIsRecording);
+  INIT_API_TABLE_ENTRY(MXAutogradSetIsTraining);
+  INIT_API_TABLE_ENTRY(MXAutogradIsRecording);
+  INIT_API_TABLE_ENTRY(MXAutogradIsTraining);
+  INIT_API_TABLE_ENTRY(MXAutogradMarkVariables);
+  INIT_API_TABLE_ENTRY(MXAutogradBackwardEx);
 
   INIT_API_TABLE_ENTRY(MXListAllOpNames);
   INIT_API_TABLE_ENTRY(NNGetOpHandle);
   INIT_API_TABLE_ENTRY(MXSymbolGetAtomicSymbolInfo);
   INIT_API_TABLE_ENTRY(MXImperativeInvoke);
+
+  INIT_API_TABLE_ENTRY(MXListDataIters);
+  INIT_API_TABLE_ENTRY(MXDataIterCreateIter);
+  INIT_API_TABLE_ENTRY(MXDataIterGetIterInfo);
+  INIT_API_TABLE_ENTRY(MXDataIterFree);
+  INIT_API_TABLE_ENTRY(MXDataIterNext);
+  INIT_API_TABLE_ENTRY(MXDataIterBeforeFirst);
+  INIT_API_TABLE_ENTRY(MXDataIterGetData);
+  INIT_API_TABLE_ENTRY(MXDataIterGetIndex);
+  INIT_API_TABLE_ENTRY(MXDataIterGetPadNum);
+  INIT_API_TABLE_ENTRY(MXDataIterGetLabel);
+
   INIT_API_TABLE_ENTRY(MXSymbolCreateFromFile);
   INIT_API_TABLE_ENTRY(MXSymbolCreateFromJSON);
   INIT_API_TABLE_ENTRY(MXSymbolCreateAtomicSymbol);
@@ -75,6 +98,8 @@ init_api_table(VALUE handle)
   INIT_API_TABLE_ENTRY(MXSymbolCopy);
   INIT_API_TABLE_ENTRY(MXSymbolCreateVariable);
   INIT_API_TABLE_ENTRY(MXSymbolGetName);
+  INIT_API_TABLE_ENTRY(MXSymbolSetAttr);
+  INIT_API_TABLE_ENTRY(MXSymbolListAttr);
   INIT_API_TABLE_ENTRY(MXSymbolListArguments);
   INIT_API_TABLE_ENTRY(MXSymbolListAuxiliaryStates);
   INIT_API_TABLE_ENTRY(MXSymbolListOutputs);
@@ -105,7 +130,7 @@ imperative_invoke(VALUE mod, VALUE handle, VALUE ndargs, VALUE keys, VALUE vals,
   inputs_str = rb_str_tmp_new(sizeof(void *)*num_inputs);
   inputs = (void **)RSTRING_PTR(inputs_str);
   for (i = 0; i < num_inputs; ++i) {
-    inputs[i] = mxnet_get_handle(RARRAY_AREF(ndargs, i));
+    inputs[i] = mxnet_ndarray_get_handle(RARRAY_AREF(ndargs, i));
   }
 
   num_params = (int)RARRAY_LEN(keys);
@@ -131,7 +156,7 @@ imperative_invoke(VALUE mod, VALUE handle, VALUE ndargs, VALUE keys, VALUE vals,
       num_outputs = 1;
       outputs_str = rb_str_tmp_new(sizeof(void *));
       outputs = (void **)RSTRING_PTR(outputs_str);
-      outputs[0] = mxnet_get_handle(out);
+      outputs[0] = mxnet_ndarray_get_handle(out);
     }
     else {
       out = rb_check_convert_type(out, T_ARRAY, "Array", "to_ary");
@@ -143,7 +168,7 @@ imperative_invoke(VALUE mod, VALUE handle, VALUE ndargs, VALUE keys, VALUE vals,
       outputs = (void **)RSTRING_PTR(outputs_str);
       for (i = 0; i < num_outputs; ++i) {
         VALUE v = RARRAY_AREF(out, i);
-        outputs[i] = mxnet_get_handle(v);
+        outputs[i] = mxnet_ndarray_get_handle(v);
       }
     }
   }
