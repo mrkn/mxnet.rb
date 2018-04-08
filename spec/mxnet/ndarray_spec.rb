@@ -310,10 +310,6 @@ module MXNet
       pending
     end
 
-    describe '.arange' do
-      pending
-    end
-
     describe '#+' do
       describe 'ndarray + ndarray' do
         specify do
@@ -473,12 +469,20 @@ module MXNet
       end
     end
 
-    describe '#maximum' do
-      pending
+    describe '#argmax' do
+      specify do
+        x = MXNet::NDArray.arange(0,6).reshape([2,3]) # [[ 0,  1,  2], [ 3,  4,  5]]
+        expect(MXNet::NDArray.argmax(x, axis:0).to_narray).to eq([1, 1, 1])
+        expect(MXNet::NDArray.argmax(x, axis:1).to_narray).to eq([2, 2])
+      end
     end
 
-    describe '#minimum' do
-      pending
+    describe '#argmin' do
+      specify do
+        x = MXNet::NDArray.arange(0,6).reshape([2,3]) # [[ 0,  1,  2], [ 3,  4,  5]]
+        expect(MXNet::NDArray.argmin(x, axis:0).to_narray).to eq([0, 0, 0])
+        expect(MXNet::NDArray.argmin(x, axis:1).to_narray).to eq([0, 0])
+      end
     end
 
     describe '#==' do
@@ -636,7 +640,38 @@ module MXNet
     end
 
     describe '#tile' do
-      pending
+      specify do
+        # x = [[1,2], [3,4]] as in mxnet.ndarray.tile documentation
+        x = MXNet::NDArray.arange(1,5).reshape([2,2])
+        # case n=d
+        y = x.tile(reps: [2,3])
+        expect(y.to_narray).to eq(
+          [[1, 2, 1, 2, 1, 2], 
+           [3, 4, 3, 4, 3, 4], 
+           [1, 2, 1, 2, 1, 2], 
+           [3, 4, 3, 4, 3, 4]]
+        )
+
+        # case n > d
+        y = x.tile(reps: [2,]) # same as [1,2]
+        expect(y.to_narray).to eq(
+          [[1, 2, 1, 2], 
+           [3, 4, 3, 4]]
+        )
+
+        #case n < d
+        y = x.tile(reps: [2,2,3])
+        expect(y.to_narray).to eq(
+          [[[1, 2, 1, 2, 1, 2], 
+            [3, 4, 3, 4, 3, 4], 
+            [1, 2, 1, 2, 1, 2], 
+            [3, 4, 3, 4, 3, 4]], 
+           [[1, 2, 1, 2, 1, 2], 
+            [3, 4, 3, 4, 3, 4], 
+            [1, 2, 1, 2, 1, 2], 
+             [3, 4, 3, 4, 3, 4]]]
+        )
+      end
     end
 
     describe '#attach_grad' do
@@ -656,11 +691,68 @@ module MXNet
     end
 
     describe '.maximum' do
-      pending
+      specify do
+        x = MXNet::NDArray.ones([2,3])
+        y = MXNet::NDArray.arange(2).reshape([2,1])
+        z = MXNet::NDArray.arange(2).reshape([1,2])
+        expect(MXNet::NDArray.maximum(x,2).to_narray).to eq(
+          [[2, 2, 2], 
+           [2, 2, 2]]
+        )
+        expect(MXNet::NDArray.maximum(x,y).to_narray).to eq(
+          [[1, 1, 1], 
+           [1, 1, 1]]
+        )
+        expect(MXNet::NDArray.maximum(y,z).to_narray).to eq(
+          [[0, 1], 
+           [1, 1]]
+        )
+      end
+    end
+
+    describe '.minimum' do
+      specify do
+        x = MXNet::NDArray.ones([2,3])
+        y = MXNet::NDArray.arange(2).reshape([2,1])
+        z = MXNet::NDArray.arange(2).reshape([1,2])
+        expect(MXNet::NDArray.minimum(x,2).to_narray).to eq(
+           [[1, 1, 1], 
+            [1, 1, 1]]
+        )
+        expect(MXNet::NDArray.minimum(x,y).to_narray).to eq(
+          [[0, 0, 0], 
+           [1, 1, 1]]
+        )
+        expect(MXNet::NDArray.minimum(y,z).to_narray).to eq(
+          [[0, 0], 
+           [0, 1]]
+        )
+      end
     end
 
     describe '.concat' do
-      pending
+      specify do
+        x = MXNet::NDArray.arange(4).reshape([2,2]) # [[0, 1], [2, 3]]
+        y = MXNet::NDArray.arange(3,9).reshape([3,2]) # [[3, 4], [5, 6], [7, 8]]
+        z = MXNet::NDArray.arange(9,15).reshape([3,2]) # [[9, 10], [11, 12], [13, 14]]
+        expect(MXNet::NDArray.concat(x,y,z,dim: 0).to_narray).to eq(
+          [[0, 1], 
+           [2, 3], 
+           [3, 4], 
+           [5, 6], 
+           [7, 8], 
+           [9, 10], 
+           [11, 12], 
+           [13, 14]]         
+       )  
+       expect(MXNet::NDArray.concat(y,z,dim: 1).to_narray).to eq(
+        [[3, 4, 9, 10], 
+         [5, 6, 11, 12], 
+         [7, 8, 13, 14]]       
+       )
+       # Cannot concatenate arrays along a dimension that is not the same for all arrays
+       expect { MXNet::NDArray.concat(x,y,dim: 1) }.to raise_exception(MXNet::Error, /Incompatible input shape/)
+      end
     end
   end
 end
