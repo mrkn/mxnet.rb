@@ -553,8 +553,30 @@ module MXNet
       else
         raise TypeError, "type #{rhs.class} not supported"
       end
+    end #
+
+
+    # Returns element-wise minimum of the input arrays with broadcasting.
+    #
+    # Equivalent to `MXNet::NDArray.broadcast_minimum(lhs, rhs)`.
+    def self.minimum(lhs, rhs)
+      if lhs.is_a? Numeric
+        if rhs.is_a? Numeric
+          return [lhs, rhs].min
+        else
+          Internal._minimum_scalar(rhs, scalar: Float(lhs))
+        end
+      elsif rhs.is_a? Numeric
+        Internal._minimum_scalar(lhs, scalar: Float(rhs))
+      elsif rhs.is_a? NDArray
+        Ops.broadcast_minimum(lhs, rhs)
+      else
+        raise TypeError, "type #{rhs.class} not supported"
+      end
     end
-  end
+    
+  end # SwappedOperationAdapter
+  
 
   NDArray::CONVERTER = []
 
