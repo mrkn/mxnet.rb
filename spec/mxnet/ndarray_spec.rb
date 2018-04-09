@@ -335,6 +335,23 @@ module MXNet
           expect(y.to_a).to eq([1, 2, 3])
         end
       end
+
+      describe 'ndarray.inplace + ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4])
+          y = MXNet::NDArray.ones([2, 3, 4])
+          x.inplace + y
+          expect(x.reshape([24]).to_a).to eq([2.0] * 24)
+        end
+      end
+
+      describe 'ndarray.inplace + scalar' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4])
+          x.inplace + 1
+          expect(x.reshape([24]).to_a).to eq([2.0] * 24)
+        end
+      end
     end
 
     describe '#-' do
@@ -360,6 +377,23 @@ module MXNet
           x = MXNet::NDArray.arange(3)
           y = 2 - x
           expect(y.to_a).to eq([2, 1, 0])
+        end
+      end
+
+      describe 'ndarray.inplace - ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4])
+          y = MXNet::NDArray.ones([2, 3, 4])
+          x.inplace - y
+          expect(x.reshape([24]).to_a).to eq([0.0] * 24)
+        end
+      end
+
+      describe 'ndarray.inplace - scalar' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4])
+          x.inplace - 1
+          expect(x.reshape([24]).to_a).to eq([0.0] * 24)
         end
       end
     end
@@ -389,6 +423,23 @@ module MXNet
           expect(y.to_a).to eq([0, 10, 20])
         end
       end
+
+      describe 'ndarray.inplace * ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4])
+          y = x + x
+          y.inplace * y
+          expect(y.reshape([24]).to_a).to eq([4.0] * 24)
+        end
+      end
+
+      describe 'ndarray.inplace * scalar' do
+        specify do
+          x = MXNet::NDArray.arange(3)
+          x.inplace * 10
+          expect(x.to_a).to eq([0, 10, 20])
+        end
+      end
     end
 
     describe '#/' do
@@ -415,6 +466,23 @@ module MXNet
           expect(y.to_a).to eq([12, 6, 4])
         end
       end
+
+      describe 'ndarray.inplace / ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
+          y = x + x
+          y.inplace / (x + x + x)
+          expect(y.reshape([24]).to_a).to eq([2.0 / 3.0] * 24)
+        end
+      end
+
+      describe 'ndarray.inplace / scalar' do
+        specify do
+          x = MXNet::NDArray.arange(3, dtype: :float64)
+          x.inplace / 10
+          expect(x.to_a).to eq([0, 0.1, 0.2])
+        end
+      end
     end
 
     describe '#%' do
@@ -439,6 +507,24 @@ module MXNet
           x = MXNet::NDArray.arange(3)
           y = 11 % (x + 1)
           expect(y.to_a).to eq([0, 1, 2])
+        end
+      end
+
+      describe 'ndarray.inplace / ndarray' do
+        specify do
+          x = MXNet::NDArray.ones([2, 3, 4], dtype: :float64)
+          y = x + x + x
+          y.inplace % (x + x)
+          expect(y.reshape([24]).to_a).to eq([1.0] * 24)
+        end
+      end
+
+      describe 'ndarray.inplace % scalar' do
+        specify do
+          x = MXNet::NDArray.arange(3, dtype: :float64)
+          x.inplace + 2
+          x.inplace % 3
+          expect(x.to_a).to eq([2, 0, 1])
         end
       end
     end

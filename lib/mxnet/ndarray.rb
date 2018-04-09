@@ -422,6 +422,83 @@ module MXNet
       [SwappedOperationAdapter.new(other), self]
     end
 
+    class InplaceOperationAdapter
+      def initialize(ndary)
+        @ndary = ndary
+      end
+
+      def +(other)
+        check_writable
+        case other
+        when NDArray
+          Ops.broadcast_add(@ndary, other, out: @ndary)
+        when Numeric
+          Internal._plus_scalar(@ndary, scalar: other, out: @ndary)
+        else
+          raise ArgumentError, "type #{other.class} not supported"
+        end
+      end
+
+      def -(other)
+        check_writable
+        case other
+        when NDArray
+          Ops.broadcast_sub(@ndary, other, out: @ndary)
+        when Numeric
+          Internal._minus_scalar(@ndary, scalar: other, out: @ndary)
+        else
+          raise ArgumentError, "type #{other.class} not supported"
+        end
+      end
+
+      def *(other)
+        check_writable
+        case other
+        when NDArray
+          Ops.broadcast_mul(@ndary, other, out: @ndary)
+        when Numeric
+          Internal._mul_scalar(@ndary, scalar: other, out: @ndary)
+        else
+          raise ArgumentError, "type #{other.class} not supported"
+        end
+      end
+
+      def /(other)
+        check_writable
+        case other
+        when NDArray
+          Ops.broadcast_div(@ndary, other, out: @ndary)
+        when Numeric
+          Internal._div_scalar(@ndary, scalar: other, out: @ndary)
+        else
+          raise ArgumentError, "type #{other.class} not supported"
+        end
+      end
+
+      def %(other)
+        check_writable
+        case other
+        when NDArray
+          Ops.broadcast_mod(@ndary, other, out: @ndary)
+        when Numeric
+          Internal._mod_scalar(@ndary, scalar: other, out: @ndary)
+        else
+          raise ArgumentError, "type #{other.class} not supported"
+        end
+      end
+
+      private
+
+      def check_writable
+        true # TODO: support writable flag
+        #raise 'trying to add to a readonly NDArray' unless @ndary.writable?
+      end
+    end
+
+    def inplace
+      InplaceOperationAdapter.new(self)
+    end
+
     def ==(other)
       case other
       when NDArray
