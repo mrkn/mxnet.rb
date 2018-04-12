@@ -59,7 +59,7 @@ module MXNet
     attr = kwargs.delete(:attr)
     kwargs.update(AttrScope.current.get(attr))
     name = kwargs.delete(:name)
-    name = NameManager.current.get(name, :'#{op_info.func_name.to_s.downcase}')
+    name = Name::NameManager.current.get(name, :'#{op_info.func_name.to_s.downcase}')
     _ = kwargs.delete(:out)
     keys = []
     vals = []
@@ -131,7 +131,7 @@ module MXNet
         end # if ary_name
 
         code << <<-RUBY
-    name = NameManager.current.get(name, :'#{op_info.func_name.to_s.downcase}')
+    name = Name::NameManager.current.get(name, :'#{op_info.func_name.to_s.downcase}')
     return LibMXNet.symbol_creator(#{handle}, nil, sym_kwargs, keys, vals, name)
   end
   module_function :#{op_info.func_name}

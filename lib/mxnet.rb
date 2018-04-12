@@ -16,7 +16,7 @@ module MXNet
   require 'mxnet/attribute'
   require 'mxnet/autograd'
   require 'mxnet/context'
-  require 'mxnet/name_manager'
+  require 'mxnet/name/name_manager'
   require 'mxnet/executor'
   require 'mxnet/io'
   require 'mxnet/ndarray'
@@ -29,4 +29,6 @@ module MXNet
   require 'mxnet.so'
   require 'mxnet/ndarray/operations'
   require 'mxnet/symbol/operations'
+  require 'mxnet/lr_scheduler'
+  require 'mxnet/optimizer'
 end
