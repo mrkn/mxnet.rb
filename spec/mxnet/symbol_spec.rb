@@ -12,9 +12,11 @@ module MXNet
 
     describe '.var' do
       specify do
-        x = MXNet::Symbol.var(:x)
+        x = MXNet::Symbol.var(:x, shape: [2, 3], dtype: :float64)
         expect(x).to be_a(MXNet::Symbol)
         expect(x.name).to eq(:x)
+        expect(x.attr(:__shape__)).to eq([2, 3].to_s)
+        expect(x.attr(:__dtype__)).to eq(MXNet::DType.name2id(:float64).to_s)
       end
 
       specify 'symbol values in attributes are not allowed' do

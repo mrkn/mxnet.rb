@@ -217,9 +217,13 @@ struct mxnet_api_table {
   int (* MXSymbolGetName)(SymbolHandle symbol,
                           const char** out,
                           int *success);
+  int (* MXSymbolGetAttr)(SymbolHandle symbol,
+                          const char *key,
+                          const char **out,
+                          int *success);
   int (* MXSymbolSetAttr)(SymbolHandle symbol,
-                          const char* key,
-                          const char* value);
+                          const char *key,
+                          const char *value);
   int (* MXSymbolListAttr)(SymbolHandle symbol,
                            mx_uint *out_size,
                            const char ***out);

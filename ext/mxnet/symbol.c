@@ -219,6 +219,27 @@ symbol_attributes(VALUE obj)
 }
 
 static VALUE
+symbol_attr(VALUE obj, VALUE key)
+{
+  SymbolHandle handle;
+  char const *key_cstr, *value_cstr;
+  int success;
+
+  if (RB_TYPE_P(key, T_SYMBOL)) {
+    key = rb_sym_to_s(key);
+  }
+  key_cstr = StringValueCStr(key);
+
+  handle = mxnet_get_handle(obj);
+  CHECK_CALL(MXNET_API(MXSymbolGetAttr)(handle, key_cstr, &value_cstr, &success));
+  if (success == 0) {
+    return Qnil;
+  }
+
+  return rb_str_new2(value_cstr);
+}
+
+static VALUE
 symbol_set_attributes_i(VALUE key, VALUE value, VALUE arg)
 {
   SymbolHandle handle = (SymbolHandle)arg;
@@ -913,6 +934,7 @@ mxnet_init_symbol(void)
   rb_define_method(cSymbol, "list_auxiliary_states", symbol_list_auxiliary_states, 0);
   rb_define_method(cSymbol, "list_outputs", mxnet_symbol_list_outputs, 0);
   rb_define_method(cSymbol, "attributes", symbol_attributes, 0);
+  rb_define_method(cSymbol, "attr", symbol_attr, 1);
   rb_define_method(cSymbol, "infer_type", symbol_infer_type, -1);
   rb_define_method(cSymbol, "save", symbol_save, 1);
   rb_define_method(cSymbol, "to_json", symbol_to_json, 0);
