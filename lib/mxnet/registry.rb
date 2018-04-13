@@ -21,8 +21,8 @@ module MXNet
         unless klass < @base_class
           raise TypeError, "Can only register subclass of #{@base_class}"
         end
-        name = klass.name[/:?(\w+)\z/, 1].downcase if name.nil?
-        name = name.to_sym
+        name = klass.name[/:?(\w+)\z/, 1] if name.nil?
+        name = name.downcase.to_sym
         if @registry.has_key?(name)
           warn "\033[91mNew #{@nickname} #{klass} registered with name #{name}" +
                " is overriding existing #{@nickname} #{@registry[name]}\033[0m"

@@ -80,6 +80,12 @@ RSpec.describe MXNet::Registry::Manager do
       expect(internal_registry.length).to eq(2)
       expect(internal_registry.keys).to eq([:bar, :baz])
     end
+
+    specify do
+      expect(regman.alias(namespace::TestSubclass1, :CamelCase)).to equal(namespace::TestSubclass1)
+      expect(internal_registry.length).to eq(1)
+      expect(internal_registry.keys).to eq([:camelcase])
+    end
   end
 
   describe '#create' do
