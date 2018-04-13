@@ -228,6 +228,7 @@ symbol_set_attributes_i(VALUE key, VALUE value, VALUE arg)
     key = rb_sym_to_s(key);
   }
   key_cstr = StringValueCStr(key);
+  /* NOTE: don't convert symbol into string implicitly */
   value_cstr = StringValueCStr(value);
 
   CHECK_CALL(MXNET_API(MXSymbolSetAttr)(handle, key_cstr, value_cstr));
@@ -294,7 +295,7 @@ make_type_array(mx_uint size, int const *types)
 {
   VALUE res;
   mx_uint i;
- 
+
   res = rb_ary_new_capa(size);
   for (i = 0; i < size; ++i) {
     rb_ary_push(res, mxnet_dtype_id2name(types[i]));
@@ -708,7 +709,7 @@ symbol_dup(VALUE obj)
 
   handle = mxnet_get_handle(obj);
   CHECK_CALL(MXNET_API(MXSymbolCopy)(handle, &copy_handle));
-  
+
   return mxnet_symbol_new(copy_handle);
 }
 

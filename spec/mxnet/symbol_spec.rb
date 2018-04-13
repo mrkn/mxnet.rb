@@ -16,6 +16,12 @@ module MXNet
         expect(x).to be_a(MXNet::Symbol)
         expect(x.name).to eq(:x)
       end
+
+      specify 'symbol values in attributes are not allowed' do
+        expect {
+          MXNet::Symbol.var(:x, __foo__: :bar)
+        }.to raise_error(TypeError)
+      end
     end
 
     describe '.Variable' do
