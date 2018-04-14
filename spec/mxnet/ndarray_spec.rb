@@ -736,29 +736,29 @@ module MXNet
         # case n=d
         y = x.tile(reps: [2,3])
         expect(y.to_narray).to eq(
-          [[1, 2, 1, 2, 1, 2], 
-           [3, 4, 3, 4, 3, 4], 
-           [1, 2, 1, 2, 1, 2], 
+          [[1, 2, 1, 2, 1, 2],
+           [3, 4, 3, 4, 3, 4],
+           [1, 2, 1, 2, 1, 2],
            [3, 4, 3, 4, 3, 4]]
         )
 
         # case n > d
         y = x.tile(reps: [2,]) # same as [1,2]
         expect(y.to_narray).to eq(
-          [[1, 2, 1, 2], 
+          [[1, 2, 1, 2],
            [3, 4, 3, 4]]
         )
 
         #case n < d
         y = x.tile(reps: [2,2,3])
         expect(y.to_narray).to eq(
-          [[[1, 2, 1, 2, 1, 2], 
-            [3, 4, 3, 4, 3, 4], 
-            [1, 2, 1, 2, 1, 2], 
-            [3, 4, 3, 4, 3, 4]], 
-           [[1, 2, 1, 2, 1, 2], 
-            [3, 4, 3, 4, 3, 4], 
-            [1, 2, 1, 2, 1, 2], 
+          [[[1, 2, 1, 2, 1, 2],
+            [3, 4, 3, 4, 3, 4],
+            [1, 2, 1, 2, 1, 2],
+            [3, 4, 3, 4, 3, 4]],
+           [[1, 2, 1, 2, 1, 2],
+            [3, 4, 3, 4, 3, 4],
+            [1, 2, 1, 2, 1, 2],
              [3, 4, 3, 4, 3, 4]]]
         )
       end
@@ -786,15 +786,15 @@ module MXNet
         y = MXNet::NDArray.arange(2).reshape([2,1])
         z = MXNet::NDArray.arange(2).reshape([1,2])
         expect(MXNet::NDArray.maximum(x,2).to_narray).to eq(
-          [[2, 2, 2], 
+          [[2, 2, 2],
            [2, 2, 2]]
         )
         expect(MXNet::NDArray.maximum(x,y).to_narray).to eq(
-          [[1, 1, 1], 
+          [[1, 1, 1],
            [1, 1, 1]]
         )
         expect(MXNet::NDArray.maximum(y,z).to_narray).to eq(
-          [[0, 1], 
+          [[0, 1],
            [1, 1]]
         )
       end
@@ -806,15 +806,15 @@ module MXNet
         y = MXNet::NDArray.arange(2).reshape([2,1])
         z = MXNet::NDArray.arange(2).reshape([1,2])
         expect(MXNet::NDArray.minimum(x,2).to_narray).to eq(
-           [[1, 1, 1], 
+           [[1, 1, 1],
             [1, 1, 1]]
         )
         expect(MXNet::NDArray.minimum(x,y).to_narray).to eq(
-          [[0, 0, 0], 
+          [[0, 0, 0],
            [1, 1, 1]]
         )
         expect(MXNet::NDArray.minimum(y,z).to_narray).to eq(
-          [[0, 0], 
+          [[0, 0],
            [0, 1]]
         )
       end
@@ -826,19 +826,19 @@ module MXNet
         y = MXNet::NDArray.arange(3,9).reshape([3,2]) # [[3, 4], [5, 6], [7, 8]]
         z = MXNet::NDArray.arange(9,15).reshape([3,2]) # [[9, 10], [11, 12], [13, 14]]
         expect(MXNet::NDArray.concat(x,y,z,dim: 0).to_narray).to eq(
-          [[0, 1], 
-           [2, 3], 
-           [3, 4], 
-           [5, 6], 
-           [7, 8], 
-           [9, 10], 
-           [11, 12], 
-           [13, 14]]         
-       )  
+          [[0, 1],
+           [2, 3],
+           [3, 4],
+           [5, 6],
+           [7, 8],
+           [9, 10],
+           [11, 12],
+           [13, 14]]
+       )
        expect(MXNet::NDArray.concat(y,z,dim: 1).to_narray).to eq(
-        [[3, 4, 9, 10], 
-         [5, 6, 11, 12], 
-         [7, 8, 13, 14]]       
+        [[3, 4, 9, 10],
+         [5, 6, 11, 12],
+         [7, 8, 13, 14]]
        )
        # Cannot concatenate arrays along a dimension that is not the same for all arrays
        expect { MXNet::NDArray.concat(x,y,dim: 1) }.to raise_exception(MXNet::Error, /Incompatible input shape/)
