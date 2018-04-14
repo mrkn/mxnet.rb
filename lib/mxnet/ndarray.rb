@@ -27,6 +27,28 @@ module MXNet
       return out
     end
 
+    def self.array(source_array, ctx: nil, dtype: nil)
+      ctx ||= Context.default
+      case source_array
+      when NDArray
+        dtype ||= source_array.dtype
+      else
+        dtype ||= :float32
+        unless source_array.is_a?(Numo::NArray)
+          begin
+            require 'mxnet/narray_helper'
+            # FIXME: dtype support
+            source_array = Numo::SFloat[*source_array]
+          rescue
+            raise ArgumentError, "source_array must be array like object"
+          end
+        end
+      end
+      arr = empty(source_array.shape, ctx: ctx, dtype: dtype)
+      arr[0..-1] = source_array
+      arr
+    end
+
     def inspect
       shape_info = shape.join('x')
       ary = to_narray.inspect.lines[1..-1].join
@@ -252,9 +274,8 @@ module MXNet
         when value.is_a?(Array)
           raise NotImplementedError, "Array is not supported yet"
         when defined?(Numo::NArray) && value.is_a?(Numo::NArray)
-          # require 'mxnet/narray_helper'
-          # TODO: MXNet::NArrayHelper.sync_copyfrom(self, value)
-          raise NotImplementedError, "NArray is not supported yet"
+          require 'mxnet/narray_helper'
+          MXNet::NArrayHelper.sync_copyfrom(self, value)
         when defined?(NMatrix) && value.is_a?(NMatrix)
           # require 'mxnet/mxnet_helper'
           # TODO: _sync_copyfrom_nmatrix(value)
@@ -651,9 +672,9 @@ module MXNet
         raise TypeError, "type #{rhs.class} not supported"
       end
     end
-    
+
   end # SwappedOperationAdapter
-  
+
 
   NDArray::CONVERTER = []
 

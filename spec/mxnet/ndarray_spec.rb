@@ -304,6 +304,10 @@ module MXNet
     end
 
     describe '.array' do
+      specify do
+        x = MXNet::NDArray.array([[1, 2], [3, 4]])
+        expect(x.to_narray).to eq(Numo::SFloat.new(2, 2).seq(1))
+      end
     end
 
     describe '#move_axis' do
