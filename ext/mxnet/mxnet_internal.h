@@ -125,6 +125,14 @@ struct mxnet_api_table {
                             int dev_type, int dev_id, int delay_alloc,
                             int dtype, NDArrayHandle *out);
   int (* MXNDArrayFree)(NDArrayHandle handle);
+  int (* MXNDArraySave)(const char *fname, mx_uint num_args,
+                        NDArrayHandle *args, const char **keys);
+  int (* MXNDArrayLoad)(const char *fname,
+                        mx_uint *out_size, NDArrayHandle **out_arr,
+                        mx_uint *out_name_size, const char ***out_names);
+  int (* MXNDArrayLoadFromBuffer)(const void *ndarray_buffer, size_t size,
+                                  mx_uint *out_size, NDArrayHandle **out_arr,
+                                  mx_uint *out_name_size, const char ***out_names);
   int (* MXNDArrayReshape)(NDArrayHandle handle, int ndim, int *dims,
                            NDArrayHandle *out);
   int (* MXNDArrayGetContext)(NDArrayHandle handle, int *out_dev_type, int *out_dev_id);

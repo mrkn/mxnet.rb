@@ -187,8 +187,154 @@ ndarray_s_empty(int argc, VALUE *argv, VALUE klass)
   return mxnet_ndarray_new(handle);
 }
 
+static int
+ndarray_s_save_extract_hash_i(VALUE key, VALUE val, VALUE arg)
+{
+  VALUE *pmemo = (VALUE *)arg;
+  NDArrayHandle *handles = (NDArrayHandle *)pmemo[0];
+  char const **keys = (char const **)pmemo[1];
+
+  if (RB_TYPE_P(key, T_SYMBOL)) {
+    key = rb_sym_to_s(key);
+  }
+  key = rb_check_string_type(key);
+
+  if (NIL_P(key) || !mxnet_is_ndarray(val)) {
+    rb_raise(rb_eArgError, "save only accept dict String => NDArray "
+             "or an Array of NDArrays.");
+  }
+
+  *keys = RSTRING_PTR(key);
+  rb_ary_push(pmemo[2], key);
+
+  *handles = mxnet_ndarray_get_handle(val);
+
+  pmemo[0] = (VALUE)(handles + 1);
+  pmemo[1] = (VALUE)(keys + 1);
+
+  return ST_CONTINUE;
+}
+
+/* Saves a list of arrays or a dict of str => array to file.
+ *
+ * Examples of filenames:
+ *
+ * - `/path/to/file`
+ * - `s3://my-bucket/path/to/file` (if compiled with AWS S3 supports)
+ * - `hdfs://path/to/file` (if compiled with HDFS supports)
+ */
+static VALUE
+ndarray_s_save(VALUE klass, VALUE fname, VALUE data)
+{
+  char const *fname_cstr, **keys = NULL;
+  VALUE handles_str, keys_str;
+  NDArrayHandle *handles;
+  mx_uint len;
+
+  fname_cstr = StringValueCStr(fname); /* TODO: support pathname */
+
+  if (mxnet_is_ndarray(data)) {
+    len = 1;
+    handles_str = rb_str_tmp_new(sizeof(NDArrayHandle)*len);
+    handles = (NDArrayHandle *)RSTRING_PTR(handles_str);
+    handles[0] = mxnet_ndarray_get_handle(data);
+  }
+  else if (RB_TYPE_P(data, T_HASH)) {
+    VALUE memo[3];
+
+#if LONG_MAX > UINT_MAX
+    if (RHASH_SIZE(data) > UINT_MAX) {
+      rb_raise(rb_eArgError, "the size of the give hash is too long.");
+    }
+#endif
+
+    len = (mx_uint)RHASH_SIZE(data);
+    handles_str = rb_str_tmp_new(sizeof(NDArrayHandle)*len);
+    handles = (NDArrayHandle *)RSTRING_PTR(handles_str);
+    keys_str = rb_str_tmp_new(sizeof(char const *)*len);
+    keys = (char const **)RSTRING_PTR(keys_str);
+
+    memo[0] = (VALUE)handles;
+    memo[1] = (VALUE)keys;
+    memo[2] = rb_ary_tmp_new(len);
+    rb_hash_foreach(data, ndarray_s_save_extract_hash_i, (VALUE)memo);
+  }
+  else if (RB_TYPE_P(data, T_ARRAY)) {
+    mx_uint i;
+
+#if LONG_MAX > UINT_MAX
+    if (RARRAY_LEN(data) > UINT_MAX) {
+      rb_raise(rb_eArgError, "the size of the give array is too long.");
+    }
+#endif
+
+    len = (mx_uint)RARRAY_LEN(data);
+    handles_str = rb_str_tmp_new(sizeof(NDArrayHandle)*len);
+    handles = (NDArrayHandle *)RSTRING_PTR(handles_str);
+    for (i = 0; i < len; ++i) {
+      VALUE ndary = RARRAY_AREF(data, i);
+      if (!mxnet_is_ndarray(ndary)) {
+        rb_raise(rb_eArgError, "save only accept Hash of String => NDArray "
+                 "or Array of NDArrays.");
+      }
+      handles[i] = mxnet_ndarray_get_handle(ndary);
+    }
+  }
+  else {
+    rb_raise(rb_eArgError,
+             "data needs to either be a NDArray, Hash of String => NDArray, "
+             "or an Array of NDArrays.");
+  }
+
+  CHECK_CALL(MXNET_API(MXNDArraySave)(fname_cstr, len, handles, keys));
+
+  return Qnil;
+}
+
+/* Loads an array from file.
+ * See more details in `save`.
+ */
+static VALUE
+ndarray_s_load(VALUE obj, VALUE fname)
+{
+  char const *fname_cstr;
+  mx_uint out_size, out_name_size;
+  NDArrayHandle *handles;
+  char const **names;
+
+  fname_cstr = StringValueCStr(fname);
+  CHECK_CALL(MXNET_API(MXNDArrayLoad)(
+    fname_cstr, &out_size, &handles, &out_name_size, &names));
+
+  if (out_name_size == 0) {
+    mx_uint i;
+    VALUE ary = rb_ary_new_capa(out_size);
+    for (i = 0; i < out_size; ++i) {
+      VALUE ndary = mxnet_ndarray_new(handles[i]);
+      rb_ary_push(ary, ndary);
+    }
+    return ary;
+  }
+  else {
+    VALUE hsh;
+    mx_uint i;
+    if (out_size != out_name_size) {
+      rb_raise(rb_eRuntimeError,
+               "the loaded file is broken (out_size != out_name_size).");
+    }
+    hsh = rb_hash_new();
+    for (i = 0; i < out_size; ++i) {
+      VALUE name, ndary;
+      name = rb_str_new2(names[i]);
+      ndary = mxnet_ndarray_new(handles[i]);
+      rb_hash_aset(hsh, name, ndary);
+    }
+    return hsh;
+  }
+}
+
 /* Returns a **view**  of this array with a new shape without altering any data.
- * 
+ *
  * @param [Array<Integer>] shape  The new shape should not change the array size.
  * @return [NDArray] An array with desired shape that shares data with this array.
  */
@@ -290,7 +436,7 @@ ndarray_at(VALUE obj, VALUE idx_v)
 {
   void *handle, *out_handle;
   mx_uint idx;
-  
+
   handle = mxnet_ndarray_get_handle(obj);
   idx = NUM2MXUINT(idx_v);
   CHECK_CALL(MXNET_API(MXNDArrayAt)(handle, idx, &out_handle));
@@ -571,6 +717,9 @@ mxnet_init_ndarray(void)
   rb_define_alloc_func(cNDArray, ndarray_allocate);
 
   rb_define_singleton_method(cNDArray, "empty", ndarray_s_empty, -1);
+  rb_define_singleton_method(cNDArray, "save", ndarray_s_save, 2);
+  rb_define_singleton_method(cNDArray, "load", ndarray_s_load, 1);
+  /* TODO: rb_define_singleton_method(cNDArray, "load_from_buffer", ndarray_s_load_from_buffer, 1); */
 
   rb_define_method(cNDArray, "dtype", ndarray_get_dtype, 0);
   rb_define_method(cNDArray, "dtype_name", ndarray_get_dtype_name, 0);

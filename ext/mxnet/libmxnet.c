@@ -58,6 +58,9 @@ init_api_table(VALUE handle)
 
   INIT_API_TABLE_ENTRY(MXNDArrayCreateEx);
   INIT_API_TABLE_ENTRY(MXNDArrayFree);
+  INIT_API_TABLE_ENTRY(MXNDArraySave);
+  INIT_API_TABLE_ENTRY(MXNDArrayLoad);
+  /* TODO: INIT_API_TABLE_ENTRY(MXNDArrayLoadFromBuffer); */
   INIT_API_TABLE_ENTRY(MXNDArrayReshape);
   INIT_API_TABLE_ENTRY(MXNDArrayGetContext);
   INIT_API_TABLE_ENTRY(MXNDArrayGetShape);

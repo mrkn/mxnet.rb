@@ -2,10 +2,6 @@ require 'spec_helper'
 
 module MXNet
   ::RSpec.describe NDArray do
-    describe '#save and .load' do
-      pending
-    end
-
     describe '#[]' do
       context 'when the array is 1D' do
         specify do
