@@ -1,6 +1,7 @@
 require "bundler/setup"
 require "mxnet"
-require "tmpdir"
+
+require_relative 'support/tmpdir'
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
