@@ -347,6 +347,14 @@ module MXNet
       Internal._mul_scalar(self, scalar: -1.0)
     end
 
+    def sqrt(*args, **kwargs)
+      Ops.sqrt(self, *args, **kwargs)
+    end
+
+    def square(*args, **kwargs)
+      Ops.square(self, *args, **kwargs)
+    end
+
     def +(other)
       case other
       when NDArray
