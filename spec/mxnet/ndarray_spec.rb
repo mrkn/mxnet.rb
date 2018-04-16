@@ -271,8 +271,8 @@ module MXNet
         expect(z.to_a).to eq([4, 9, 16])
       end
     end
-    describe '.dot' do
 
+    describe '.dot' do
       specify do
         x = MXNet::NDArray.array([2,3,4]).reshape([1,3])
         y = MXNet::NDArray.array([7,6,5]).reshape([3,1])
@@ -282,19 +282,16 @@ module MXNet
       end
 
       specify do
-      x = MXNet::NDArray.array([0,1,2,3,4,5,6,7]).reshape([2,2,2])
-      y = MXNet::NDArray.array([7,6,5,4,3,2,1,0]).reshape([2,2,2])
-      z = MXNet::NDArray.dot(x,y)
-      expect(z.shape).to eq([2,2,2,2])
-      expect(z.to_narray).to eq([[[[3, 2], 
-        [1, 0]], 
-       [[23, 18], 
-        [13, 8]]], 
-      [[[43, 34], 
-        [25, 16]], 
-       [[63, 50], 
-        [37, 24]]]]
-     )
+        x = MXNet::NDArray.array([0,1,2,3,4,5,6,7]).reshape([2,2,2])
+        y = MXNet::NDArray.array([7,6,5,4,3,2,1,0]).reshape([2,2,2])
+        z = MXNet::NDArray.dot(x,y)
+        expect(z.shape).to eq([2,2,2,2])
+        expect(z.to_narray).to eq(
+          [[[[3, 2],  [1, 0]], 
+           [[23, 18], [13, 8]]], 
+          [[[43, 34], [25, 16]], 
+           [[63, 50],  [37, 24]]]]
+          )
       end
     end
 
@@ -824,7 +821,6 @@ module MXNet
         expect(z.to_narray).to eq([[1, 3], [2, 4]])
       end
     end
-
 
     describe '#attach_grad' do
       context 'default stype' do
