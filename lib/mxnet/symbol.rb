@@ -127,16 +127,16 @@ module MXNet
     # NATIVE: to_json
 
     # Evaluates a symbol given argumens.
-    # 
+    #
     # The `eval` method combines a call to `bind` (which returns an executer)
     # with a call to `forward` (executor method).
     # For the common use case, where you might repeatedly evaluate with same arguments,
     # eval is slow.
     # In that case, you should call `bind` once and then repeatedly call `forward`.
     # This function allows simpler syntax for less cumbersome introspection.
-    # 
+    #
     # Example:
-    # 
+    #
     #     > a = MXNet.var(:a)
     #     > b = MXNet.var(:b)
     #     > c = a + b
@@ -351,17 +351,18 @@ module MXNet
       attr = AttrScope.current.get(attr)
       attr ||= {}
       attr[:__shape__] = shape.to_s if shape
-      attr[:__lr_mult__] = lr_mult if lr_mult
-      attr[:__wd_mult__] = wd_mult if wd_mult
-      attr[:__dtype__] = MXNet::DType.name(dtype) if dtype
+      attr[:__lr_mult__] = lr_mult.to_s if lr_mult
+      attr[:__wd_mult__] = wd_mult.to_s if wd_mult
+      attr[:__dtype__] = MXNet::DType.name2id(dtype).to_s if dtype
       if init
         init = init.to_json unless init.is_a?(String) || init.is_a?(::Symbol)
         attr[:__init__] = init
       end
       # attr[:__storage_type__] = str(_STORAGE_TYPE_STR_TO_ID[stype] if stype
       kwargs.each do |k, v|
+        k = k.to_s
         if k.start_with?('__') && k.end_with?('__')
-          attr[k] = v
+          attr[k.to_sym] = v
         else
           raise ArgumentError, "Attribute name=#{k} is not supported." +
             ' Additional attributes must start and end with double underscores,' +
