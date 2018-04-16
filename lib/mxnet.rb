@@ -24,6 +24,7 @@ module MXNet
   require 'mxnet/symbol'
   require 'mxnet/symbol/operation_delegator'
   require 'mxnet/random'
+  require 'mxnet/registry'
   require 'mxnet/utils'
   require 'mxnet/op_info'
   require 'mxnet.so'
