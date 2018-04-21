@@ -347,6 +347,10 @@ module MXNet
       Internal._mul_scalar(self, scalar: -1.0)
     end
 
+    def abs(*args, **kwargs)
+      Ops.abs(self, *args, **kwargs)
+    end
+
     def sqrt(*args, **kwargs)
       Ops.sqrt(self, *args, **kwargs)
     end

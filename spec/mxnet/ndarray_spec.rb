@@ -239,6 +239,22 @@ module MXNet
       pending
     end
 
+    describe '.abs' do
+      specify do
+        x = MXNet::NDArray.array([-1, 2, -3])
+        z = MXNet::NDArray.abs(x)
+        expect(z.to_a).to eq([1, 2, 3])
+      end
+    end
+
+    describe '#abs' do
+      specify do
+        x = MXNet::NDArray.array([-1, 2, -3])
+        z = x.abs
+        expect(z.to_a).to eq([1, 2, 3])
+      end
+    end
+
     describe '.sqrt' do
       specify do
         x = MXNet::NDArray.array([4, 9, 16])
@@ -287,9 +303,9 @@ module MXNet
         z = MXNet::NDArray.dot(x,y)
         expect(z.shape).to eq([2,2,2,2])
         expect(z.to_narray).to eq(
-          [[[[3, 2],  [1, 0]], 
-           [[23, 18], [13, 8]]], 
-          [[[43, 34], [25, 16]], 
+          [[[[3, 2],  [1, 0]],
+           [[23, 18], [13, 8]]],
+          [[[43, 34], [25, 16]],
            [[63, 50],  [37, 24]]]]
           )
       end
