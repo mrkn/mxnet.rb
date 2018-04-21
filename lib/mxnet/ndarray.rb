@@ -351,6 +351,14 @@ module MXNet
       Ops.abs(self, *args, **kwargs)
     end
 
+    def max(*args, **kwargs)
+      Ops.max(self, *args, **kwargs)
+    end
+
+    def min(*args, **kwargs)
+      Ops.min(self, *args, **kwargs)
+    end
+
     def sqrt(*args, **kwargs)
       Ops.sqrt(self, *args, **kwargs)
     end

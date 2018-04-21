@@ -255,6 +255,46 @@ module MXNet
       end
     end
 
+    describe '.max' do
+      specify do
+        x = MXNet::NDArray.array([[1, 2, 3, 4], [6, 5, 4, 3]])
+        z = MXNet::NDArray.max(x)
+        expect(z.to_a).to eq([6])
+        z = MXNet::NDArray.max(x, axis: 0)
+        expect(z.to_a).to eq([6, 5, 4, 4])
+      end
+    end
+
+    describe '#max' do
+      specify do
+        x = MXNet::NDArray.array([[1, 2, 3, 4], [6, 5, 4, 3]])
+        z = x.max
+        expect(z.to_a).to eq([6])
+        z = x.max(axis: 0)
+        expect(z.to_a).to eq([6, 5, 4, 4])
+      end
+    end
+
+    describe '.min' do
+      specify do
+        x = MXNet::NDArray.array([[4, 5, 2, 1], [6, 3, 0, 2]])
+        z = MXNet::NDArray.min(x)
+        expect(z.to_a).to eq([0])
+        z = MXNet::NDArray.min(x, axis: 0)
+        expect(z.to_a).to eq([4, 3, 0, 1])
+      end
+    end
+
+    describe '#min' do
+      specify do
+        x = MXNet::NDArray.array([[4, 5, 2, 1], [6, 3, 0, 2]])
+        z = x.min
+        expect(z.to_a).to eq([0])
+        z = x.min(axis: 0)
+        expect(z.to_a).to eq([4, 3, 0, 1])
+      end
+    end
+
     describe '.sqrt' do
       specify do
         x = MXNet::NDArray.array([4, 9, 16])
