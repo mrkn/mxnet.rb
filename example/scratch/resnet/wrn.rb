@@ -160,7 +160,7 @@ class ResidualGroup < BlockBase
     super(name: name)
     @blocks = [ ResidualBlock.new(in_channels, num_filter, stride: stride, ctx: ctx, name: "#{name}-resblock1") ]
     1.step(n-1) do |i|
-      @blocks << ResidualBlock.new(in_channels, num_filter, stride: 1, ctx: ctx, name: "#{name}-resblock#{i+1}")
+      @blocks << ResidualBlock.new(num_filter, num_filter, stride: 1, ctx: ctx, name: "#{name}-resblock#{i+1}")
     end
 
     @all_parameters = @blocks.map(&:all_parameters).flatten
