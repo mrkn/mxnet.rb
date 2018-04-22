@@ -235,6 +235,96 @@ module MXNet
       pending
     end
 
+    describe '.argsort' do
+      specify do
+        x = MXNet::NDArray.array([[0.3, 0.2, 0.4], [0.1, 0.3, 0.2]])
+        y = MXNet::NDArray.argsort(x)
+        expect(y.reshape([-1]).to_a).to eq([1, 0, 2, 0, 2, 1])
+        y = MXNet::NDArray.argsort(x, axis: 0)
+        expect(y.reshape([-1]).to_a).to eq([1, 0, 1, 0, 1, 0])
+        y = MXNet::NDArray.argsort(x, axis: 0, is_ascend: 'false')
+        expect(y.reshape([-1]).to_a).to eq([0, 1, 0, 1, 0, 1])
+      end
+
+      specify do
+        pending 'is_ascend should work for false'
+        x = MXNet::NDArray.array([[0.3, 0.2, 0.4], [0.1, 0.3, 0.2]])
+        y = MXNet::NDArray.argsort(x, axis: 0, is_ascend: false)
+        expect(y.reshape([-1]).to_a).to eq([0, 1, 0, 1, 0, 1])
+      end
+    end
+
+    describe '#argsort' do
+      specify do
+        x = MXNet::NDArray.array([[0.3, 0.2, 0.4], [0.1, 0.3, 0.2]])
+        y = x.argsort
+        expect(y.reshape([-1]).to_a).to eq([1, 0, 2, 0, 2, 1])
+        y = x.argsort(axis: 0)
+        expect(y.reshape([-1]).to_a).to eq([1, 0, 1, 0, 1, 0])
+        y = x.argsort(axis: 0, is_ascend: 'false')
+        expect(y.reshape([-1]).to_a).to eq([0, 1, 0, 1, 0, 1])
+      end
+
+      specify do
+        pending 'is_ascend should work for false'
+        x = MXNet::NDArray.array([[0.3, 0.2, 0.4], [0.1, 0.3, 0.2]])
+        y = x.argsort(axis: 0, is_ascend: false)
+        expect(y.reshape([-1]).to_a).to eq([0, 1, 0, 1, 0, 1])
+      end
+    end
+
+    describe '.argmax' do
+      specify do
+        x = MXNet::NDArray.array([[0, 1, 2], [3, 4, 5]])
+        y = MXNet::NDArray.argmax(x, axis: 0)
+        expect(y.reshape([-1]).to_a).to eq([1, 1, 1])
+        y = MXNet::NDArray.argmax(x, axis: 1)
+        expect(y.reshape([-1]).to_a).to eq([2, 2])
+        y = MXNet::NDArray.argmax(x, axis: 1, keepdims: true)
+        expect(y.shape).to eq([2, 1])
+        expect(y.reshape([-1]).to_a).to eq([2, 2])
+      end
+    end
+
+    describe '#argmax' do
+      specify do
+        x = MXNet::NDArray.array([[0, 1, 2], [3, 4, 5]])
+        y = x.argmax(axis: 0)
+        expect(y.reshape([-1]).to_a).to eq([1, 1, 1])
+        y = x.argmax(axis: 1)
+        expect(y.reshape([-1]).to_a).to eq([2, 2])
+        y = x.argmax(axis: 1, keepdims: true)
+        expect(y.shape).to eq([2, 1])
+        expect(y.reshape([-1]).to_a).to eq([2, 2])
+      end
+    end
+
+    describe '.argmin' do
+      specify do
+        x = MXNet::NDArray.array([[0, 1, 2], [3, 4, 5]])
+        y = MXNet::NDArray.argmin(x, axis: 0)
+        expect(y.reshape([-1]).to_a).to eq([0, 0, 0])
+        y = MXNet::NDArray.argmin(x, axis: 1)
+        expect(y.reshape([-1]).to_a).to eq([0, 0])
+        y = MXNet::NDArray.argmin(x, axis: 1, keepdims: true)
+        expect(y.shape).to eq([2, 1])
+        expect(y.reshape([-1]).to_a).to eq([0, 0])
+      end
+    end
+
+    describe '#argmin' do
+      specify do
+        x = MXNet::NDArray.array([[0, 1, 2], [3, 4, 5]])
+        y = x.argmin(axis: 0)
+        expect(y.reshape([-1]).to_a).to eq([0, 0, 0])
+        y = x.argmin(axis: 1)
+        expect(y.reshape([-1]).to_a).to eq([0, 0])
+        y = x.argmin(axis: 1, keepdims: true)
+        expect(y.shape).to eq([2, 1])
+        expect(y.reshape([-1]).to_a).to eq([0, 0])
+      end
+    end
+
     describe '#clip' do
       pending
     end
@@ -310,7 +400,6 @@ module MXNet
         expect(z.to_a).to eq([2, 3, 4])
       end
     end
-
 
     describe '.square' do
       specify do

@@ -347,6 +347,18 @@ module MXNet
       Internal._mul_scalar(self, scalar: -1.0)
     end
 
+    def argsort(*args, **kwargs)
+      Ops.argsort(self, *args, **kwargs)
+    end
+
+    def argmax(*args, **kwargs)
+      Ops.argmax(self, *args, **kwargs)
+    end
+
+    def argmin(*args, **kwargs)
+      Ops.argmin(self, *args, **kwargs)
+    end
+
     def abs(*args, **kwargs)
       Ops.abs(self, *args, **kwargs)
     end
