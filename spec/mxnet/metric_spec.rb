@@ -1,5 +1,4 @@
 require 'spec_helper'
-require 'mxnet/metric'
 
 RSpec.describe MXNet::Metric::Accuracy do
   specify do
