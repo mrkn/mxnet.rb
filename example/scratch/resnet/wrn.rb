@@ -433,6 +433,8 @@ def main
             "#{name[0]}=#{acc[0]}, #{name[1]}=#{acc[1]}"
       end
       batch_tic = Time.now
+
+      GC.start
     end
 
     epoch_time = Time.now - tic
@@ -451,6 +453,8 @@ def main
 
     # save model if meet requirements
     save_checkpoint(epoch, val_acc[0], best_acc, opt)
+
+    GC.start
   end
 
   if num_epochs > 1
