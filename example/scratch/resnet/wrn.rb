@@ -36,7 +36,6 @@ class Dense < BlockBase
   end
 
   def forward(x)
-    p name => { x: x.shape, w: @weight.shape, b: @bias.shape }
     y = ND.FullyConnected(x, @weight, @bias, num_hidden: @out_units)
     return y
   end
@@ -67,7 +66,6 @@ class Conv2D < BlockBase
   end
 
   def forward(x)
-    p name => { x: x.shape, w: @weight.shape, b: @bias.shape }
     ND.Convolution(x, @weight, @bias, kernel: @kernel, stride: @stride,
                    dilate: [1, 1], pad: @pad, num_filter: @num_filter)
   end
