@@ -707,6 +707,17 @@ ndarray_to_a(VALUE obj)
   return ary;
 }
 
+static VALUE
+ndarray_wait_to_read(VALUE obj)
+{
+  NDArrayHandle *handle;
+
+  handle = mxnet_ndarray_get_handle(obj);
+  CHECK_CALL(MXNET_API(MXNDArrayWaitToRead)(handle));
+
+  return Qnil;
+}
+
 void
 mxnet_init_ndarray(void)
 {
@@ -728,6 +739,7 @@ mxnet_init_ndarray(void)
   rb_define_method(cNDArray, "grad", ndarray_grad, 0);
   rb_define_method(cNDArray, "backward", ndarray_backward, -1);
   rb_define_method(cNDArray, "to_a", ndarray_to_a, 0);
+  rb_define_method(cNDArray, "wait_to_read", ndarray_wait_to_read, 0);
 
   rb_define_private_method(cNDArray, "__mxnet_handle__", ndarray_get_mxnet_handle, 0);
   rb_define_private_method(cNDArray, "_get_context_params", ndarray_get_context_params, 0);

@@ -995,6 +995,14 @@ module MXNet
       end
     end
 
+    describe '#wait_to_read' do
+      specify do
+        x = MXNet::NDArray.array([1, 2, 3])
+        y = MXNet::NDArray.dot(x, x)
+        expect { y.wait_to_read }.not_to raise_error
+      end
+    end
+
     describe '.maximum' do
       specify do
         x = MXNet::NDArray.ones([2,3])

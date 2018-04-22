@@ -144,6 +144,7 @@ struct mxnet_api_table {
   int (* MXNDArrayAt)(NDArrayHandle handle, mx_uint idx, NDArrayHandle *out);
   int (* MXNDArraySlice)(NDArrayHandle handle, mx_uint start, mx_uint stop, NDArrayHandle *out);
   int (* MXNDArrayGetGrad)(NDArrayHandle handle, NDArrayHandle *out);
+  int (* MXNDArrayWaitToRead)(NDArrayHandle handle);
 
   int (* MXAutogradSetIsRecording)(int is_recording, int* prev);
   int (* MXAutogradSetIsTraining)(int is_training, int* prev);
