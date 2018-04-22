@@ -120,7 +120,7 @@ class ResidualUnit < BlockBase
     @num_filter = num_filter
     @ctx = ctx
 
-    @bn   = BatchNorm.new(num_filter, ctx: @ctx, name: "#{name}-bn")
+    @bn   = BatchNorm.new(in_channels, ctx: @ctx, name: "#{name}-bn")
     @conv = Conv2D.new(in_channels, num_filter, kernel: 3, stride: stride, pad: 1, ctx: @ctx, name: "#{name}-conv")
     if @in_channels != @num_filter
       @shortcut = Conv2D.new(in_channels, num_filter, kernel: 1, stride: stride, pad: 0, ctx: @ctx, name: "#{name}-conv-shortcut")
