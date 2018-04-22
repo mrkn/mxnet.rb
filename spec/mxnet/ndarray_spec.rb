@@ -215,6 +215,14 @@ module MXNet
       pending
     end
 
+    describe '#as_type' do
+      specify do
+        x = MXNet::NDArray.zeros([2, 3], dtype: :float32)
+        y = x.as_type(:int32)
+        expect(y.dtype_name).to eq(:int32)
+      end
+    end
+
     describe '#as_in_context' do
       pending
     end

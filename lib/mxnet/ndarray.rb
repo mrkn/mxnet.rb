@@ -331,6 +331,15 @@ module MXNet
       to_a[0]
     end
 
+    # Return a copy of the array after casting to a specified type.
+    def as_type(dtype, copy: true)
+      dtype = MXNet::Utils.dtype_name(dtype)
+      return self if !copy and dtype == self.dtype_name
+      res = MXNet::NDArray.empty(self.shape, ctx: self.context, dtype: dtype)
+      copy_to(res)
+      return res
+    end
+
     def to_i
       as_scalar.to_i
     end
