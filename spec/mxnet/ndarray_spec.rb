@@ -215,6 +215,10 @@ module MXNet
       pending
     end
 
+    describe '#as_scalar' do
+      pending
+    end
+
     describe '#as_type' do
       specify do
         x = MXNet::NDArray.zeros([2, 3], dtype: :float32)
