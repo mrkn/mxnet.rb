@@ -30,4 +30,5 @@ module MXNet
   require 'mxnet.so'
   require 'mxnet/ndarray/operations'
   require 'mxnet/symbol/operations'
+  require 'mxnet/lr_scheduler'
 end
