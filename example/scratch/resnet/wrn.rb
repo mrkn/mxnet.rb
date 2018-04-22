@@ -14,11 +14,17 @@ end
 class BlockBase
   ND = MXNet::NDArray
 
+  def initialize(name: '')
+    @name = name.to_s
+  end
+
+  attr_reader :name
   attr_reader :all_parameters
 end
 
 class Dense < BlockBase
-  def initialize(in_units, out_units, ctx: MXNet::Context.default)
+  def initialize(in_units, out_units, ctx: MXNet::Context.default, name: 'dense')
+    super(name: name)
     @in_units = in_units
     @out_units = out_units
     @ctx = ctx
@@ -30,6 +36,7 @@ class Dense < BlockBase
   end
 
   def forward(x)
+    p name => { x: x.shape, w: @weight.shape, b: @bias.shape }
     y = ND.FullyConnected(x, @weight, @bias, num_hidden: @out_units)
     return y
   end
@@ -37,7 +44,8 @@ end
 
 class Conv2D < BlockBase
   def initialize(in_channels, num_filter, kernel:, stride:, pad:,
-                 ctx: MXNet::Context.default)
+                 ctx: MXNet::Context.default, name: 'conv')
+    super(name: name)
     @in_channels = in_channels
     @num_filter = num_filter
     @ctx = ctx
@@ -59,14 +67,15 @@ class Conv2D < BlockBase
   end
 
   def forward(x)
+    p name => { x: x.shape, w: @weight.shape, b: @bias.shape }
     ND.Convolution(x, @weight, @bias, kernel: @kernel, stride: @stride,
                    dilate: [1, 1], pad: @pad, num_filter: @num_filter)
   end
 end
 
 class BatchNorm < BlockBase
-  def initialize(n, eps: 1e-5, momentum: 0.9, ctx: MXNet::Context.default)
-    super()
+  def initialize(n, eps: 1e-5, momentum: 0.9, ctx: MXNet::Context.default, name: 'bn')
+    super(name: name)
 
     @n = n
     @eps = eps
@@ -89,8 +98,8 @@ class BatchNorm < BlockBase
 end
 
 class AvgPool2D < BlockBase
-  def initialize(kernel: [2, 2], stride: 1, pad: 0, ctx: MXNet::Context.default)
-    super()
+  def initialize(kernel: [2, 2], stride: 1, pad: 0, ctx: MXNet::Context.default, name: 'avgpool')
+    super(name: name)
 
     @kernel = kernel.is_a?(Numeric) ? [kernel, kernel] : kernel.to_ary
     @stride = stride.is_a?(Numeric) ? [stride, stride] : stride.to_ary
@@ -105,15 +114,16 @@ class AvgPool2D < BlockBase
 end
 
 class ResidualUnit < BlockBase
-  def initialize(in_channels, num_filter, stride: 1, ctx: MXNet::Context.default)
+  def initialize(in_channels, num_filter, stride: 1, ctx: MXNet::Context.default, name: 'resunit')
+    super(name: name)
     @in_channels = in_channels
     @num_filter = num_filter
     @ctx = ctx
 
-    @bn   = BatchNorm.new(num_filter, ctx: @ctx)
-    @conv = Conv2D.new(in_channels, num_filter, kernel: 3, stride: stride, pad: 1, ctx: @ctx)
+    @bn   = BatchNorm.new(num_filter, ctx: @ctx, name: "#{name}-bn")
+    @conv = Conv2D.new(in_channels, num_filter, kernel: 3, stride: stride, pad: 1, ctx: @ctx, name: "#{name}-conv")
     if @in_channels != @num_filter
-      @shortcut = Conv2D.new(in_channels, num_filter, kernel: 1, stride: stride, pad: 0, ctx: @ctx)
+      @shortcut = Conv2D.new(in_channels, num_filter, kernel: 1, stride: stride, pad: 0, ctx: @ctx, name: "#{name}-conv-shortcut")
     end
 
     @all_parameters = [*@bn.all_parameters, *@conv.all_parameters]
@@ -130,9 +140,10 @@ class ResidualUnit < BlockBase
 end
 
 class ResidualBlock < BlockBase
-  def initialize(count, in_channels, num_filter, stride: 1, ctx: MXNet::Context.default)
-    @unit1 = ResidualUnit.new(in_channels, num_filter, stride: stride, ctx: ctx)
-    @unit2 = ResidualUnit.new(num_filter, num_filter, stride: 1, ctx: ctx)
+  def initialize(in_channels, num_filter, stride: 1, ctx: MXNet::Context.default, name: 'resblock')
+    super(name: name)
+    @unit1 = ResidualUnit.new(in_channels, num_filter, stride: stride, ctx: ctx, name: "#{name}-resunit1")
+    @unit2 = ResidualUnit.new(num_filter, num_filter, stride: 1, ctx: ctx, name: "#{name}-resunit2")
 
     @all_parameters = [*@unit1.all_parameters, *@unit2.all_parameters]
   end
@@ -145,10 +156,11 @@ class ResidualBlock < BlockBase
 end
 
 class ResidualGroup < BlockBase
-  def initialize(n, in_channels, num_filter, stride: 1, ctx: MXNet::Context.default)
-    @blocks = [ ResidualBlock.new(in_channels, num_filter, stride: stride, ctx: ctx) ]
-    1.step(n-1) do
-      @blocks << ResidualBlock.new(in_channels, num_filter, stride: 1, ctx: ctx)
+  def initialize(n, in_channels, num_filter, stride: 1, ctx: MXNet::Context.default, name: 'resgrp')
+    super(name: name)
+    @blocks = [ ResidualBlock.new(in_channels, num_filter, stride: stride, ctx: ctx, name: "#{name}-resblock1") ]
+    1.step(n-1) do |i|
+      @blocks << ResidualBlock.new(in_channels, num_filter, stride: 1, ctx: ctx, name: "#{name}-resblock#{i+1}")
     end
 
     @all_parameters = @blocks.map(&:all_parameters).flatten
@@ -165,7 +177,7 @@ end
 class WideResNet < BlockBase
   ND = MXNet::NDArray
 
-  def initialize(depth, width, in_channels, num_classes, ctx: MXNet::Context.default)
+  def initialize(depth, width, in_channels, num_classes, ctx: MXNet::Context.default, name: '')
     unless (depth - 4) % 6 == 0
       raise ArgumentError, "depth must be 6n + 4"
     end
@@ -179,15 +191,15 @@ class WideResNet < BlockBase
   end
 
   private def build_network
-    @conv1 = Conv2D.new(3, @widths[0], kernel: 3, stride: 1, pad: 1, ctx: @ctx)
+    @conv1 = Conv2D.new(3, @widths[0], kernel: 3, stride: 1, pad: 1, ctx: @ctx, name: 'conv1')
     @groups = [
-      ResidualBlock.new(@n, @widths[0], @widths[1], stride: 1, ctx: @ctx),
-      ResidualBlock.new(@n, @widths[1], @widths[2], stride: 2, ctx: @ctx),
-      ResidualBlock.new(@n, @widths[2], @widths[3], stride: 2, ctx: @ctx)
+      ResidualGroup.new(@n, @widths[0], @widths[1], stride: 1, ctx: @ctx, name: 'resgrp1'),
+      ResidualGroup.new(@n, @widths[1], @widths[2], stride: 2, ctx: @ctx, name: 'resgrp2'),
+      ResidualGroup.new(@n, @widths[2], @widths[3], stride: 2, ctx: @ctx, name: 'resgrp3')
     ]
     @bn = BatchNorm.new(@widths[3], ctx: @ctx)
     @pool = AvgPool2D.new(kernel: [8, 8], stride: 1, pad: 0, ctx: @ctx)
-    @fc = Dense.new(@widths[3], @num_classes, ctx: @ctx)
+    @fc = Dense.new(@widths[3], @num_classes, ctx: @ctx, name: 'fc')
 
     @all_parameters = [
       *@conv1.all_parameters,
