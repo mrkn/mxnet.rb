@@ -327,14 +327,14 @@ def test(ctx, val_iter)
   @metric.reset
   val_iter.reset
   val_iter.each do |batch|
-    data = batch.data[0]
-    label = batch.label[0]
+    data = batch.data[0].as_in_context(ctx[0])
+    label = batch.label[0].as_in_context(ctx[0])
     outputs = []
 
     outputs << @model.forward(data)
-
     @metric.update(label, outputs)
-    break
+
+    GC.start
   end
   return @metric.get
 end
