@@ -23,7 +23,7 @@ class Dense < BlockBase
     @out_units = out_units
     @ctx = ctx
 
-    @weight = ND::Random.normal(shape: [out_units, in_units], ctx: @ctx)
+    @weight = ND.random_normal(shape: [out_units, in_units], ctx: @ctx)
     @bias = ND.zeros([out_units], ctx: @ctx)
 
     @all_parameters = [@weight, @bias]
@@ -52,7 +52,7 @@ class Conv2D < BlockBase
       dilate: [1, 1], num_filter: @num_filter
     ).infer_shape_partial
 
-    @weight = ND::Random.normal(shape: @weight_shape[1], ctx: @ctx)
+    @weight = ND.random_normal(shape: @weight_shape[1], ctx: @ctx)
     @bias   = ND.zeros(@weight_shape[2], ctx: @ctx)
 
     @all_parameters = [@weight, @bias]
@@ -308,8 +308,8 @@ def init_metrics
 end
 
 # Model
-def init_model
-  @model = WideResNet.new(28, 10, 3, 10)
+def init_model(ctx: MXNet::Context.default)
+  @model = WideResNet.new(28, 10, 3, 10, ctx: ctx)
   @model.all_parameters.each(&:attach_grad)
 end
 
@@ -370,7 +370,7 @@ def main
   )
 
   init_metrics
-  init_model
+  init_model(ctx: context[0])
 
   # Loss function
   loss_func = SoftmaxCrossEntropyLoss.new
@@ -395,8 +395,8 @@ def main
     @metric.reset
     batch_tic = Time.now
     train_iter.each_with_index do |batch, i|
-      data = batch.data[0]
-      label = batch.label[0]
+      data = batch.data[0].as_in_context(context[0])
+      label = batch.label[0].as_in_context(context[0])
 
       # TODO: Collecting results from the different contexts
       outputs = []
