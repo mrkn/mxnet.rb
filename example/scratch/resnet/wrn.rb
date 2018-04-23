@@ -14,10 +14,11 @@ end
 class BlockBase
   ND = MXNet::NDArray
 
-  def initialize(prefix: nil)
+  def initialize(prefix: nil, ctx: nil)
     @prefix = prefix || default_prefix
     @prefix = "#{@prefix}_" unless @prefix.empty?
     @name = @prefix.end_with?('_') ? @prefix[0...-1] : @prefix
+    @context = ctx || MXNet::Context.default
     @children = {}
     @params = {}
   end
@@ -26,7 +27,7 @@ class BlockBase
     MXNet::Name::NameManager.current.get(nil, self.class.name.split('::').last.downcase)
   end
 
-  attr_reader :prefix, :name
+  attr_reader :prefix, :name, :context
 
   def [](name)
     @params[name] || @children[name]
@@ -112,28 +113,29 @@ class Activation < BlockBase
 end
 
 class Dense < BlockBase
-  def initialize(in_units, out_units, ctx: MXNet::Context.default, **kwargs)
+  def initialize(in_units, out_units, use_bias: true, **kwargs)
     super(**kwargs)
     @in_units = in_units
     @out_units = out_units
-    @ctx = ctx
+    @use_bias = use_bias
 
-    self[:weight] = ND.random_normal(shape: [out_units, in_units], ctx: @ctx)
-    self[:bias]   = ND.zeros([out_units], ctx: @ctx)
+    self[:weight] = ND.random_normal(shape: [out_units, in_units], ctx: context)
+    self[:bias]   = ND.zeros([out_units], ctx: context) if @use_bias
   end
 
   def forward(x)
-    y = ND.FullyConnected(x, self[:weight], self[:bias], num_hidden: @out_units)
+    y = ND.FullyConnected(x, self[:weight], @use_bias ? self[:bias] : nil,
+                          no_bias: !@use_bias, num_hidden: @out_units)
     return y
   end
 end
 
 class Conv2D < BlockBase
-  def initialize(in_channels, num_filter, kernel:, stride:, pad:, ctx: MXNet::Context.default, **kwargs)
+  def initialize(in_channels, num_filter, kernel:, stride:, pad:, use_bias: true, **kwargs)
     super(**kwargs)
     @in_channels = in_channels
     @num_filter = num_filter
-    @ctx = ctx
+    @use_bias = use_bias
 
     @kernel = kernel.is_a?(Numeric) ? [kernel, kernel] : kernel.to_ary
     @stride = stride.is_a?(Numeric) ? [stride, stride] : stride.to_ary
@@ -145,31 +147,29 @@ class Conv2D < BlockBase
       dilate: [1, 1], num_filter: @num_filter
     ).infer_shape_partial
 
-    self[:weight] = ND.random_normal(shape: @weight_shape[1], ctx: @ctx)
-    self[:bias]   = ND.zeros(@weight_shape[2], ctx: @ctx)
+    self[:weight] = ND.random_normal(shape: @weight_shape[1], ctx: context)
+    self[:bias]   = ND.zeros(@weight_shape[2], ctx: context) if @use_bias
   end
 
   def forward(x)
-    ND.Convolution(x, self[:weight], self[:bias],
-                   kernel: @kernel, stride: @stride, dilate: [1, 1],
-                   pad: @pad, num_filter: @num_filter)
+    ND.Convolution(x, self[:weight], @use_bias ? self[:bias] : nil,
+                   no_bias: !@use_bias, kernel: @kernel, stride: @stride,
+                   dilate: [1, 1], pad: @pad, num_filter: @num_filter)
   end
 end
 
 class BatchNorm < BlockBase
-  def initialize(n, eps: 1e-5, momentum: 0.9, ctx: MXNet::Context.default, **kwargs)
+  def initialize(n, eps: 1e-5, momentum: 0.9, **kwargs)
     super(**kwargs)
-
     @n = n
     @eps = eps
     @momentum = momentum
-    @ctx = ctx
 
-    @running_mean = ND.zeros(n, ctx: @ctx)
-    @running_var = ND.ones(n, ctx: @ctx)
+    @running_mean = ND.zeros(n, ctx: context)
+    @running_var = ND.ones(n, ctx: context)
 
-    self[:gamma] = ND.ones(n, ctx: @ctx)
-    self[:beta]  = ND.zeros(n, ctx: @ctx)
+    self[:gamma] = ND.ones(n, ctx: context)
+    self[:beta]  = ND.zeros(n, ctx: context)
   end
 
   def forward(x)
@@ -179,7 +179,7 @@ class BatchNorm < BlockBase
 end
 
 class AvgPool2D < BlockBase
-  def initialize(kernel: [2, 2], stride: 1, pad: 0, ctx: MXNet::Context.default, **kwargs)
+  def initialize(kernel: [2, 2], stride: 1, pad: 0, **kwargs)
     super(**kwargs)
 
     @kernel = kernel.is_a?(Numeric) ? [kernel, kernel] : kernel.to_ary
@@ -195,21 +195,20 @@ class AvgPool2D < BlockBase
 end
 
 class ResidualUnit < BlockBase
-  def initialize(in_channels, num_filter, stride: 1, ctx: MXNet::Context.default, **kwargs)
+  def initialize(in_channels, num_filter, stride: 1, **kwargs)
     super(**kwargs)
     @in_channels = in_channels
     @num_filter = num_filter
-    @ctx = ctx
 
     self[:body] = Sequential.new(prefix: '')
     self[:body].add(
-      BatchNorm.new(in_channels, ctx: @ctx),
+      BatchNorm.new(in_channels),
       Activation.new(:relu),
-      Conv2D.new(in_channels, num_filter, kernel: 3, stride: stride, pad: 1, ctx: @ctx)
+      Conv2D.new(in_channels, num_filter, kernel: 3, stride: stride, pad: 1, use_bias: false)
     )
 
     if @in_channels != @num_filter
-      self[:downsample] = Conv2D.new(in_channels, num_filter, kernel: 1, stride: stride, pad: 0, ctx: @ctx)
+      self[:downsample] = Conv2D.new(in_channels, num_filter, kernel: 1, stride: stride, pad: 0, use_bias: false)
     end
   end
 
@@ -222,12 +221,12 @@ class ResidualUnit < BlockBase
 end
 
 class ResidualBlock < BlockBase
-  def initialize(in_channels, num_filter, stride: 1, ctx: MXNet::Context.default, **kwargs)
+  def initialize(in_channels, num_filter, stride: 1, **kwargs)
     super(**kwargs)
     self[:units] = Sequential.new(prefix: '')
     self[:units].add(
-      ResidualUnit.new(in_channels, num_filter, stride: stride, ctx: ctx),
-      ResidualUnit.new(num_filter, num_filter, stride: 1, ctx: ctx)
+      ResidualUnit.new(in_channels, num_filter, stride: stride),
+      ResidualUnit.new(num_filter, num_filter, stride: 1)
     )
   end
 
@@ -237,12 +236,12 @@ class ResidualBlock < BlockBase
 end
 
 class ResidualGroup < BlockBase
-  def initialize(n, in_channels, num_filter, stride: 1, ctx: MXNet::Context.default, **kwargs)
+  def initialize(n, in_channels, num_filter, stride: 1, **kwargs)
     super(**kwargs)
     self[:blocks] = Sequential.new(prefix: '')
-    self[:blocks].add(ResidualBlock.new(in_channels, num_filter, stride: stride, ctx: ctx))
+    self[:blocks].add(ResidualBlock.new(in_channels, num_filter, stride: stride))
     1.step(n-1) do |i|
-      self[:blocks].add(ResidualBlock.new(num_filter, num_filter, stride: 1, ctx: ctx))
+      self[:blocks].add(ResidualBlock.new(num_filter, num_filter, stride: 1))
     end
   end
 
@@ -254,7 +253,7 @@ end
 class WideResNet < BlockBase
   ND = MXNet::NDArray
 
-  def initialize(depth, width, in_channels, num_classes, ctx: MXNet::Context.default, **kwargs)
+  def initialize(depth, width, in_channels, num_classes, **kwargs)
     super(**kwargs)
     unless (depth - 4) % 6 == 0
       raise ArgumentError, "depth must be 6n + 4"
@@ -263,7 +262,6 @@ class WideResNet < BlockBase
     @widths = [16, *[16, 32, 64].map {|x| x * width }]
     @in_channels = in_channels
     @num_classes = num_classes
-    @ctx = ctx
 
     build_network
   end
@@ -271,14 +269,14 @@ class WideResNet < BlockBase
   private def build_network
     self[:features] = Sequential.new(prefix: '')
     self[:features].add(
-      Conv2D.new(3, @widths[0], kernel: 3, stride: 1, pad: 1, ctx: @ctx),
-      ResidualGroup.new(@n, @widths[0], @widths[1], stride: 1, ctx: @ctx),
-      ResidualGroup.new(@n, @widths[1], @widths[2], stride: 2, ctx: @ctx),
-      ResidualGroup.new(@n, @widths[2], @widths[3], stride: 2, ctx: @ctx),
-      BatchNorm.new(@widths[3], ctx: @ctx),
-      AvgPool2D.new(kernel: [8, 8], stride: 1, pad: 0, ctx: @ctx)
+      Conv2D.new(3, @widths[0], kernel: 3, stride: 1, pad: 1, use_bias: false),
+      ResidualGroup.new(@n, @widths[0], @widths[1], stride: 1),
+      ResidualGroup.new(@n, @widths[1], @widths[2], stride: 2),
+      ResidualGroup.new(@n, @widths[2], @widths[3], stride: 2),
+      BatchNorm.new(@widths[3]),
+      AvgPool2D.new(kernel: [8, 8], stride: 1, pad: 0)
     )
-    self[:output] = Dense.new(@widths[3], @num_classes, ctx: @ctx)
+    self[:output] = Dense.new(@widths[3], @num_classes)
   end
 
   def forward(x)
@@ -397,7 +395,9 @@ end
 
 # Model
 def init_model(opt)
-  @model = WideResNet.new(28, 10, 3, 10, ctx: opt[:context][0])
+  MXNet::Context.with(opt[:context][0]) do
+    @model = WideResNet.new(28, 10, 3, 10)
+  end
   @model.load_params(opt[:resume]) if opt[:resume]
 
   @model_params = @model.collect_params
