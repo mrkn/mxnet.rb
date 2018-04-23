@@ -61,7 +61,7 @@ module MXNet
     def self.with(ctx)
       return unless block_given?
       begin
-        old_context = @default
+        old_context, @default = @default, ctx
         yield
       ensure
         @default = @old_context
