@@ -14,37 +14,123 @@ end
 class BlockBase
   ND = MXNet::NDArray
 
-  def initialize(name: '')
-    @name = name.to_s
+  def initialize(prefix: nil)
+    @prefix = prefix || default_prefix
+    @prefix = "#{@prefix}_" unless @prefix.empty?
+    @name = @prefix.end_with?('_') ? @prefix[0...-1] : @prefix
+    @children = {}
+    @params = {}
   end
 
-  attr_reader :name
-  attr_reader :all_parameters
+  private def default_prefix
+    MXNet::Name::NameManager.current.get(nil, self.class.name.split('::').last.downcase)
+  end
+
+  attr_reader :prefix, :name
+
+  def [](name)
+    @params[name] || @children[name]
+  end
+
+  def []=(name, val)
+    case val
+    when BlockBase
+      register_child(val, name)
+    when MXNet::NDArray
+      @params[name] = val
+    else
+      raise ArgumentError, "invalid parameter type: #{val.class}"
+    end
+  end
+
+  private def register_child(child, name=nil)
+    name ||= @children.length.to_s
+    @children[name] = child
+  end
+
+  def collect_params
+    result = @params.values
+    @children.each_value do |child|
+      result.concat child.collect_params
+    end
+    return result
+  end
+
+  def collect_params_with_prefix(prefix=nil)
+    prefix &&= "#{prefix}."
+    result = @params.transform_keys {|k| :"#{prefix}#{k}" }
+    @children.each do |child_name, child|
+      result.update(child.collect_params_with_prefix("#{prefix}#{child_name}"))
+    end
+    return result
+  end
+
+  def save_params(filename)
+    params = collect_params_with_prefix
+    MXNet::NDArray.save(filename, params)
+  end
+
+  def load_params(filename)
+    loaded = MXNet::NDArray.load(filename)
+    return if loaded.nil? || loaded.empty?
+    params = collect_params_with_prefix
+    return if params.nil? || params.empty?
+
+    loaded.each do |name, val|
+      params[name.to_sym][0..-1] = loaded[name]
+    end
+  end
+end
+
+class Sequential < BlockBase
+  def add(*blocks)
+    blocks.each &method(:register_child)
+  end
+
+  def forward(x)
+    @children.each_value do |child|
+      x = child.forward(x)
+    end
+    return x
+  end
+
+  def length
+    @children.length
+  end
+end
+
+class Activation < BlockBase
+  def initialize(act_type, **kwargs)
+    super(**kwargs)
+    @act_type = act_type
+  end
+
+  def forward(x)
+    x = ND.Activation(x, act_type: @act_type)
+    return x
+  end
 end
 
 class Dense < BlockBase
-  def initialize(in_units, out_units, ctx: MXNet::Context.default, name: 'dense')
-    super(name: name)
+  def initialize(in_units, out_units, ctx: MXNet::Context.default, **kwargs)
+    super(**kwargs)
     @in_units = in_units
     @out_units = out_units
     @ctx = ctx
 
-    @weight = ND.random_normal(shape: [out_units, in_units], ctx: @ctx)
-    @bias = ND.zeros([out_units], ctx: @ctx)
-
-    @all_parameters = [@weight, @bias]
+    self[:weight] = ND.random_normal(shape: [out_units, in_units], ctx: @ctx)
+    self[:bias]   = ND.zeros([out_units], ctx: @ctx)
   end
 
   def forward(x)
-    y = ND.FullyConnected(x, @weight, @bias, num_hidden: @out_units)
+    y = ND.FullyConnected(x, self[:weight], self[:bias], num_hidden: @out_units)
     return y
   end
 end
 
 class Conv2D < BlockBase
-  def initialize(in_channels, num_filter, kernel:, stride:, pad:,
-                 ctx: MXNet::Context.default, name: 'conv')
-    super(name: name)
+  def initialize(in_channels, num_filter, kernel:, stride:, pad:, ctx: MXNet::Context.default, **kwargs)
+    super(**kwargs)
     @in_channels = in_channels
     @num_filter = num_filter
     @ctx = ctx
@@ -59,21 +145,20 @@ class Conv2D < BlockBase
       dilate: [1, 1], num_filter: @num_filter
     ).infer_shape_partial
 
-    @weight = ND.random_normal(shape: @weight_shape[1], ctx: @ctx)
-    @bias   = ND.zeros(@weight_shape[2], ctx: @ctx)
-
-    @all_parameters = [@weight, @bias]
+    self[:weight] = ND.random_normal(shape: @weight_shape[1], ctx: @ctx)
+    self[:bias]   = ND.zeros(@weight_shape[2], ctx: @ctx)
   end
 
   def forward(x)
-    ND.Convolution(x, @weight, @bias, kernel: @kernel, stride: @stride,
-                   dilate: [1, 1], pad: @pad, num_filter: @num_filter)
+    ND.Convolution(x, self[:weight], self[:bias],
+                   kernel: @kernel, stride: @stride, dilate: [1, 1],
+                   pad: @pad, num_filter: @num_filter)
   end
 end
 
 class BatchNorm < BlockBase
-  def initialize(n, eps: 1e-5, momentum: 0.9, ctx: MXNet::Context.default, name: 'bn')
-    super(name: name)
+  def initialize(n, eps: 1e-5, momentum: 0.9, ctx: MXNet::Context.default, **kwargs)
+    super(**kwargs)
 
     @n = n
     @eps = eps
@@ -83,21 +168,19 @@ class BatchNorm < BlockBase
     @running_mean = ND.zeros(n, ctx: @ctx)
     @running_var = ND.ones(n, ctx: @ctx)
 
-    @gamma = ND.ones(n, ctx: @ctx)
-    @beta = ND.zeros(n, ctx: @ctx)
-
-    @all_parameters = [@gamma, @beta]
+    self[:gamma] = ND.ones(n, ctx: @ctx)
+    self[:beta]  = ND.zeros(n, ctx: @ctx)
   end
 
   def forward(x)
-    ND.BatchNorm(x, @gamma, @beta, @running_mean, @running_var,
+    ND.BatchNorm(x, self[:gamma], self[:beta], @running_mean, @running_var,
                  eps: @eps, momentum: @momentum, fix_gamma: false)
   end
 end
 
 class AvgPool2D < BlockBase
-  def initialize(kernel: [2, 2], stride: 1, pad: 0, ctx: MXNet::Context.default, name: 'avgpool')
-    super(name: name)
+  def initialize(kernel: [2, 2], stride: 1, pad: 0, ctx: MXNet::Context.default, **kwargs)
+    super(**kwargs)
 
     @kernel = kernel.is_a?(Numeric) ? [kernel, kernel] : kernel.to_ary
     @stride = stride.is_a?(Numeric) ? [stride, stride] : stride.to_ary
@@ -112,70 +195,67 @@ class AvgPool2D < BlockBase
 end
 
 class ResidualUnit < BlockBase
-  def initialize(in_channels, num_filter, stride: 1, ctx: MXNet::Context.default, name: 'resunit')
-    super(name: name)
+  def initialize(in_channels, num_filter, stride: 1, ctx: MXNet::Context.default, **kwargs)
+    super(**kwargs)
     @in_channels = in_channels
     @num_filter = num_filter
     @ctx = ctx
 
-    @bn   = BatchNorm.new(in_channels, ctx: @ctx, name: "#{name}-bn")
-    @conv = Conv2D.new(in_channels, num_filter, kernel: 3, stride: stride, pad: 1, ctx: @ctx, name: "#{name}-conv")
-    if @in_channels != @num_filter
-      @shortcut = Conv2D.new(in_channels, num_filter, kernel: 1, stride: stride, pad: 0, ctx: @ctx, name: "#{name}-conv-shortcut")
-    end
+    self[:body] = Sequential.new(prefix: '')
+    self[:body].add(
+      BatchNorm.new(in_channels, ctx: @ctx),
+      Activation.new(:relu),
+      Conv2D.new(in_channels, num_filter, kernel: 3, stride: stride, pad: 1, ctx: @ctx)
+    )
 
-    @all_parameters = [*@bn.all_parameters, *@conv.all_parameters]
-    @all_parameters.concat @shortcut.all_parameters if @shortcut
+    if @in_channels != @num_filter
+      self[:downsample] = Conv2D.new(in_channels, num_filter, kernel: 1, stride: stride, pad: 0, ctx: @ctx)
+    end
   end
 
   def forward(x)
-    bn  = @bn.forward(x)
-    act = ND.Activation(bn, act_type: :relu)
-    conv = @conv.forward(act)
-    shortcut = @shortcut ? @shortcut.forward(x) : x
-    return conv + shortcut
+    residual = x
+    x = self[:body].forward(x)
+    residual = self[:downsample].forward(residual) if self[:downsample]
+    return residual + x
   end
 end
 
 class ResidualBlock < BlockBase
-  def initialize(in_channels, num_filter, stride: 1, ctx: MXNet::Context.default, name: 'resblock')
-    super(name: name)
-    @unit1 = ResidualUnit.new(in_channels, num_filter, stride: stride, ctx: ctx, name: "#{name}-resunit1")
-    @unit2 = ResidualUnit.new(num_filter, num_filter, stride: 1, ctx: ctx, name: "#{name}-resunit2")
-
-    @all_parameters = [*@unit1.all_parameters, *@unit2.all_parameters]
+  def initialize(in_channels, num_filter, stride: 1, ctx: MXNet::Context.default, **kwargs)
+    super(**kwargs)
+    self[:units] = Sequential.new(prefix: '')
+    self[:units].add(
+      ResidualUnit.new(in_channels, num_filter, stride: stride, ctx: ctx),
+      ResidualUnit.new(num_filter, num_filter, stride: 1, ctx: ctx)
+    )
   end
 
   def forward(x)
-    unit1 = @unit1.forward(x)
-    unit2 = @unit2.forward(unit1)
-    return unit2
+    return self[:units].forward(x)
   end
 end
 
 class ResidualGroup < BlockBase
-  def initialize(n, in_channels, num_filter, stride: 1, ctx: MXNet::Context.default, name: 'resgrp')
-    super(name: name)
-    @blocks = [ ResidualBlock.new(in_channels, num_filter, stride: stride, ctx: ctx, name: "#{name}-resblock1") ]
+  def initialize(n, in_channels, num_filter, stride: 1, ctx: MXNet::Context.default, **kwargs)
+    super(**kwargs)
+    self[:blocks] = Sequential.new(prefix: '')
+    self[:blocks].add(ResidualBlock.new(in_channels, num_filter, stride: stride, ctx: ctx))
     1.step(n-1) do |i|
-      @blocks << ResidualBlock.new(num_filter, num_filter, stride: 1, ctx: ctx, name: "#{name}-resblock#{i+1}")
+      self[:blocks].add(ResidualBlock.new(num_filter, num_filter, stride: 1, ctx: ctx))
     end
-
-    @all_parameters = @blocks.map(&:all_parameters).flatten
   end
 
   def forward(x)
-    @blocks.each do |block|
-      x = block.forward(x)
-    end
-    return x
+    return self[:blocks].forward(x)
   end
 end
 
 class WideResNet < BlockBase
   ND = MXNet::NDArray
 
-  def initialize(depth, width, in_channels, num_classes, ctx: MXNet::Context.default, name: '')
+  def initialize(depth, width, in_channels, num_classes, ctx: MXNet::Context.default, **kwargs)
+    super(**kwargs)
     unless (depth - 4) % 6 == 0
       raise ArgumentError, "depth must be 6n + 4"
     end
@@ -189,34 +269,22 @@ class WideResNet < BlockBase
   end
 
   private def build_network
-    @conv1 = Conv2D.new(3, @widths[0], kernel: 3, stride: 1, pad: 1, ctx: @ctx, name: 'conv1')
-    @groups = [
-      ResidualGroup.new(@n, @widths[0], @widths[1], stride: 1, ctx: @ctx, name: 'resgrp1'),
-      ResidualGroup.new(@n, @widths[1], @widths[2], stride: 2, ctx: @ctx, name: 'resgrp2'),
-      ResidualGroup.new(@n, @widths[2], @widths[3], stride: 2, ctx: @ctx, name: 'resgrp3')
-    ]
-    @bn = BatchNorm.new(@widths[3], ctx: @ctx)
-    @pool = AvgPool2D.new(kernel: [8, 8], stride: 1, pad: 0, ctx: @ctx)
-    @fc = Dense.new(@widths[3], @num_classes, ctx: @ctx, name: 'fc')
-
-    @all_parameters = [
-      *@conv1.all_parameters,
-      *@groups.map(&:all_parameters).flatten,
-      *@bn.all_parameters,
-      *@fc.all_parameters
-    ]
+    self[:features] = Sequential.new(prefix: '')
+    self[:features].add(
+      Conv2D.new(3, @widths[0], kernel: 3, stride: 1, pad: 1, ctx: @ctx),
+      ResidualGroup.new(@n, @widths[0], @widths[1], stride: 1, ctx: @ctx),
+      ResidualGroup.new(@n, @widths[1], @widths[2], stride: 2, ctx: @ctx),
+      ResidualGroup.new(@n, @widths[2], @widths[3], stride: 2, ctx: @ctx),
+      BatchNorm.new(@widths[3], ctx: @ctx),
+      AvgPool2D.new(kernel: [8, 8], stride: 1, pad: 0, ctx: @ctx)
+    )
+    self[:output] = Dense.new(@widths[3], @num_classes, ctx: @ctx)
   end
 
   def forward(x)
-    x = @conv1.forward(x)
-    @groups.each do |group|
-      x = group.forward(x)
-    end
-    x = @bn.forward(x)
-    x = ND.Activation(x, act_type: :relu)
-    x = @pool.forward(x)
-    x = x.reshape([0, -1]) # flatten
-    x = @fc.forward(x)
+    x = self[:features].forward(x)
+    # TODO: x = x.reshape([0, -1]) # flatten
+    x = self[:output].forward(x)
     return x
   end
 end
@@ -264,6 +332,7 @@ end
 
 def parse_options
   options = {
+    prefix: nil,
     data_dir: File.expand_path('../../../../spec/fixture/cifar10', __FILE__),
     batch_size: 128,
     context: [MXNet.cpu],
@@ -293,8 +362,17 @@ def parse_options
     end
 
     opt.on(
+      '--start-epoch=N', Integer, 'Starting epoch, 0 for fresh training, >0 to resume.'
+    ) {|v| options[:start_epoch] = v }
+    opt.on(
+      '--resume=FILENAME', String, 'Path to saved weights where you want resume.'
+    ) {|v| options[:resume] = v }
+    opt.on(
       '--log-interval=N', Integer, 'Number of batches to wait before logging.'
     ) {|v| options[:log_interval] = v }
+    opt.on(
+      '--save-frequency=N', Integer, 'Number of epochs to save parameters.'
+    ) {|v| options[:save_frequency] = v }
 
     opt.on('-h', '--help', 'Show help') do
       puts opt
@@ -318,9 +396,12 @@ def init_metrics
 end
 
 # Model
-def init_model(ctx: MXNet::Context.default)
-  @model = WideResNet.new(28, 10, 3, 10, ctx: ctx)
-  @model.all_parameters.each(&:attach_grad)
+def init_model(opt)
+  @model = WideResNet.new(28, 10, 3, 10, ctx: opt[:context][0])
+  @model.load_params(opt[:resume]) if opt[:resume]
+
+  @model_params = @model.collect_params
+  @model_params.each(&:attach_grad)
 end
 
 def test(ctx, val_iter)
@@ -335,6 +416,7 @@ def test(ctx, val_iter)
     @metric.update(label, outputs)
 
     GC.start
+    break
   end
   return @metric.get
 end
@@ -343,9 +425,8 @@ def train(opt, ctx)
 end
 
 def save_checkpoint(epoch, top1, best_acc, opt)
-  return # TODO:
   if opt[:save_frequency] > 0 && (epoch + 1) % opt[:save_frequency] == 0
-    fname = File.join(opt[:prefix], "wide_res_net_#{epoch}_acc_%.4f.params" % top1)
+    fname = File.join(opt[:prefix] || Dir.pwd, "wide_res_net_#{epoch}_acc_%.4f.params" % top1)
     @model.save_params(fname)
     puts "[Epoch #{epoch}] Saving checkpoint to #{fname} with Accuracy: %.4f" % top1
   end
@@ -380,7 +461,7 @@ def main
   )
 
   init_metrics
-  init_model(ctx: context[0])
+  init_model(opt)
 
   # Loss function
   loss_func = SoftmaxCrossEntropyLoss.new
@@ -393,7 +474,7 @@ def main
     lr_scheduler: MXNet::LRScheduler::FactorScheduler.new(step: 80, factor: 0.2),
     momentum: momentum,
   )
-  optimizer.init_states(@model.all_parameters)
+  optimizer.init_states(@model_params)
 
   # Training loop
   total_time = 0
@@ -421,7 +502,7 @@ def main
         MXNet::Autograd.backward(losses)
       end
 
-      optimizer.update(@model.all_parameters)
+      optimizer.update(@model_params)
       @metric.update(label, outputs)
 
       if log_interval && (i + 1) % log_interval == 0
@@ -433,6 +514,7 @@ def main
       batch_tic = Time.now
 
       GC.start
+      break
     end
 
     epoch_time = Time.now - tic
