@@ -20,6 +20,7 @@ Gem::Specification.new do |spec|
   spec.bindir        = "exe"
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
+  spec.extensions    = ["ext/mxnet/extconf.rb", "ext/mxnet/narray_helper/extconf.rb"]
 
   spec.add_dependency "fiddle"
   spec.add_dependency "numo-narray"
