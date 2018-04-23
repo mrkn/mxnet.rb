@@ -416,7 +416,6 @@ def test(ctx, val_iter)
     @metric.update(label, outputs)
 
     GC.start
-    break
   end
   return @metric.get
 end
@@ -432,7 +431,7 @@ def save_checkpoint(epoch, top1, best_acc, opt)
   end
   if top1 > best_acc[0]
     best_acc[0] = top1
-    fname = File.join(opt[:prefix], "wide_res_net_best.params")
+    fname = File.join(opt[:prefix] || Dir.pwd, "wide_res_net_best.params")
     @model.save_params(fname)
     puts "[Epoch #{epoch}] Saving checkpoint to #{fname} with Accuracy: %.4f" % top1
   end
@@ -514,7 +513,6 @@ def main
       batch_tic = Time.now
 
       GC.start
-      break
     end
 
     epoch_time = Time.now - tic
