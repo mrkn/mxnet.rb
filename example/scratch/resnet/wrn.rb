@@ -356,7 +356,7 @@ def parse_options
     momentum: 0.9,
     weight_decay: 0.0001,
     lr_decay_factor: 0.8,
-    lr_decay_step: 80,
+    lr_decay_step: [30, 60, 90],
     save_frequency: 10,
     start_epoch: 0,
     epochs: 300,
@@ -484,7 +484,7 @@ def main
   loss_func = SoftmaxCrossEntropyLoss.new
 
   # Initialize optimizer
-  lr_scheduler = MXNet::LRScheduler::FactorScheduler.new(
+  lr_scheduler = MXNet::LRScheduler::MultiFactorScheduler.new(
     step: lr_decay_step, factor: lr_decay_factor)
   optimizer = NAG.new(
     lr: learning_rate,
