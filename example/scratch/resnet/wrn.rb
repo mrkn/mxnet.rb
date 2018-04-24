@@ -119,7 +119,10 @@ class Dense < BlockBase
     @out_units = out_units
     @use_bias = use_bias
 
-    self[:weight] = ND.random_normal(shape: [out_units, in_units], ctx: context)
+    # weight is initialized by He Kaiming's method
+    factor = @in_units
+    scale = Math.sqrt(2.0 / factor)
+    self[:weight] = ND.random_normal(loc: 0, scale: scale, shape: [out_units, in_units], ctx: context)
     self[:bias]   = ND.zeros([out_units], ctx: context) if @use_bias
   end
 
@@ -147,7 +150,10 @@ class Conv2D < BlockBase
       dilate: [1, 1], num_filter: @num_filter
     ).infer_shape_partial
 
-    self[:weight] = ND.random_normal(shape: @weight_shape[1], ctx: context)
+    # weight is initialized by He Kaiming's method
+    factor = @weight_shape[1][1]
+    scale = Math.sqrt(2.0 / factor)
+    self[:weight] = ND.random_normal(loc: 0, scale: scale, shape: @weight_shape[1], ctx: context)
     self[:bias]   = ND.zeros(@weight_shape[2], ctx: context) if @use_bias
   end
 
