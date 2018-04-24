@@ -287,10 +287,11 @@ class WideResNet < BlockBase
   end
 end
 
-class MomentumSGD
-  def initialize(lr: 0.01, lr_scheduler: nil, momentum: 0.0)
+class NAG
+  def initialize(lr: 0.01, lr_scheduler: nil, wd: 0.0, momentum: 0.0)
     @lr = lr
     @lr_scheduler = lr_scheduler
+    @wd = wd
     @momentum = momentum
     @num_update = 0
     @states = nil
@@ -304,6 +305,10 @@ class MomentumSGD
     end
   end
 
+  def weight_decay
+    @wd
+  end
+
   def init_states(params)
     return unless @momentum > 0
     @states = params.map do |param|
@@ -315,14 +320,21 @@ class MomentumSGD
   def update(params)
     @num_update += 1
     lr = self.learning_rate
-    if @states
-      params.each_with_index do |param, i|
-        MXNet::NDArray.sgd_mom_update(param, param.grad, @states[i], out: param,
-                                      lr: lr, momentum: @momentum)
-      end
-    else
-      params.each_with_index do |param, i|
-        MXNet::NDArray.sgd_update(param, param.grad, out: param, lr: lr)
+    wd = self.weight_decay
+
+    @states.each_with_index do |state, i|
+      param = params[i]
+      grad = param.grad
+      if state
+        mom = state
+        mom[0..-1].inplace * @momentum
+        grad.inplace + wd * param
+        mom[0..-1].inplace + grad
+        grad[0..-1].inplace + @momentum * mom
+        param[0..-1].inplace - lr * grad
+      else
+        raise "AssertionError: @momentum == 0.0" unless @momentum == 0.0
+        param[0..-1].inplace - lr * (grad + wd * param)
       end
     end
   end
@@ -468,9 +480,10 @@ def main
   # Initialize optimizer
   lr_scheduler = MXNet::LRScheduler::FactorScheduler.new(
     step: lr_decay_step, factor: lr_decay_factor)
-  optimizer = MomentumSGD.new(
+  optimizer = NAG.new(
     lr: learning_rate,
     lr_scheduler: MXNet::LRScheduler::FactorScheduler.new(step: 80, factor: 0.2),
+    wd: 0.0005,
     momentum: momentum,
   )
   optimizer.init_states(@model_params)
