@@ -396,6 +396,7 @@ def parse_options
     end
 
     opt.parse!(ARGV)
+    options[:data_dir] = ARGV[0] if ARGV[0]
 
     num_gpus = options[:context].length
     options[:batch_size] *= num_gpus
@@ -488,7 +489,7 @@ def main
     step: lr_decay_step, factor: lr_decay_factor)
   optimizer = NAG.new(
     lr: learning_rate,
-    lr_scheduler: MXNet::LRScheduler::FactorScheduler.new(step: 80, factor: 0.2),
+    lr_scheduler: lr_scheduler,
     wd: 0.0005,
     momentum: momentum,
   )
