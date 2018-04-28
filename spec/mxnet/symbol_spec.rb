@@ -124,6 +124,14 @@ module MXNet
         ex = z.eval(ctx: MXNet.cpu, x: nd_ones, y: nd_ones)
         expect(ex[0].reshape([6]).to_a).to eq([2] * 6)
       end
+
+      specify do
+        x = MXNet::Symbol.var(:x)
+        y = MXNet::Symbol.var(:y)
+        z = x + y
+        ex = z.eval(x: nd_ones, y: nd_ones)
+        expect(ex[0].reshape([6]).to_a).to eq([2] * 6)
+      end
     end
 
     describe '#list_arguments' do
