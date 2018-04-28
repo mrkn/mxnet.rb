@@ -153,7 +153,7 @@ module MXNet
     #   When called on a single symbol (not a group), the result will be
     #   an array with one element.
     def eval(ctx: nil, **kwargs)
-      ctx ||= Context.default_ctx
+      ctx ||= Context.default
       bind(ctx, kwargs).forward
     end
 
