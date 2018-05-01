@@ -341,6 +341,31 @@ module MXNet
       Ops.swapaxes(self, *args, **kwargs)
     end
 
+    def split(*args, **kwargs)
+      Ops.split(self, *args, **kwargs)
+    end
+
+    def slice(*args, **kwargs)
+      Ops.slice(self, *args, **kwargs)
+    end
+
+    def slice_axis(*args, **kwargs)
+      Ops.slice_axis(self, *args, **kwargs)
+    end
+
+    def slice_like(shape_like, *args, **kwargs)
+      Ops.slice_like(self, *args, **kwargs)
+    end
+
+    def take(*args, **kwargs)
+      Ops.take(self, *args, **kwargs)
+    end
+
+    def self.one_hot(indices, depth: nil, on_value: 1.0, off_value: 0.0, dtype: :float32, **kwargs)
+      dtype = Utils.dtype_name(dtype)
+      Internal._one_hot(indices, depth: depth, on_value: on_value, off_value: off_value, dtype: dtype, **kwargs)
+    end
+
     def ndim
       shape.length
     end
