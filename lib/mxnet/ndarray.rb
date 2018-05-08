@@ -2,19 +2,19 @@ module MXNet
   class NDArray
     include Enumerable
 
-    def self.ones(shape, ctx=nil, dtype=:float32, **kwargs)
+    def self.ones(shape, ctx = nil, dtype = :float32, **kwargs)
       ctx ||= Context.default
       dtype = Utils.dtype_id(dtype)
       Internal._ones(shape: shape, ctx: ctx, dtype: dtype, **kwargs)
     end
 
-    def self.zeros(shape, ctx=nil, dtype=:float32, **kwargs)
+    def self.zeros(shape, ctx = nil, dtype = :float32, **kwargs)
       ctx ||= Context.default
       dtype = Utils.dtype_id(dtype)
       Internal._zeros(shape: shape, ctx: ctx, dtype: dtype, **kwargs)
     end
 
-    def self.arange(start, stop=nil, step: 1.0, repeat: 1, ctx: nil, dtype: :float32)
+    def self.arange(start, stop = nil, step: 1.0, repeat: 1, ctx: nil, dtype: :float32)
       ctx ||= Context.default
       dtype = Utils.dtype_name(dtype)
       Internal._arange(start: start, stop: stop, step: step, repeat: repeat, dtype: dtype, ctx: ctx)
@@ -36,7 +36,7 @@ module MXNet
         dtype ||= :float32
         unless source_array.is_a?(Numo::NArray)
           begin
-            require 'mxnet/narray_helper'
+            require "mxnet/narray_helper"
             # FIXME: dtype support
             source_array = Numo::SFloat[*source_array]
           rescue
@@ -50,7 +50,7 @@ module MXNet
     end
 
     def inspect
-      shape_info = shape.join('x')
+      shape_info = shape.join("x")
       ary = to_narray.inspect.lines[1..-1].join
       "\n#{ary}\n<#{self.class} #{shape_info} @#{context}>"
     end
@@ -115,7 +115,7 @@ module MXNet
       when Range, Enumerator
         start, stop, step = MXNet::Utils.decompose_slice(key)
         if step && step != 1
-          raise ArgumentError, 'slice step cannot be zero' if step == 0
+          raise ArgumentError, "slice step cannot be zero" if step == 0
           Ops.slice(self, begin: [start], end: [stop], step: [step])
         elsif start || stop
           _slice(start, stop)
@@ -147,7 +147,7 @@ module MXNet
             raise IndexError, "NDArray does not support slicing with index=#{slice_i} of type #{slice_i.class}"
           end
         end
-        kept_axes.concat([*(keys.length) ... shape.length])
+        kept_axes.concat([*(keys.length)...shape.length])
         sliced_nd = Ops.slice(self, begin: begins, end: ends, step: steps)
         return sliced_nd if kept_axes.length == shape.length
 
@@ -237,7 +237,7 @@ module MXNet
                      else
                        (start - stop - 1).div(-step) + 1
                      end
-           value_shape << dim_size
+          value_shape << dim_size
         else
           raise ArgumentError, "NDArray does not support index=#{slice_i} of type #{slice_i.class}"
         end
@@ -274,7 +274,7 @@ module MXNet
         when value.is_a?(Array)
           raise NotImplementedError, "Array is not supported yet"
         when defined?(Numo::NArray) && value.is_a?(Numo::NArray)
-          require 'mxnet/narray_helper'
+          require "mxnet/narray_helper"
           MXNet::NArrayHelper.sync_copyfrom(self, value)
         when defined?(NMatrix) && value.is_a?(NMatrix)
           # require 'mxnet/mxnet_helper'
@@ -286,10 +286,11 @@ module MXNet
           raise NotImplementedError, "Matrix is not supported yet"
         else
           raise TypeError, "NDArray does not support assignment with non-array-like " +
-            "object #{value.to_s} of #{value.class} class"
+                           "object #{value.to_s} of #{value.class} class"
         end
       end
     end
+
     private :_fill_by
 
     private def _prepare_value_nd(value, value_shape)
@@ -310,18 +311,83 @@ module MXNet
       return value_nd
     end
 
+    def self.reshape_like(lhs, rhs, *args, **kwargs)
+      Ops.reshape_like(lhs, rhs, *args, **kwargs)
+    end
+
+    def zeros_like(*args, **kwargs)
+      Ops.zeros_like(self, *args, **kwargs)
+    end
+
+    def ones_like(*args, **kwargs)
+      Ops.ones_like(self, *args, **kwargs)
+    end
+
+    def broadcast_axes(*args, **kwargs)
+      Ops.broadcast_axes(self, *args, **kwargs)
+    end
+
+    alias broadcast_axis broadcast_axes
+
+    def repeat(*args, **kwargs)
+      Ops.repeat(self, *args, **kwargs)
+    end
+
+    def pad(*args, **kwargs)
+      Ops.pad(self, *args, **kwargs)
+    end
+
+    def swapaxes(*args, **kwargs)
+      Ops.swapaxes(self, *args, **kwargs)
+    end
+
+    def split(*args, **kwargs)
+      Ops.split(self, *args, **kwargs)
+    end
+
+    def slice(*args, **kwargs)
+      Ops.slice(self, *args, **kwargs)
+    end
+
+    def slice_axis(*args, **kwargs)
+      Ops.slice_axis(self, *args, **kwargs)
+    end
+
+    def slice_like(shape_like, *args, **kwargs)
+      Ops.slice_like(self, *args, **kwargs)
+    end
+
+    def take(*args, **kwargs)
+      Ops.take(self, *args, **kwargs)
+    end
+
+    def self.one_hot(indices, depth: nil, on_value: 1.0, off_value: 0.0, dtype: :float32, **kwargs)
+      dtype = Utils.dtype_name(dtype)
+      Internal._one_hot(indices, depth: depth, on_value: on_value, off_value: off_value, dtype: dtype, **kwargs)
+    end
+
     def ndim
       shape.length
     end
+
     alias rank ndim
 
     def size
       shape.inject(:*)
     end
+
     alias length size
 
     def transpose(axes: nil)
       Ops.transpose(self, axes: axes)
+    end
+
+    def T
+      if self.shape.size < 2
+        self
+      else
+        self.transpose
+      end
     end
 
     def as_scalar
@@ -356,12 +422,28 @@ module MXNet
       Internal._mul_scalar(self, scalar: -1.0)
     end
 
+    def topk(*args, **kwargs)
+      Ops.topk(self, *args, **kwargs)
+    end
+
+    def pick(*args, **kwargs)
+      Ops.pick(self, *args, **kwargs)
+    end
+
+    def sort(*args, **kwargs)
+      Ops.sort(self, *args, **kwargs)
+    end
+
     def argsort(*args, **kwargs)
       Ops.argsort(self, *args, **kwargs)
     end
 
     def argmax(*args, **kwargs)
       Ops.argmax(self, *args, **kwargs)
+    end
+
+    def argmax_channel(*args, **kwargs)
+      Ops.argmax_channel(self, *args, **kwargs)
     end
 
     def argmin(*args, **kwargs)
@@ -389,68 +471,93 @@ module MXNet
     end
 
     def +(other)
-      case other
+      self.class.add(self, other)
+    end
+
+    def self.add(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_add(self, other)
+        Ops.broadcast_add(lhs, rhs)
       when Numeric
-        Internal._plus_scalar(self, scalar: other)
+        Internal._plus_scalar(lhs, scalar: rhs)
       else
-        raise TypeError, "#{other.class} is not supported"
+        raise TypeError, "#{rhs.class} is not supported"
       end
     end
 
     def -(other)
-      case other
+      self.class.sub(self, other)
+    end
+
+    def self.sub(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_sub(self, other)
+        Ops.broadcast_sub(lhs, rhs)
       when Numeric
-        Internal._minus_scalar(self, scalar: other)
+        Internal._minus_scalar(lhs, scalar: rhs)
       else
-        raise TypeError, "#{other.class} is not supported"
+        raise TypeError, "#{rhs.class} is not supported"
       end
     end
 
     def *(other)
-      case other
+      self.class.multiply(self, other)
+    end
+
+    def self.multiply(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_mul(self, other)
+        Ops.broadcast_mul(lhs, rhs)
       when Numeric
-        Internal._mul_scalar(self, scalar: other)
+        Internal._mul_scalar(lhs, scalar: rhs)
       else
-        raise TypeError, "#{other.class} is not supported"
+        raise TypeError, "#{rhs.class} is not supported"
       end
     end
 
     def /(other)
-      case other
-      when NDArray
-        Ops.broadcast_div(self, other)
-      when Numeric
-        Internal._div_scalar(self, scalar: other)
-      else
-        raise TypeError, "#{other.class} is not supported"
-      end
+      self.class.divide(self, other)
     end
 
-    def %(other)
-      case other
+    def self.divide(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_mod(self, other)
+        Ops.broadcast_div(lhs, rhs)
       when Numeric
-        Internal._mod_scalar(self, scalar: other)
+        Internal._div_scalar(lhs, scalar: rhs)
       else
-        raise TypeError, "#{other.class} is not supported"
+        raise TypeError, "#{rhs.class} is not supported"
+      end
+    end
+    singleton_class.send(:alias_method, :true_divide, :divide)
+
+    def %(other)
+      self.class.modulo(self, other)
+    end
+
+    def self.modulo(lhs, rhs)
+      case rhs
+      when NDArray
+        Ops.broadcast_mod(lhs, rhs)
+      when Numeric
+        Internal._mod_scalar(lhs, scalar: rhs)
+      else
+        raise TypeError, "#{rhs.class} is not supported"
       end
     end
 
     def **(other)
-      case other
+      self.class.power(self, other)
+    end
+
+    def self.power(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_power(self, other)
+        Ops.broadcast_power(lhs, rhs)
       when Numeric
-        Internal._power_scalar(self, scalar: other)
+        Internal._power_scalar(lhs, scalar: rhs)
       else
-        raise TypeError, "#{other.class} is not supported"
+        raise TypeError, "#{rhs.class} is not supported"
       end
     end
 
@@ -562,57 +669,93 @@ module MXNet
     end
 
     def ==(other)
-      case other
+      self.class.equal(self, other)
+    end
+
+    def self.equal(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_equal(self, other)
+        Ops.broadcast_equal(lhs, rhs)
       else
         super
       end
     end
 
     def !=(other)
-      case other
+      self.class.not_equal(self, other)
+    end
+
+    def self.not_equal(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_not_equal(self, other)
+        Ops.broadcast_not_equal(lhs, rhs)
       else
         super
       end
     end
 
     def >(other)
-      case other
+      self.class.greater(self, other)
+    end
+
+    def self.greater(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_greater(self, other)
+        Ops.broadcast_greater(lhs, rhs)
       else
         super
       end
     end
 
     def >=(other)
-      case other
+      self.class.greater_equal(self, other)
+    end
+
+    def self.greater_equal(lhs, rhs)
+      case lhs
       when NDArray
-        Ops.broadcast_greater_equal(self, other)
+        Ops.broadcast_greater_equal(lhs, rhs)
       else
         super
       end
     end
 
     def <(other)
-      case other
+      self.class.lesser(self, other)
+    end
+
+    def self.lesser(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_lesser(self, other)
+        Ops.broadcast_lesser(lhs, rhs)
       else
         super
       end
     end
 
     def <=(other)
-      case other
+      self.class.lesser_equal(self, other)
+    end
+
+    def self.lesser_equal(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_lesser_equal(self, other)
+        Ops.broadcast_lesser_equal(lhs, rhs)
       else
         super
       end
+    end
+
+    def clip(*args, **kwargs)
+      Ops.clip(self, *args, **kwargs)
+    end
+
+    def sign(*args, **kwargs)
+      Ops.sign(self, *args, **kwargs)
+    end
+
+    def flatten(*args, **kwargs)
+      Ops.flatten(self, *args, **kwargs)
     end
 
     def tile(*args, **kwargs)
@@ -622,7 +765,7 @@ module MXNet
     GRAD_REQ_MAP = {
       null: 0,
       write: 1,
-      add: 3
+      add: 3,
     }.freeze
     private_constant :GRAD_REQ_MAP
 
@@ -662,7 +805,7 @@ module MXNet
 
     # Returns a Numo::NArray object with value copied from this array.
     def to_narray
-      require 'mxnet/narray_helper'
+      require "mxnet/narray_helper"
       self.to_narray
     end
 
@@ -694,7 +837,6 @@ module MXNet
       end
     end #
 
-
     # Returns element-wise minimum of the input arrays with broadcasting.
     #
     # Equivalent to `MXNet::NDArray.broadcast_minimum(lhs, rhs)`.
@@ -713,9 +855,7 @@ module MXNet
         raise TypeError, "type #{rhs.class} not supported"
       end
     end
-
   end # SwappedOperationAdapter
-
 
   NDArray::CONVERTER = []
 
