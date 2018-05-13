@@ -310,10 +310,6 @@ module MXNet
       return value_nd
     end
 
-    def self.reshape_like(lhs, rhs, *args, **kwargs)
-      Ops.reshape_like(lhs, rhs, *args, **kwargs)
-    end
-
     def zeros_like(*args, **kwargs)
       Ops.zeros_like(self, *args, **kwargs)
     end
