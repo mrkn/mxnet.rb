@@ -1,6 +1,77 @@
 require 'spec_helper'
 
 RSpec.describe MXNet::KVStore do
+  describe '.new' do
+    specify do
+      kvs = MXNet::KVStore.new
+      expect(kvs.type).to eq(:local)
+
+      kvs = MXNet::KVStore.new(:local)
+      expect(kvs.type).to eq(:local)
+
+      kvs = MXNet::KVStore.new('local')
+      expect(kvs.type).to eq(:local)
+
+      kvs = MXNet::KVStore.new(:device)
+      expect(kvs.type).to eq(:device)
+
+      kvs = MXNet::KVStore.new('device')
+      expect(kvs.type).to eq(:device)
+
+      kvs = MXNet::KVStore.new(:dist_sync)
+      expect(kvs.type).to eq(:dist_sync)
+
+      kvs = MXNet::KVStore.new(:dist_device_sync)
+      expect(kvs.type).to eq(:dist_device_sync)
+
+      kvs = MXNet::KVStore.new(:dist_async)
+      expect(kvs.type).to eq(:dist_async)
+
+      expect {
+        kvs = MXNet::KVStore.new(:invalid_kvstore_name)
+      }.to raise_error(ArgumentError)
+    end
+  end
+
+  subject(:kvs_local) { MXNet::KVStore.new(:local) }
+
+  describe '#init' do
+    specify do
+      subject.init('3', MXNet::NDArray.ones([2, 3]) * 2)
+      x = MXNet::NDArray.zeros([2, 3])
+      subject.pull('3', out: x)
+      expect(x.to_narray).to eq(Numo::DFloat[[2, 2, 2], [2, 2, 2]])
+    end
+
+    specify do
+      keys = %w[5 7 9]
+      subject.init(keys, Array.new(keys.length) { MXNet::NDArray.ones([2, 3]) })
+      x = MXNet::NDArray.zeros([2, 3])
+      subject.pull('5', out: x)
+      expect(x.to_narray).to eq(Numo::DFloat[[1, 1, 1], [1, 1, 1]])
+      subject.pull('7', out: x)
+      expect(x.to_narray).to eq(Numo::DFloat[[1, 1, 1], [1, 1, 1]])
+      subject.pull('9', out: x)
+      expect(x.to_narray).to eq(Numo::DFloat[[1, 1, 1], [1, 1, 1]])
+    end
+
+    # TODO: sparse storage types support
+    xspecify do
+      subject.init('4', MXNet::NDArray.ones([2, 3]).to_stype(:row_sparse))
+      b = MXNet::NDArray::Sparse.zeros(:row_sparse, [2, 3])
+      suject.row_sparse_pull('4', row_ids: MXNet::NDArray.array([0, 1]), out: b)
+      expect(b.to_narray).to eq(Numo::DFloat[[1, 1, 1], [1, 1, 1]])
+    end
+  end
+
+  describe '#push' do
+    specify do
+      subject.push('3',)
+    end
+  end
+end
+
+RSpec.describe 'tests KVStore imported from Python' do
   let(:shape) { [4, 4] }
   let(:keys) { [5, 7, 11] }
   let(:str_keys) { ['b', 'c', 'd'] }
