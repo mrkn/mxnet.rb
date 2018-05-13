@@ -33,12 +33,12 @@ module MXNet
       when NDArray
         dtype ||= source_array.dtype
       else
+        require 'mxnet/narray_helper'
         dtype ||= :float32
-        unless source_array.is_a?(Numo::NArray)
+        unless source_array.is_a?(::Numo::NArray)
           begin
-            require 'mxnet/narray_helper'
             # FIXME: dtype support
-            source_array = Numo::SFloat[*source_array]
+            source_array = ::Numo::SFloat[*source_array]
           rescue
             raise ArgumentError, "source_array must be array like object"
           end
