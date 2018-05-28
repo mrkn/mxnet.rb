@@ -142,6 +142,16 @@ module MXNet
         expect { x.reshape([2, 2, 2]) }.to raise_error(MXNet::Error, /target shape size is larger current shape/)
       end
     end
+    
+    describe ".reshape_like" do
+      specify do
+        x = MXNet::NDArray.zeros([2, 6])
+        y = MXNet::NDArray.ones([3, 4])
+        z = MXNet::NDArray.reshape_like(x, y)
+        expect(z.shape).to eq([3, 4])
+        expect(z.reshape([12]).to_a).to be_all {|x| x == 0.0 }
+      end
+    end
 
     describe '#dtype' do
       specify do
@@ -189,10 +199,6 @@ module MXNet
       end
     end
 
-    describe '#dtype' do
-      pending
-    end
-
     describe '#stype' do
       pending
     end
@@ -208,6 +214,14 @@ module MXNet
         x = MXNet::NDArray.empty([3, 2, 1, 4])
         x_t = x.transpose(axes: [1, 2, 3, 0])
         expect(x_t.shape).to eq([2, 1, 4, 3])
+      end
+    end
+
+    describe "#T" do
+      specify do
+        x = MXNet::NDArray.arange(0, 6).reshape([2, 3])
+        expect(x.to_narray).to eq([[0, 1, 2], [3, 4, 5]])
+        expect(x.T.to_narray).to eq([[0, 3], [1, 4], [2, 5]])
       end
     end
 
@@ -241,6 +255,75 @@ module MXNet
 
     describe '#backward' do
       pending
+    end
+
+    describe "#topk" do
+      let(:x) { MXNet::NDArray.array([[0.3, 0.2, 0.4], [0.1, 0.3, 0.2]]) }
+
+      specify "returns an index of the largest element on last axis" do
+        expect(x.topk.to_narray).to eq([[2], [1]])
+      end
+
+      specify "returns the value of top-2 largest elements on last axis" do
+        expect(x.topk(ret_typ: "value", k: 2).to_narray).to eq([[0.4, 0.3], [0.3, 0.2]])
+      end
+
+      specify "returns the value of top-2 smallest elements on last axis" do
+        expect(x.topk(ret_typ: "value", k: 2, is_ascend: true).to_narray).to eq([[0.2, 0.3], [0.1, 0.2]])
+      end
+
+      specify "returns the value of top-2 largest elements on axis 0" do
+        expect(x.topk(axis: 0, ret_typ: "value", k: 2).to_narray).to eq([[0.3, 0.3, 0.4], [0.1, 0.2, 0.2]])
+      end
+
+      specify "flattens and then returns list of both values and indices" do
+        res = x.topk(ret_typ: "both", k: 2)
+        expect(res.size).to eq(2)
+        expect(res.first.to_narray).to eq([[0.4, 0.3], [0.3, 0.2]])
+        expect(res.last.to_narray).to eq([[2, 0], [1, 2]])
+      end
+    end
+
+    describe "#pick" do
+      let(:x) { MXNet::NDArray.arange(1, 7).reshape([3, 2]) }
+
+      specify "picks elements with specified indices along axis 0" do
+        y = MXNet::NDArray.array([0, 1])
+        expect(x.pick(y, axis: 0).to_narray).to eq([1, 4])
+      end
+
+      specify "picks elements with specified indices along axis 1" do
+        y = MXNet::NDArray.array([0, 1, 0])
+        expect(x.pick(y, axis: 1).to_narray).to eq([1, 4, 5])
+      end
+
+      specify "picks elements with specified indices along axis 1 and dims are maintained" do
+        y = MXNet::NDArray.array([[1], [0], [2]])
+        expect(x.pick(y, axis: 1, keepdims: true).to_narray).to eq([[2], [3], [6]])
+      end
+    end
+
+    describe "#sort" do
+      x = MXNet::NDArray.array([[1, 4], [3, 1]])
+
+      specify "sorts along the last axis" do
+        expect(x.sort.to_narray).to eq([[1, 4], [1, 3]])
+      end
+
+      specify "sorts along the first axis" do
+        expect(x.sort(axis: 0).to_narray).to eq([[1, 1], [3, 4]])
+      end
+
+      specify "sort in a descend order" do
+        #TODO: when using is_ascend: false it doesn't work
+        expect(x.sort(is_ascend: 0).to_narray).to eq([[4, 1], [3, 1]])
+      end
+
+      specify "sort in a descend order (with Ruby boolean)" do
+        #TODO: when using is_ascend: false it doesn't work
+        pending "is_ascend should work for false"
+        expect(x.sort(is_ascend: false).to_narray).to eq([[4, 1], [3, 1]])
+      end
     end
 
     describe '#tostype' do
@@ -311,6 +394,13 @@ module MXNet
       end
     end
 
+    describe "#argmax_channel" do
+      specify do
+        x = MXNet::NDArray.array([[0, 1, 2], [3, 4, 5], [8, 7, 6]])
+        expect(x.argmax_channel.to_a).to eq([2, 2, 0])
+      end
+    end
+
     describe '.argmin' do
       specify do
         x = MXNet::NDArray.array([[0, 1, 2], [3, 4, 5]])
@@ -335,10 +425,6 @@ module MXNet
         expect(y.shape).to eq([2, 1])
         expect(y.reshape([-1]).to_a).to eq([0, 0])
       end
-    end
-
-    describe '#clip' do
-      pending
     end
 
     describe '.abs' do
@@ -461,12 +547,311 @@ module MXNet
       end
     end
 
+    describe ".ones_like" do
+      specify do
+        x = MXNet::NDArray.zeros([3, 4])
+        z = MXNet::NDArray.ones_like(x)
+        expect(z.shape).to eq([3, 4])
+        expect(z.reshape([12]).to_a).to be_all {|x| x == 1.0 }
+      end
+    end
+
     describe '.zeros' do
       specify do
         x = MXNet::NDArray.zeros([2, 1, 3])
         expect(x).to be_a(MXNet::NDArray)
         expect(x.shape).to eq([2, 1, 3])
         expect(x.reshape([6]).to_a).to be_all {|x| x == 0.0 }
+      end
+    end
+
+    describe ".zeros_like" do
+      specify do
+        x = MXNet::NDArray.ones([3, 4])
+        z = MXNet::NDArray.zeros_like(x)
+        expect(z.shape).to eq([3, 4])
+        expect(z.reshape([12]).to_a).to be_all {|x| x == 0.0 }
+      end
+    end
+
+    describe "#broadcast_axes" do
+      # given x of shape (1,2,1)
+      x = MXNet::NDArray.array([[[1], [2]]])
+      specify "broadcast x on on axis 2" do
+        expect(x.broadcast_axes(axis: 2, size: 3).to_narray).to eq([[[1, 1, 1], [2, 2, 2]]])
+      end
+
+      specify "broadcast x on on axes 0 and 2" do
+        expect(x.broadcast_axes(axis: [0, 2], size: [2, 3]).to_narray).to eq(
+          [[[1, 1, 1], [2, 2, 2]],
+           [[1, 1, 1], [2, 2, 2]]]
+        )
+      end
+    end
+    describe "#repeat" do
+      x = MXNet::NDArray.array([[1, 2], [3, 4]])
+
+      specify "repeat along axis 0" do
+        expect(x.repeat(repeats: 2, axis: 0).to_narray).to eq(
+          [[1, 2],
+           [1, 2],
+           [3, 4],
+           [3, 4]]
+        )
+      end
+
+      specify "repeat along axis 1" do
+        expect(x.repeat(repeats: 2, axis: -1).to_narray).to eq(
+          [[1, 1, 2, 2],
+           [3, 3, 4, 4]]
+        )
+      end
+
+      specify "repeat along the last axis" do
+        expect(x.repeat(repeats: 2, axis: -1).to_narray).to eq(
+          [[1, 1, 2, 2],
+           [3, 3, 4, 4]]
+        )
+      end
+    end
+
+    describe "#pad" do
+      x = MXNet::NDArray.array(
+        [[[[1, 2, 3],
+           [4, 5, 6]],
+          [[7, 8, 9],
+           [10, 11, 12]]],
+         [[[11, 12, 13],
+           [14, 15, 16]],
+          [[17, 18, 19],
+           [20, 21, 22]]]]
+      )
+
+      specify "pads using the edge values of the input array" do
+        expect(x.pad(mode: "edge", pad_width: [0, 0, 0, 0, 1, 1, 1, 1]).to_narray).to eq(
+          [[[[1, 1, 2, 3, 3],
+             [1, 1, 2, 3, 3],
+             [4, 4, 5, 6, 6],
+             [4, 4, 5, 6, 6]],
+
+            [[7, 7, 8, 9, 9],
+             [7, 7, 8, 9, 9],
+             [10, 10, 11, 12, 12],
+             [10, 10, 11, 12, 12]]],
+
+           [[[11, 11, 12, 13, 13],
+             [11, 11, 12, 13, 13],
+             [14, 14, 15, 16, 16],
+             [14, 14, 15, 16, 16]],
+
+            [[17, 17, 18, 19, 19],
+             [17, 17, 18, 19, 19],
+             [20, 20, 21, 22, 22],
+             [20, 20, 21, 22, 22]]]]
+        )
+      end
+
+      specify "pads using a constant value" do
+        expect(x.pad(mode: "constant", constant_value: 0, pad_width: [0, 0, 0, 0, 1, 1, 1, 1]).to_narray).to eq(
+          [[[[0, 0, 0, 0, 0],
+             [0, 1, 2, 3, 0],
+             [0, 4, 5, 6, 0],
+             [0, 0, 0, 0, 0]],
+
+            [[0, 0, 0, 0, 0],
+             [0, 7, 8, 9, 0],
+             [0, 10, 11, 12, 0],
+             [0, 0, 0, 0, 0]]],
+
+           [[[0, 0, 0, 0, 0],
+             [0, 11, 12, 13, 0],
+             [0, 14, 15, 16, 0],
+             [0, 0, 0, 0, 0]],
+
+            [[0, 0, 0, 0, 0],
+             [0, 17, 18, 19, 0],
+             [0, 20, 21, 22, 0],
+             [0, 0, 0, 0, 0]]]]
+        )
+      end
+    end
+
+    describe "#swapaxes" do
+      specify "interchange axis 0 and 1 of a 1,3 array" do
+        x = MXNet::NDArray.array([[1, 2, 3]])
+        expect(x.swapaxes(dim1: 0, dim2: 1).to_narray).to eq([[1], [2], [3]])
+      end
+
+      specify "interchange axis 0 and 2 of a 2,2,2 array" do
+        x = MXNet::NDArray.array(
+          [[[0, 1],
+            [2, 3]],
+           [[4, 5],
+            [6, 7]]]
+        )
+        expect(x.swapaxes(dim1: 0, dim2: 2).to_narray).to eq(
+          [[[0, 4],
+            [2, 6]],
+           [[1, 5],
+            [3, 7]]]
+        )
+      end
+    end
+
+    describe "#split" do
+      x = MXNet::NDArray.array([[[1], [2]], [[3], [4]], [[5], [6]]])
+
+      specify "split a 3,2,1 array into two 3,1,1 arrays" do
+        expect(x.shape).to eq([3, 2, 1])
+        y = x.split(axis: 1, num_outputs: 2)
+        expect(y.size).to eq(2)
+        expect(y[0].shape).to eq([3, 1, 1])
+        expect(y[0].to_narray).to eq ([[[1]], [[3]], [[5]]])
+        expect(y[1].to_narray).to eq ([[[2]], [[4]], [[6]]])
+      end
+
+      specify "split a 3,2,1 array into three 1,2,1 arrays" do
+        y = x.split(axis: 0, num_outputs: 3)
+        expect(y.size).to eq(3)
+        expect(y[0].shape).to eq([1, 2, 1])
+        expect(y[0].to_narray).to eq([[[1], [2]]])
+        expect(y[1].to_narray).to eq([[[3], [4]]])
+        expect(y[2].to_narray).to eq([[[5], [6]]])
+      end
+
+      specify "squeeze axis with length 1 from the shapes of the 3 output arrays with shape (2, 1)" do
+        y = x.split(axis: 0, num_outputs: 3, squeeze_axis: 1)
+        expect(y.size).to eq(3)
+        expect(y[0].shape).to eq([2, 1])
+        expect(y[0].to_narray).to eq([[1], [2]])
+        expect(y[1].to_narray).to eq([[3], [4]])
+        expect(y[2].to_narray).to eq([[5], [6]])
+      end
+    end
+
+    describe "#slice" do
+      x = MXNet::NDArray.arange(1, 13).reshape([3, 4])
+      specify do
+        expect(x.slice(begin: [0, 1], end: [2, 4]).to_narray).to eq(
+          [[2, 3, 4],
+           [6, 7, 8]]
+        )
+
+        expect(x.slice(begin: [None, 0], end: [None, 3], step: [-1, 2]).to_narray).to eq(
+          [[9, 11], [5, 7], [1, 3]]
+        )
+      end
+    end
+
+    describe "#slice_axis" do
+      x = MXNet::NDArray.arange(1, 13).reshape([3, 4])
+
+      specify "slice elements 1 and 2 along axis 0" do
+        expect(x.slice_axis(axis: 0, begin: 1, end: 3).to_narray).to eq(
+          [[5, 6, 7, 8],
+           [9, 10, 11, 12]]
+        )
+      end
+
+      specify "slice elements 0 and 1 along axis 1" do
+        expect(x.slice_axis(axis: 1, begin: 0, end: 2).to_narray).to eq(
+          [[1, 2], [5, 6], [9, 10]]
+        )
+      end
+
+      specify "slice elements 2 and 3 along axis 1 counting from the end" do
+        expect(x.slice_axis(axis: 1, begin: -3, end: -1).to_narray).to eq(
+          [[2, 3], [6, 7], [10, 11]]
+        )
+      end
+    end
+
+    describe "#slice_like" do
+      x = MXNet::NDArray.arange(1, 13).reshape([3, 4])
+      y = MXNet::NDArray.zeros([2, 3])
+
+      specify "slice along all axes" do
+        pending "slice_like unknown from Ops (operation delegator)"
+        expect(x.slice_like(y).to_narray).to eq(
+          [[1, 2, 3],
+           [5, 6, 7]]
+        )
+      end
+
+      specify "slice along axis 0 and 1 (same as above)" do
+        pending "slice_like unknown from Ops (operation delegator)"
+        expect(x.slice_like(shape_like: y, axes: [0, 1]).to_narray).to eq(
+          [[1, 2, 3],
+           [5, 6, 7]]
+        )
+      end
+
+      specify "slice along axis 0" do
+        pending "slice_like unknown from Ops (operation delegator)"
+        expect(x.slice_like(shape_like: y, axes: [0]).to_narray).to eq(
+          [[1, 2, 3, 4],
+           [5, 6, 7, 8]]
+        )
+      end
+
+      specify "slice along axis -1" do
+        pending "slice_like unknown from Ops (operation delegator)"
+        expect(x.slice_like(shape_like: y, axes: [-1]).to_narray).to eq(
+          [[1, 2, 3],
+           [5, 6, 7],
+           [9, 10, 11]]
+        )
+      end
+    end
+
+    describe "#take" do
+      specify "take the second element along the first axis" do
+        x = MXNet::NDArray.array([4, 5, 6])
+        indices = MXNet::NDArray.array([1]) # can not use a Ruby Array for indices
+        expect(x.take(indices).to_narray).to eq([5])
+      end
+
+      specify "take rows 0 and 1, then 1 and 2 along axis 0" do
+        x = MXNet::NDArray.array([[1, 2], [3, 4], [5, 6]])
+        indices = MXNet::NDArray.array([[0, 1], [1, 2]]) # can not use a Ruby Array for indices
+        expect(x.take(indices).to_narray).to eq(
+          [[[1, 2], [3, 4]],
+           [[3, 4], [5, 6]]]
+        )
+      end
+    end
+
+    describe ".one_hot" do
+      specify "one_hot with default on and off values and depth of 3" do
+        indices = MXNet::NDArray.array([1, 0, 2, 0]) # can not use a Ruby Array for indices
+        expect(MXNet::NDArray.one_hot(indices, depth: 3).to_narray).to eq(
+          [[0, 1, 0],
+           [1, 0, 0],
+           [0, 0, 1],
+           [1, 0, 0]]
+        )
+      end
+
+      specify "one_hot with specific on and off values and dtype int32" do
+        indices = MXNet::NDArray.array([1, 0, 2, 0]) # can not use a Ruby Array for indices
+        expect(MXNet::NDArray.one_hot(indices, depth: 3, on_value: 8, off_value: 1, dtype: :int32).to_narray).to eq(
+          [[1, 8, 1],
+           [8, 1, 1],
+           [1, 1, 8],
+           [8, 1, 1]]
+        )
+      end
+
+      specify "one_hot with multi-level indices" do
+        indices = MXNet::NDArray.array([[1, 0], [1, 0], [2, 0]]) # can not use a Ruby Array for indices
+        expect(MXNet::NDArray.one_hot(indices, depth: 3).to_narray).to eq(
+          [[[0, 1, 0],
+            [1, 0, 0]],
+           [[0, 1, 0],
+            [1, 0, 0]],
+           [[0, 0, 1],
+            [1, 0, 0]]]
+        )
       end
     end
 
@@ -511,8 +896,12 @@ module MXNet
       end
     end
 
-    describe '#move_axis' do
-      pending
+    describe '#moveaxis' do
+      specify do
+        pending "moveaxis is unknown from Ops delegator. Why ?"
+        x = MXNet::NDArray.array([[1, 2, 3], [4, 5, 6]])
+        expect(x.moveaxis(0,1).to_narray).to eq([[1,2], [3,4], [5,6]])
+      end
     end
 
     describe '#+' do
@@ -927,6 +1316,30 @@ module MXNet
       specify do
         x = MXNet::NDArray.full([1], 3.14, dtype: :float64)
         expect(x.to_f).to eq(3.14)
+      end
+    end
+
+    describe "#clip" do
+      specify do
+        x = MXNet::NDArray.arange(0, 10)
+        expect(x.clip(a_min: 1, a_max: 8).to_narray).to eq([1, 1, 2, 3, 4, 5, 6, 7, 8, 8])
+      end
+    end
+
+    describe "#sign" do
+      specify do
+        x = MXNet::NDArray.array([-2, 0, 3])
+        expect(x.sign.to_narray).to eq([-1, 0, 1])
+      end
+    end
+
+    describe "#flatten" do
+      specify do
+        x = MXNet::NDArray.arange(1, 19).reshape([2, 3, 3])
+        expect(x.flatten.to_narray).to eq(
+          [[1, 2, 3, 4, 5, 6, 7, 8, 9], 
+           [10, 11, 12, 13, 14, 15, 16, 17, 18]]
+        )
       end
     end
 

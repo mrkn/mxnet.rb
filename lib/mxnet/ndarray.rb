@@ -237,7 +237,7 @@ module MXNet
                      else
                        (start - stop - 1).div(-step) + 1
                      end
-           value_shape << dim_size
+          value_shape << dim_size
         else
           raise ArgumentError, "NDArray does not support index=#{slice_i} of type #{slice_i.class}"
         end
@@ -310,6 +310,54 @@ module MXNet
       return value_nd
     end
 
+    def zeros_like(*args, **kwargs)
+      Ops.zeros_like(self, *args, **kwargs)
+    end
+
+    def ones_like(*args, **kwargs)
+      Ops.ones_like(self, *args, **kwargs)
+    end
+
+    def broadcast_axes(*args, **kwargs)
+      Ops.broadcast_axes(self, *args, **kwargs)
+    end
+
+    def repeat(*args, **kwargs)
+      Ops.repeat(self, *args, **kwargs)
+    end
+
+    def pad(*args, **kwargs)
+      Ops.pad(self, *args, **kwargs)
+    end
+
+    def swapaxes(*args, **kwargs)
+      Ops.swapaxes(self, *args, **kwargs)
+    end
+
+    def split(*args, **kwargs)
+      Ops.split(self, *args, **kwargs)
+    end
+
+    def slice(*args, **kwargs)
+      Ops.slice(self, *args, **kwargs)
+    end
+
+    def slice_axis(*args, **kwargs)
+      Ops.slice_axis(self, *args, **kwargs)
+    end
+
+    def slice_like(*args, **kwargs)
+      Ops.slice_like(self, *args, **kwargs)
+    end
+
+    def take(*args, **kwargs)
+      Ops.take(self, *args, **kwargs)
+    end
+
+    def moveaxis(*args, **kwargs)
+      Ops.moveaxis(self, *args, **kwargs)
+    end
+
     def ndim
       shape.length
     end
@@ -320,8 +368,16 @@ module MXNet
     end
     alias length size
 
-    def transpose(axes: nil)
-      Ops.transpose(self, axes: axes)
+    def transpose(*args, **kwargs)
+      Ops.transpose(self, *args, **kwargs)
+    end
+
+    def T
+      if self.shape.size < 2
+        self
+      else
+        Ops.transpose(self)
+      end
     end
 
     def as_scalar
@@ -356,12 +412,28 @@ module MXNet
       Internal._mul_scalar(self, scalar: -1.0)
     end
 
+    def topk(*args, **kwargs)
+      Ops.topk(self, *args, **kwargs)
+    end
+
+    def pick(*args, **kwargs)
+      Ops.pick(self, *args, **kwargs)
+    end
+
+    def sort(*args, **kwargs)
+      Ops.sort(self, *args, **kwargs)
+    end
+
     def argsort(*args, **kwargs)
       Ops.argsort(self, *args, **kwargs)
     end
 
     def argmax(*args, **kwargs)
       Ops.argmax(self, *args, **kwargs)
+    end
+
+    def argmax_channel(*args, **kwargs)
+      Ops.argmax_channel(self, *args, **kwargs)
     end
 
     def argmin(*args, **kwargs)
@@ -389,68 +461,92 @@ module MXNet
     end
 
     def +(other)
-      case other
+      self.class.add(self, other)
+    end
+
+    def self.add(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_add(self, other)
+        Ops.broadcast_add(lhs, rhs)
       when Numeric
-        Internal._plus_scalar(self, scalar: other)
+        Internal._plus_scalar(lhs, scalar: rhs)
       else
-        raise TypeError, "#{other.class} is not supported"
+        raise TypeError, "#{rhs.class} is not supported"
       end
     end
 
     def -(other)
-      case other
+      self.class.sub(self, other)
+    end
+
+    def self.sub(lhs, rhs)      
+      case rhs
       when NDArray
-        Ops.broadcast_sub(self, other)
+        Ops.broadcast_sub(lhs, rhs)
       when Numeric
-        Internal._minus_scalar(self, scalar: other)
+        Internal._minus_scalar(lhs, scalar: rhs)
       else
-        raise TypeError, "#{other.class} is not supported"
+        raise TypeError, "#{rhs.class} is not supported"
       end
     end
 
     def *(other)
-      case other
+      self.class.multiply(self, other)
+    end
+
+    def self.multiply(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_mul(self, other)
+        Ops.broadcast_mul(lhs, rhs)
       when Numeric
-        Internal._mul_scalar(self, scalar: other)
+        Internal._mul_scalar(lhs, scalar: rhs)
       else
-        raise TypeError, "#{other.class} is not supported"
+        raise TypeError, "#{rhs.class} is not supported"
       end
     end
 
     def /(other)
-      case other
+      self.class.divide(self, other)
+    end
+
+    def self.divide(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_div(self, other)
+        Ops.broadcast_div(lhs, rhs)
       when Numeric
-        Internal._div_scalar(self, scalar: other)
+        Internal._div_scalar(lhs, scalar: rhs)
       else
-        raise TypeError, "#{other.class} is not supported"
+        raise TypeError, "#{rhs.class} is not supported"
       end
     end
 
     def %(other)
-      case other
+      self.class.modulo(self, other)
+    end
+
+    def self.modulo(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_mod(self, other)
+        Ops.broadcast_mod(lhs, rhs)
       when Numeric
-        Internal._mod_scalar(self, scalar: other)
+        Internal._mod_scalar(lhs, scalar: rhs)
       else
-        raise TypeError, "#{other.class} is not supported"
+        raise TypeError, "#{rhs.class} is not supported"
       end
     end
 
     def **(other)
-      case other
+      self.class.power(self, other)
+    end
+
+    def self.power(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_power(self, other)
+        Ops.broadcast_power(lhs, rhs)
       when Numeric
-        Internal._power_scalar(self, scalar: other)
+        Internal._power_scalar(lhs, scalar: rhs)
       else
-        raise TypeError, "#{other.class} is not supported"
+        raise TypeError, "#{rhs.class} is not supported"
       end
     end
 
@@ -562,57 +658,93 @@ module MXNet
     end
 
     def ==(other)
-      case other
+      self.class.equal(self, other)
+    end
+
+    def self.equal(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_equal(self, other)
+        Ops.broadcast_equal(lhs, rhs)
       else
         super
       end
     end
 
     def !=(other)
-      case other
+      self.class.not_equal(self, other)
+    end
+
+    def self.not_equal(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_not_equal(self, other)
+        Ops.broadcast_not_equal(lhs, rhs)
       else
         super
       end
     end
 
     def >(other)
-      case other
+      self.class.greater(self, other)
+    end
+
+    def self.greater(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_greater(self, other)
+        Ops.broadcast_greater(lhs, rhs)
       else
         super
       end
     end
 
     def >=(other)
-      case other
+      self.class.greater_equal(self, other)
+    end
+
+    def self.greater_equal(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_greater_equal(self, other)
+        Ops.broadcast_greater_equal(lhs, rhs)
       else
         super
       end
     end
 
     def <(other)
-      case other
+      self.class.lesser(self, other)
+    end
+
+    def self.lesser(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_lesser(self, other)
+        Ops.broadcast_lesser(lhs, rhs)
       else
         super
       end
     end
 
     def <=(other)
-      case other
+      self.class.lesser_equal(self, other)
+    end
+
+    def self.lesser_equal(lhs, rhs)
+      case rhs
       when NDArray
-        Ops.broadcast_lesser_equal(self, other)
+        Ops.broadcast_lesser_equal(lhs, rhs)
       else
         super
       end
+    end
+
+    def clip(*args, **kwargs)
+      Ops.clip(self, *args, **kwargs)
+    end
+
+    def sign(*args, **kwargs)
+      Ops.sign(self, *args, **kwargs)
+    end
+
+    def flatten(*args, **kwargs)
+      Ops.flatten(self, *args, **kwargs)
     end
 
     def tile(*args, **kwargs)
