@@ -142,7 +142,7 @@ module MXNet
         expect { x.reshape([2, 2, 2]) }.to raise_error(MXNet::Error, /target shape size is larger current shape/)
       end
     end
-    
+
     describe ".reshape_like" do
       specify do
         x = MXNet::NDArray.zeros([2, 6])
@@ -1337,7 +1337,7 @@ module MXNet
       specify do
         x = MXNet::NDArray.arange(1, 19).reshape([2, 3, 3])
         expect(x.flatten.to_narray).to eq(
-          [[1, 2, 3, 4, 5, 6, 7, 8, 9], 
+          [[1, 2, 3, 4, 5, 6, 7, 8, 9],
            [10, 11, 12, 13, 14, 15, 16, 17, 18]]
         )
       end
