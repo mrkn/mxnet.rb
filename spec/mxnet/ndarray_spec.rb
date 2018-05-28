@@ -304,7 +304,7 @@ module MXNet
     end
 
     describe "#sort" do
-      x = MXNet::NDArray.array([[1, 4], [3, 1]])
+      let(:x) { MXNet::NDArray.array([[1, 4], [3, 1]]) }
 
       specify "sorts along the last axis" do
         expect(x.sort.to_narray).to eq([[1, 4], [1, 3]])
@@ -576,7 +576,8 @@ module MXNet
 
     describe "#broadcast_axes" do
       # given x of shape (1,2,1)
-      x = MXNet::NDArray.array([[[1], [2]]])
+      let(:x) { MXNet::NDArray.array([[[1], [2]]]) }
+
       specify "broadcast x on on axis 2" do
         expect(x.broadcast_axes(axis: 2, size: 3).to_narray).to eq([[[1, 1, 1], [2, 2, 2]]])
       end
@@ -589,7 +590,7 @@ module MXNet
       end
     end
     describe "#repeat" do
-      x = MXNet::NDArray.array([[1, 2], [3, 4]])
+      let(:x) { MXNet::NDArray.array([[1, 2], [3, 4]]) }
 
       specify "repeat along axis 0" do
         expect(x.repeat(repeats: 2, axis: 0).to_narray).to eq(
@@ -616,16 +617,18 @@ module MXNet
     end
 
     describe "#pad" do
-      x = MXNet::NDArray.array(
-        [[[[1, 2, 3],
-           [4, 5, 6]],
-          [[7, 8, 9],
-           [10, 11, 12]]],
-         [[[11, 12, 13],
-           [14, 15, 16]],
-          [[17, 18, 19],
-           [20, 21, 22]]]]
-      )
+      let(:x) do
+        MXNet::NDArray.array(
+          [[[[1, 2, 3],
+            [4, 5, 6]],
+            [[7, 8, 9],
+            [10, 11, 12]]],
+          [[[11, 12, 13],
+            [14, 15, 16]],
+            [[17, 18, 19],
+            [20, 21, 22]]]]
+        )
+      end
 
       specify "pads using the edge values of the input array" do
         expect(x.pad(mode: "edge", pad_width: [0, 0, 0, 0, 1, 1, 1, 1]).to_narray).to eq(
@@ -699,7 +702,7 @@ module MXNet
     end
 
     describe "#split" do
-      x = MXNet::NDArray.array([[[1], [2]], [[3], [4]], [[5], [6]]])
+      let(:x) { MXNet::NDArray.array([[[1], [2]], [[3], [4]], [[5], [6]]]) }
 
       specify "split a 3,2,1 array into two 3,1,1 arrays" do
         expect(x.shape).to eq([3, 2, 1])
@@ -730,7 +733,8 @@ module MXNet
     end
 
     describe "#slice" do
-      x = MXNet::NDArray.arange(1, 13).reshape([3, 4])
+      let(:x) { MXNet::NDArray.arange(1, 13).reshape([3, 4]) }
+
       specify do
         expect(x.slice(begin: [0, 1], end: [2, 4]).to_narray).to eq(
           [[2, 3, 4],
@@ -744,7 +748,7 @@ module MXNet
     end
 
     describe "#slice_axis" do
-      x = MXNet::NDArray.arange(1, 13).reshape([3, 4])
+      let(:x) { MXNet::NDArray.arange(1, 13).reshape([3, 4]) }
 
       specify "slice elements 1 and 2 along axis 0" do
         expect(x.slice_axis(axis: 0, begin: 1, end: 3).to_narray).to eq(
@@ -767,8 +771,9 @@ module MXNet
     end
 
     describe "#slice_like" do
-      x = MXNet::NDArray.arange(1, 13).reshape([3, 4])
-      y = MXNet::NDArray.zeros([2, 3])
+      let(:x) { MXNet::NDArray.arange(1, 13).reshape([3, 4]) }
+
+      let(:y) { MXNet::NDArray.zeros([2, 3]) }
 
       specify "slice along all axes" do
         pending "slice_like unknown from Ops (operation delegator)"
