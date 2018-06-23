@@ -2,6 +2,12 @@ require 'spec_helper'
 
 module MXNet
   ::RSpec.describe NDArray do
+    describe '.new' do
+      specify do
+        expect { MXNet::NDArray.new }.to raise_error(NotImplementedError)
+      end
+    end
+
     describe '#[]' do
       context 'when the array is 1D' do
         specify do

@@ -2,6 +2,12 @@ module MXNet
   class NDArray
     include Enumerable
 
+    class << self
+      def new
+        raise NotImplementedError.new("use MXNet::NDArray.array() or similar")
+      end
+    end
+
     def self.ones(shape, ctx=nil, dtype=:float32, **kwargs)
       ctx ||= Context.default
       dtype = Utils.dtype_id(dtype)
