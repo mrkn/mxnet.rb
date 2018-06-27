@@ -46,8 +46,8 @@ module MXNet
       end
 
       DEFAULT_PYTHON_COMMANDS = [
-        'python3'.freeze,
-        'python'.freeze,
+        -'python3',
+        -'python',
       ].freeze
 
       def find_libmxnet_in_python(python=nil)
