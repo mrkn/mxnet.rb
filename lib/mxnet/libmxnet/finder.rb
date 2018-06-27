@@ -46,13 +46,11 @@ module MXNet
       end
 
       def find_libmxnet_in_python(python=nil)
-        python ||= 'python'
+        python ||= ['python3', 'python']
         investigator_py = File.expand_path('../find_libmxnet.py', __FILE__)
-        lib_path = `'#{python}' '#{investigator_py}' 2>/dev/null`.chomp
-        if $?.success?
-          lib_path
-        else
-          nil
+        Array(python).each do |python_command|
+          lib_path = `'#{python_command}' '#{investigator_py}' 2>/dev/null`.chomp
+          return lib_path if $?.success?
         end
       end
     end
