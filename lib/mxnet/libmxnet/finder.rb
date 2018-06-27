@@ -45,13 +45,19 @@ module MXNet
         lib_path
       end
 
+      DEFAULT_PYTHON_COMMANDS = [
+        'python3'.freeze,
+        'python'.freeze,
+      ].freeze
+
       def find_libmxnet_in_python(python=nil)
-        python ||= ['python3', 'python']
+        python ||= DEFAULT_PYTHON_COMMANDS
         investigator_py = File.expand_path('../find_libmxnet.py', __FILE__)
         Array(python).each do |python_command|
           lib_path = `'#{python_command}' '#{investigator_py}' 2>/dev/null`.chomp
           return lib_path if $?.success?
         end
+        nil
       end
     end
   end
