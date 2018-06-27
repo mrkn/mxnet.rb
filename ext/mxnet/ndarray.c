@@ -726,6 +726,7 @@ mxnet_init_ndarray(void)
   cNDArray = rb_const_get_at(mxnet_mMXNet, rb_intern("NDArray"));
 
   rb_define_alloc_func(cNDArray, ndarray_allocate);
+  rb_undef_method(CLASS_OF(cNDArray), "new");
 
   rb_define_singleton_method(cNDArray, "empty", ndarray_s_empty, -1);
   rb_define_singleton_method(cNDArray, "save", ndarray_s_save, 2);
