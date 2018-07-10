@@ -1,4 +1,4 @@
-require 'mxnet/gluon/nn'
+require 'mxnet/gluon'
 
 module MXNet
   module Gluon
@@ -11,3 +11,5 @@ module MXNet
     end
   end
 end
+
+require_relative 'nn/layers'

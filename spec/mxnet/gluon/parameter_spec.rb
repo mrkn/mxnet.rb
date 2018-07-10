@@ -19,6 +19,13 @@ RSpec.describe MXNet::Gluon::Parameter do
     expect(param.zero_grad).to eq(nil)
   end
 
+  describe '.new' do
+    specify do
+      expect(MXNet::Gluon::Parameter.new('test', shape: 1).shape).to eq([1])
+      expect(MXNet::Gluon::Parameter.new('test', shape: [1]).shape).to eq([1])
+    end
+  end
+
   describe '#init' do
     specify do
       param = MXNet::Gluon::Parameter.new(:param)
@@ -72,6 +79,31 @@ RSpec.describe MXNet::Gluon::Parameter do
       expect(param.data(MXNet.cpu(1)).context).to eq(MXNet.cpu(1))
       expect(param.data(MXNet.cpu(0)).shape).to eq([10, 10])
       expect(param.var.name).to eq(:weight)
+    end
+  end
+
+  describe '#data' do
+    let(:parameter) do
+      MXNet::Gluon::Parameter.new('foo', shape: [1])
+    end
+
+    it 'fails if the parameter has not been initialized' do
+      expect{parameter.data}.to raise_error(RuntimeError)
+    end
+
+    it 'fails if the parameter has not been initialized on the specified context' do
+      parameter.init(ctx: MXNet.cpu)
+      expect{parameter.data(ctx: MXNet.gpu)}.to raise_error(RuntimeError)
+    end
+
+    it 'succeeds if the parameter has been initialized on the specified context' do
+      parameter.init(ctx: MXNet.cpu)
+      expect{parameter.data(ctx: MXNet.cpu)}.not_to raise_error
+    end
+
+    it 'returns the initialized data' do
+      parameter.init
+      expect(parameter.data).to be_a(MXNet::NDArray)
     end
   end
 
@@ -147,6 +179,40 @@ RSpec.describe MXNet::Gluon::ParameterDict do
       expect(params.get(:x, foo: 42)[:foo]).to eq(42)
       expect { params.get(:x, foo: 1) }.to raise_error(ArgumentError)
     end
+
+    context 'without a shared dict' do
+      let(:parameter_dict) do
+        MXNet::Gluon::ParameterDict.new
+      end
+
+      it 'creates a new parameter if not in dict' do
+        expect(parameter_dict.get('foo')).to be_a(MXNet::Gluon::Parameter)
+      end
+
+      it 'retrieves a previously created parameter' do
+        expect(parameter_dict.get('bar')).to equal(parameter_dict.get('bar'))
+      end
+
+      it 'uses keyword arguments to create a parameter' do
+        expect(parameter_dict.get('baz', shape: [1, 1]).shape).to eq([1, 1])
+      end
+    end
+
+    context 'with a shared dict' do
+      let(:shared_dict) do
+        MXNet::Gluon::ParameterDict.new
+      end
+
+      let(:parameter_dict) do
+        MXNet::Gluon::ParameterDict.new(shared: shared_dict).tap do |parameter_dict|
+          shared_dict.get('foo')
+        end
+      end
+
+      it 'retrieves a parameter from the shared dict' do
+        expect(parameter_dict.get('foo')).to equal(shared_dict.get('foo'))
+      end
+    end
   end
 
   describe '#get_constant' do
@@ -202,6 +268,18 @@ RSpec.describe MXNet::Gluon::ParameterDict do
       expect { params.update(other_params) }.to raise_error(ArgumentError)
       expect(params.keys).to contain_exactly('bar_a', 'bar_b')
     end
+
+    it 'copies parameters into dict' do
+      other_params = MXNet::Gluon::ParameterDict.new('bar_')
+      params.update(other_dict)
+      expect(params.get('foo')).to equal(other_params.get('foo'))
+    end
+
+    it 'fails if parameters already exist' do
+      other_params = MXNet::Gluon::ParameterDict.new('bar_')
+      params.get('foo')
+      expect { parameter_dict.update(other_dict) }.to raise_error(ArgumentError)
+    end
   end
 
   describe '#init' do
@@ -211,6 +289,7 @@ RSpec.describe MXNet::Gluon::ParameterDict do
 
       expect { x.data }.to raise_error(RuntimeError)
       params.init
+      expect(params.get(:x).data).to be_a(MXNet::NDArray)
       expect(x.data).to be_a(MXNet::NDArray)
       expect(x.data.shape).to eq([2, 3])
     end

@@ -6,6 +6,13 @@ module MXNet
     end
 
     # A container holding parameters (weights) of blocks.
+    #
+    # ====Parameters
+    #
+    # +name+::  (string) Name of this parameter.
+    # +shape+:: (integer or array of integers) Shape of this parameter.
+    #           By default shape is not specified.
+    #
     class Parameter
       def initialize(name, grad_req: :write, shape: nil, dtype: :float32,
                      lr_mult: 1.0, wd_mult: 1.0, initializer: nil,
@@ -239,6 +246,14 @@ module MXNet
       end
 
       # Initializes parameter and gradient arrays.  Only used for `NDArray` API.
+      #
+      # ====Parameters
+      #
+      # +ctx+::          (Context or array of Contexts)
+      #                  Desired contexts. Initialize Parameter on
+      #                  given contexts.
+      # +default_init+:: (Initializer, default MXNet::Uniform)
+      #                  Default initializer.
       def init(initializer: nil, ctx: nil,
                default_initializer: MXNet::Init::Uniform.new,
                force_reinit: false)
@@ -274,6 +289,17 @@ module MXNet
         # TODO:
       end
 
+      # Returns a copy of this parameter on one context. Must have been
+      # initialized on this context before.
+      #
+      # ====Parameters
+      #
+      # +ctx+:: (Context) Desired context.
+      #
+      # ====Returns
+      #
+      # NDArray on context.
+      #
       def data(ctx=nil)
         _check_and_get(@_data, ctx)
       end
@@ -357,6 +383,16 @@ module MXNet
     end
 
     # A dictionary managing a set of parameters.
+    #
+    # ====Parameters
+    #
+    # +prefix+:: (string, default "") The prefix to be prepended to all
+    #            Parameters' names created by this dict.
+    # +shared+:: (ParameterDict or +nil+) If not +nil+, when this dict's
+    #            #get method creates a new parameter, will first try to
+    #            retrieve it from "shared" dict. Usually used for
+    #            sharing parameters with another Block.
+    #
     class ParameterDict < Hash
       def initialize(prefix='', shared=nil)
         super()
@@ -364,7 +400,11 @@ module MXNet
         @shared = shared
       end
 
-      attr_reader :prefix, :shared
+      # Prefix of this dict. It will be prepended to a Parameter's name
+      # created with #get.
+      attr_reader :prefix
+
+      attr_reader :shared
 
       def inspect
         s = "%{name}(\n%{content}\n)"
@@ -377,6 +417,16 @@ module MXNet
       # will first try to retrieve it from `shared` hash.  If still not found,
       # `get` will create a new `Parameter` with keyword arguments and insert
       # it to self.
+      #
+      # ====Parameters
+      #
+      # +name+:: (string) Name of the desired Parameter. It will be
+      #          prepended with this dict's prefix.
+      #
+      # ====Returns
+      #
+      # The created or retrieved Parameter.
+      #
       def get(name, **kwargs)
         name = name.to_s if name.is_a? ::Symbol
         name = @prefix + name.to_str
@@ -458,6 +508,11 @@ module MXNet
 
       # Initializes all Parameters managed by this dictionary to be used for `NDArray` API.
       # It has no effect when using `Symbol` API.
+      #
+      # +ctx+:: (Context or array of Context)
+      #         Desired contexts. Initialize Parameter on
+      #         given contexts.
+      #
       def init(initializer: nil, ctx: nil, verbose: false, force_reinit: false)
         initializer ||= MXNet::Init::Uniform.new
         initializer.set_verbosity(verbose) if verbose
