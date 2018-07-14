@@ -1,5 +1,112 @@
 #include "mxnet_internal.h"
 
+#define ARRAY_P(x) rb_obj_is_kind_of((x), rb_cArray)
+
+struct mark_variables_args {
+  VALUE vars, grads, opts;
+  NDArrayHandle *vars_handles, *grads_handles;
+  mx_uint len, *reqs;
+};
+
+static VALUE
+call_mark_variables(VALUE value)
+{
+  struct mark_variables_args *args = (struct mark_variables_args *)value;
+  mx_uint i;
+
+  for (i = 0; i < args->len; i++) {
+    if (SYMBOL_P(args->opts)) {
+      VALUE val = rb_hash_lookup2(mxnet_grad_req_map(),
+                                  args->opts,
+                                  Qnil);
+      if (NIL_P(val)) {
+        rb_raise(rb_eArgError,
+                 "invalid value for grad_reqs: %+" PRIsVALUE,
+                 args->opts);
+      }
+      args->reqs[i] = FIX2UINT(val);
+    } else if (ARRAY_P(args->opts)) {
+      VALUE val = rb_hash_lookup2(mxnet_grad_req_map(),
+                                  rb_ary_entry(args->opts, i),
+                                  Qnil);
+      if (NIL_P(val)) {
+        rb_raise(rb_eArgError,
+                 "invalid value for grad_reqs: %+" PRIsVALUE,
+                 rb_ary_entry(args->opts, i));
+      }
+      args->reqs[i] = FIX2UINT(val);
+    }
+    args->vars_handles[i] =
+      mxnet_ndarray_get_handle(rb_ary_entry(args->vars, i));
+    args->grads_handles[i] =
+      mxnet_ndarray_get_handle(rb_ary_entry(args->grads, i));
+  }
+
+  CHECK_CALL(
+    MXNET_API(MXAutogradMarkVariables)(
+      args->len,
+      args->vars_handles,
+      args->reqs,
+      args->grads_handles));
+
+  return Qnil;
+}
+
+static VALUE
+autograd_s_mark_variables(int argc, VALUE *argv, VALUE mod)
+{
+  int state = 0;
+  VALUE result;
+  struct mark_variables_args args;
+
+  rb_scan_args(argc, argv, "2:", &args.vars, &args.grads, &args.opts);
+
+  if (!ARRAY_P(args.vars)) {
+    rb_raise(rb_eArgError, "first argument must be Array");
+  }
+  if (!ARRAY_P(args.grads)) {
+    rb_raise(rb_eArgError, "second argument must be Array");
+  }
+  if (RARRAY_LEN(args.vars) != RARRAY_LEN(args.grads)) {
+    rb_raise(rb_eArgError, "Arrays must be of the same length");
+  }
+  if (NIL_P(args.opts)) {
+    args.opts = rb_hash_new();
+  }
+  args.opts =
+    rb_hash_lookup2(args.opts,
+                    ID2SYM(rb_intern("grad_reqs")),
+                    ID2SYM(rb_intern("write")));
+  if (!SYMBOL_P(args.opts) && !ARRAY_P(args.opts)) {
+    rb_raise(rb_eArgError, "grad_reqs must be Symbol or Array");
+  }
+  if (ARRAY_P(args.opts) && RARRAY_LEN(args.vars) != RARRAY_LEN(args.opts)) {
+    rb_raise(rb_eArgError, "Arrays must be of the same length");
+  }
+#if SIZEOF_LONG > SIZEOF_INT
+  if (RARRAY_LEN(args.vars) > UINT_MAX) {
+    rb_raise(rb_eArgError, "Arrays are too long");
+  }
+#endif
+
+  args.len = RARRAY_LEN(args.vars);
+  args.reqs = ALLOC_N(mx_uint, args.len);
+  args.vars_handles = ALLOC_N(NDArrayHandle, args.len);
+  args.grads_handles = ALLOC_N(NDArrayHandle, args.len);
+
+  result = rb_protect((VALUE (*)(VALUE))call_mark_variables, (VALUE)&args, &state);
+
+  xfree(args.reqs);
+  xfree(args.vars_handles);
+  xfree(args.grads_handles);
+
+  if (state) {
+    rb_jump_tag(state);
+  }
+
+  return result;
+}
+
 /* Compute the gradients of heads w.r.t previously marked variables.
  */
 static VALUE
@@ -142,6 +249,7 @@ mxnet_init_autograd(void)
   VALUE mAutograd;
 
   mAutograd = rb_const_get_at(mxnet_mMXNet, rb_intern("Autograd"));
+  rb_define_singleton_method(mAutograd, "mark_variables", autograd_s_mark_variables, -1);
   rb_define_singleton_method(mAutograd, "backward", autograd_s_backward, -1);
   rb_define_singleton_method(mAutograd, "set_recording", autograd_s_set_recording, 1);
   rb_define_singleton_method(mAutograd, "set_training", autograd_s_set_training, 1);

@@ -7,6 +7,58 @@ RSpec.describe MXNet::Autograd do
     end
   end
 
+  describe '.mark_variables' do
+    context 'first argument' do
+      it 'must be Array' do
+        expect{MXNet::Autograd.mark_variables(0, [])}.to raise_error(ArgumentError)
+      end
+    end
+    context 'second argument' do
+      it 'must be Array' do
+        expect{MXNet::Autograd.mark_variables([], 0)}.to raise_error(ArgumentError)
+      end
+    end
+    context 'first and second arguments' do
+      it 'must be the same length' do
+        args = [[1, 2], [1, 2, 3]]
+        expect{MXNet::Autograd.mark_variables(*args)}.to raise_error(ArgumentError)
+        args = [[], []]
+        expect{MXNet::Autograd.mark_variables(*args)}.not_to raise_error
+      end
+    end
+    context 'optional argument' do
+      let(:zeros) do
+        MXNet::NDArray.zeros(1)
+      end
+      it 'must be Symbol or Array' do
+        args = [[], [], {grad_reqs: 'foo'}]
+        expect{MXNet::Autograd.mark_variables(*args)}.to raise_error(ArgumentError)
+        args = [[], [], {grad_reqs: :null}]
+        expect{MXNet::Autograd.mark_variables(*args)}.not_to raise_error
+        args = [[], [], {grad_reqs: []}]
+        expect{MXNet::Autograd.mark_variables(*args)}.not_to raise_error
+      end
+      it 'must hold either :null, :write or :add' do
+        args = [[zeros], [zeros], {grad_reqs: :foo}]
+        expect{MXNet::Autograd.mark_variables(*args)}.to raise_error(ArgumentError)
+        args = [[zeros], [zeros], {grad_reqs: [:foo]}]
+        expect{MXNet::Autograd.mark_variables(*args)}.to raise_error(ArgumentError)
+        [:null, :write, :add].each do |opt|
+          args = [[zeros], [zeros], {grad_reqs: opt}]
+          expect{MXNet::Autograd.mark_variables(*args)}.not_to raise_error
+          args = [[zeros], [zeros], {grad_reqs: [opt]}]
+          expect{MXNet::Autograd.mark_variables(*args)}.not_to raise_error
+        end
+      end
+    end
+    it 'attaches grads to vars' do
+      vars = [MXNet::NDArray.random_uniform(shape: 1)]
+      grads = [MXNet::NDArray.random_uniform(shape: 1)]
+      MXNet::Autograd.mark_variables(vars, grads)
+      expect(vars.map(&:grad)).to eq(grads)
+    end
+  end
+
   describe '.backward' do
     let(:x) { MXNet::NDArray.array([1, 2, 3, 4, 5]) }
     let(:y) { MXNet::NDArray.array([10]) }
