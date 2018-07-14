@@ -80,6 +80,18 @@ RSpec.describe MXNet::Optimizer::Base do
         expect { opt.learning_rate = 0.02 }.to raise_error
       end
     end
+
+    describe '#update' do
+      let(:optimizer) do
+        MXNet::Optimizer::SGD.new(learning_rate: 0.1)
+      end
+
+      it 'updates the weight' do
+        weight = MXNet::NDArray.array([1])
+        gradient = MXNet::NDArray.array([0.5])
+        expect(optimizer.update(0, weight, gradient, nil).as_scalar).to be_within(0.01).of(0.95)
+      end
+    end
   end
 
   xdescribe 'Sparse SGD' # TODO:

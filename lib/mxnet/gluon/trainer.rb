@@ -3,9 +3,25 @@ module MXNet
     # Applies an `Optimizer` on a set of Parameters.
     # Trainer should be used together with `Autograd`.
     class Trainer
+      # Creates a new instance.
+      #
+      # ====Parameters
+      #
+      # +params+::           (ParameterDict)
+      #                      The set of parameters to optimize.
+      # +optimizer+::        (Optimizer)
+      #                      The optimizer to use.
+      # +optimizer_params+:: (Hash)
+      #                      Key-word arguments to be passed to
+      #                      optimizer constructor. For example,
+      #                      <tt>{'learning_rate': 0.1}</tt>. See each
+      #                      optimizer's constructor for a list of
+      #                      additional supported arguments.
+      # +kvstore+::          ...
+      # +compression_params+:: ...
       def initialize(params, optimizer, optimizer_params: nil, kvstore: :device, compression_params: nil)
         case params
-        when Hash, ParameterHash
+        when Hash, ParameterDict
           params = params.values
         end
         begin
@@ -18,6 +34,7 @@ module MXNet
           unless param.is_a? Parameter
             raise ArgumentError, "First argument must be an Array or a Hash of Parameters, get an Array of #{param.class}"
           end
+          param._trainer = self
           @params << param
         end
         @compression_params = compression_params
@@ -27,6 +44,8 @@ module MXNet
         init_optimizer(optimizer, optimizer_params)
         @kv_initialized = false
         @kvstore = kvstore
+        @update_on_kvstore = nil
+        @distributed = nil # TODO:
       end
 
       private def check_contexts
@@ -49,6 +68,7 @@ module MXNet
           @optimizer = optimizer
           @optimizer.param_hash = param_hash
         else
+          # TODO: use registry
           @optimizer = Optimizer[optimizer].new(param_hash: param_hash, **optimizer_params)
         end
 
@@ -92,72 +112,122 @@ module MXNet
         end
         @optimizer.learning_rate = lr
       end
-    end
 
-    def step(batch_size, ignore_stale_grad: false)
-      init_kvstore unless @kv_initialized
+      # Makes one step of parameter update.
+      #
+      # ====Parameters
+      #
+      # +batch_size+:: (integer)
+      #                Batch size of data processed. Gradient will be
+      #                normalized by `1/batch_size`. Set this to 1 if
+      #                you normalized loss manually with `loss =
+      #                mean(loss)`.
+      def step(batch_size, ignore_stale_grad: false)
+        init_kvstore unless @kv_initialized
 
-      @optimizer.rescale_grad = @scale / batch_size
+        @optimizer.rescale_grad = @scale / batch_size
 
-      @params.each_with_index do |param, i|
-        continue if param.grad_req == 'null'
-        unless ignore_stale_grad
-          param.list_data.each do |data|
-            unless data.fresh_grad
-              raise "Gradient of Parameter `#{param.name}` on context #{data.context} " +
-                    "has not been updated by backward since last `step`. This could " +
-                    "mean a bug in your model that maked it only use a subset of the " +
-                    "Parameters (Blocks) for this iteration. If you are intentionally " +
-                    "only using a subset, call step with ignore_stale_grad=True to " +
-                    "suppress this warning and skip updating of Parameters with " +
-                    "stale gradient"
+        _all_reduce_grads
+        _update(ignore_stale_grad)
+      end
+
+      private def _all_reduce_grads
+        if @kvstore
+          @params.each_with_index do |param, i|
+            next if @param.grad_req == 'null'
+            @kvstore.push(i, param.list_grad, priority: -i)
+            unless @update_on_kvstore
+              @kvstore.pull(i, param.list_grad, priority: -i, ignore_sparse: @distributed)
             end
           end
         end
+      end
 
-        if @kvstore
-          @kvstore.push(i, param.list_grad, priority: -i)
-          if @update_on_kvstore
+      # Makes one step of parameter update.
+      #
+      # ====Parameter
+      #
+      # +batch_size+:: (integer)
+      #                Batch size of data processed. Gradient will be
+      #                normalized by `1/batch_size`. Set this to 1 if
+      #                you normalized loss manually with `loss =
+      #                mean(loss)`.
+      def update(batch_size, ignore_stale_grad: false)
+        init_kvstore unless @kv_initialized
+
+        # TODO:
+        # if self._params_to_init:
+        #     self._init_params()
+
+        assert not (self._kvstore and self._update_on_kvstore), \
+                'update() when parameters are updated on kvstore ' \
+                'is not supported. Try setting `update_on_kvstore` ' \
+                'to False when creating trainer.'
+
+        @optimizer.rescale_grad = @scale / batch_size
+        _update(ignore_stale_grad)
+      end
+
+      private def _update(ignore_stale_grad)
+        @params.each_with_index do |param, i|
+          continue if param.grad_req == 'null'
+
+          unless ignore_stale_grad
+            param.list_data.each do |data|
+              unless data.fresh_grad
+                raise "Gradient of Parameter `#{param.name}` on context #{data.context} " +
+                      "has not been updated by backward since last `step`. This could " +
+                      "mean a bug in your model that maked it only use a subset of the " +
+                      "Parameters (Blocks) for this iteration. If you are intentionally " +
+                      "only using a subset, call step with ignore_stale_grad=True to " +
+                      "suppress this warning and skip updating of Parameters with " +
+                      "stale gradient"
+              end
+            end
+          end  # unless ignore_stale_grad
+
+          if @kvstore && @update_on_kvstore
+            # TODO:
+            # if param._stype == 'default'
+            #   # 'row_sparse' parameters are not pulled immediately - they're pulled
+            #   # in `Block.forward`
             @kvstore.pull(i, param.list_data, priority: -i)
-            continue
-          else
-            @kvstore.pull(i, param.list_grad, priority: -i)
           end
-        end
 
-        @updaters.zip(param.list_data, param.list_grad).each do |upd, arr, grad|
-          if !ignore_stale_grad || arr.fresh_grad
-            upd.(i, grad, arr)
-            arr.fresh_grad = false
+          @updaters.zip(param.list_data, param.list_grad).each do |upd, arr, grad|
+            if !ignore_stale_grad || arr.fresh_grad
+              upd.(i, grad, arr)
+              arr.fresh_grad = false
+            end
           end
         end
       end
-    end
 
-    # Saves trainer states (e.g. optimizer, momentum) to a file.
-    def save_states(fname)
-      raise "assertion failed: @optimizer.nil?" if @optimizer.nil?
-      if @update_on_kvstore
-        @kvstore.save_optimizer_states(fname, dump_optimizer: true)
-      else
-        IO.binwrite(fname, @updaters[0].get_states(dump_optimizer: true))
-      end
-    end
-
-    # Loads trainer states (e.g. optimizer, momentum) from a file.
-    def load_states(fname)
-      init_kvstore unless @kv_initialized
-
-      if @update_on_kvstore
-        @kvstore.load_optimizer_states(fname)
-        @optimizer = @kvstore.updater.optimizer
-      else
-        states = IO.binread(fname)
-        @updaters.each do |updater|
-          updater.set_states(states)
-          updater.optimizer = @updaters[0].optimizer
+      # Saves trainer states (e.g. optimizer, momentum) to a file.
+      def save_states(fname)
+        raise "assertion failed: @optimizer.nil?" if @optimizer.nil?
+        if @update_on_kvstore
+          @kvstore.save_optimizer_states(fname, dump_optimizer: true)
+        else
+          IO.binwrite(fname, @updaters[0].get_states(dump_optimizer: true))
         end
-        @optimizer = @updaters[0].optimizer
+      end
+
+      # Loads trainer states (e.g. optimizer, momentum) from a file.
+      def load_states(fname)
+        init_kvstore unless @kv_initialized
+
+        if @update_on_kvstore
+          @kvstore.load_optimizer_states(fname)
+          @optimizer = @kvstore.updater.optimizer
+        else
+          states = IO.binread(fname)
+          @updaters.each do |updater|
+            updater.set_states(states)
+            updater.optimizer = @updaters[0].optimizer
+          end
+          @optimizer = @updaters[0].optimizer
+        end
       end
     end
   end

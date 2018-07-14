@@ -29,6 +29,21 @@ module MXNet
 
     # The base class inherited by all optimizers.
     class Base
+      # Creates a new instance.
+      #
+      # ====Parameters
+      #
+      # +rescale_grad+::  (float, optional)
+      #                   Before updating, multiply the gradient with
+      #                   "rescale_grad". Often choose to be
+      #                   <tt>1.0/batch_size</tt>.
+      # +learning_rate+:: (float, optional)
+      #                   The initial learning rate.
+      # +wd+::            (float, optional)
+      #                   The weight decay (or L2 regularization)
+      #                   coefficient. Modifies objective by adding a
+      #                   penalty for having large weights.
+      #
       def initialize(rescale_grad: 1.0,
                      param_idx2name: nil,
                      wd: 0.0,
@@ -64,6 +79,8 @@ module MXNet
         self.lr_mult = {}
         self.wd_mult = {}
       end
+
+      attr_accessor :rescale_grad
 
       attr_reader :lr_scheduler
 
@@ -112,6 +129,21 @@ module MXNet
       end
 
       # Updates the given parameter using the coressponding gradient and state.
+      #
+      # ====Parameters
+      #
+      # +index+::    (integer)
+      #              The unique index of the parameter into the
+      #              individual learning rates and weight
+      #              decays. Learning rates and weight decay may be set
+      #              via #set_lr_mult and #set_wd_mult, respectively.
+      # +weight+::   (NDArray)
+      #              The parameter to be updated.
+      # +gradient+:: (NDArray)
+      #              The gradient of the objective with respect to this
+      #              parameter.
+      # +state+::    (any)
+      #              The state returned by #create_state.
       def update(index, weight, grad, state)
         raise NotImplementedError
       end
@@ -169,6 +201,15 @@ module MXNet
       end
 
       # Gets the learning rate given the index of the weight.
+      #
+      # ====Parameters
+      #
+      # +index+:: (integer)
+      #           The index corresponding to the weight.
+      #
+      # ====Returns
+      #
+      # Learning rate for this index.
       private def get_lr(index)
         if @lr_scheduler
           lr = @lr_scheduler.(@num_update)
@@ -188,6 +229,15 @@ module MXNet
 
       # Gets weight decay for index.
       # Returns 0 for non-weights if the name of weights are provided for `__init__`.
+      #
+      # ====Parameters
+      #
+      # +index+:: (integer)
+      #           The index corresponding to the weight.
+      #
+      # ====Returns
+      #
+      # Weight decay for this index.
       def get_wd(index)
         wd = @wd
         if @param_hash.has_key? index
@@ -203,6 +253,15 @@ module MXNet
 
     # The SGD optimizer with momentum and weight decay.
     class SGD < Base
+      # Creates a new instance.
+      #
+      # This optimizer accepts the following parameters in addition to
+      # those accepted by Optimizer.
+      #
+      # ====Parameters
+      #
+      # +momentum+:: (float, optional)
+      #              The momentum value.
       def initialize(momentum: 0.0, lazy_update: true, **kwargs)
         super(**kwargs)
         @momentum = momentum

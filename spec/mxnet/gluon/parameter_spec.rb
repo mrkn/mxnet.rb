@@ -80,6 +80,16 @@ RSpec.describe MXNet::Gluon::Parameter do
       expect(param.data(MXNet.cpu(0)).shape).to eq([10, 10])
       expect(param.var.name).to eq(:weight)
     end
+    it 'initializes the grad array' do
+      parameter.init
+      expect(parameter.grad).to be_a(MXNet::NDArray)
+    end
+    it 'attaches grads' do
+      parameter.init
+      parameter.list_data.zip(parameter.list_grad).each do |p, g|
+        expect(p.grad).to eq(g)
+      end
+    end
   end
 
   describe '#data' do

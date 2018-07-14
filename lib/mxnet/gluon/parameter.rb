@@ -22,6 +22,7 @@ module MXNet
         @_grad = nil
         @_ctx_list = nil
         @_ctx_map = nil
+        @_trainer = nil
         @_deferred_init = []
         @_differentiable = differentiable
         @_allow_deferred_init = allow_deferred_init
@@ -37,6 +38,14 @@ module MXNet
       end
 
       attr_accessor :name, :dtype, :lr_mult, :wd_mult, :initializer
+
+      attr_reader :_trainer
+
+      # Set the trainer this parameter is associated with.
+      def _trainer=(trainer)
+        # TODO: trainer cannot be replaced for sparse params
+        @_trainer = trainer
+      end
 
       def has_attr?(attr_name)
         attr_name = attr_name.to_sym
@@ -304,10 +313,26 @@ module MXNet
         _check_and_get(@_data, ctx)
       end
 
+      # Returns copies of this parameter on all contexts, in the same
+      # order as creation.
+      #
+      # ====Returns
+      #
+      # List of NDArrays.
       def list_data
         _check_and_get(@_data, Array)
       end
 
+      # Returns a gradient buffer for this parameter on one context.
+      # Must have been initialized on this context before.
+      #
+      # ====Parameters
+      #
+      # +ctx+:: (Context) Desired context.
+      #
+      # ====Returns
+      #
+      # NDArray on context.
       def grad(ctx: nil)
         if @_data && @_grad.nil?
           raise "Cannot get gradient array for Parameter '#{@name}' " +
@@ -316,6 +341,12 @@ module MXNet
         _check_and_get(@_grad, ctx)
       end
 
+      # Returns gradient buffers on all contexts, in the same order as
+      # creation.
+      #
+      # ====Returns
+      #
+      # List of NDArrays.
       def list_grad
         if @_data && @_grad.nil?
           raise "Cannot get gradient array for Parameter '#{@name}' " +
@@ -324,6 +355,7 @@ module MXNet
         _check_and_get(@_grad, Array)
       end
 
+      # Returns a list of contexts this parameter is initialized on.
       def list_ctx
         if @_data.nil?
           return @_deferred_init[1] unless @_deferred_init.empty?
