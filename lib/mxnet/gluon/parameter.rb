@@ -4,6 +4,10 @@ module MXNet::Gluon
   ##
   # A Container holding parameters (weights) of Blocks.
   #
+  # Parameter holds a copy of the parameter on each Context after it
+  # is initialized with #init. Also holds a gradient array on each
+  # Context.
+  #
   # ====Parameters
   #
   # +name+::  (string) Name of this parameter.
@@ -18,6 +22,7 @@ module MXNet::Gluon
       @dtype = dtype
       @data = nil
       @grad = nil
+      @trainer = nil
     end
     def name
       @name
@@ -28,6 +33,12 @@ module MXNet::Gluon
     def shape=(shape)
       @shape ||= shape
     end
+    def trainer
+      @trainer
+    end
+    def trainer=(trainer)
+      @trainer = trainer
+    end
     ##
     # Initializes parameter and gradient arrays. Only used for NDArray
     # API.
@@ -35,18 +46,38 @@ module MXNet::Gluon
     # ====Parameters
     #
     # +ctx+::          (Context or array of Contexts)
-    #                  Desired contexts. Initialize Parameter on
-    #                  given contexts.
+    #                  Desired contexts. Initialize Parameter on given
+    #                  contexts. A copy will be made for each
+    #                  context. Note: copies are independent
+    #                  arrays. Programmer is responsible for keeping
+    #                  values consistent when updating. Normally
+    #                  Trainer does this for you.
     # +default_init+:: (Initializer, default MXNet::Uniform)
     #                  Default initializer.
     #
     def init(ctx: nil, default_init: MXNet::Uniform)
-      @data = @grad = nil
       ctx = [MXNet.current_context] if ctx.nil?
       ctx = [ctx] if ctx.is_a?(MXNet::Context)
-      data = MXNet::NDArray.zeros(@shape, dtype: @dtype, ctx: MXNet.cpu)
-      default_init.new[data]
-      @data = ctx.map { |c| data.copy_to(c) }
+      @ctx = ctx
+      @data = @grad = nil
+      MXNet::Autograd.pause do
+        data = MXNet::NDArray.zeros(@shape, dtype: @dtype, ctx: MXNet.cpu)
+        default_init.new[data]
+        @data = ctx.map { |c| data.copy_to(c) }
+        grad = MXNet::NDArray.zeros(@shape, dtype: @dtype, ctx: MXNet.cpu)
+        @grad = ctx.map { |c| grad.copy_to(c) }
+        MXNet::Autograd.mark_variables(
+          check_and_get(@data, :all),
+          check_and_get(@grad, :all)
+        )
+      end
+    end
+    ##
+    # Returns a list of contexts this parameter is initialized on.
+    #
+    def list_ctx
+      raise RuntimeError, "Parameter '#{@name}' has not been initialized." if @data.nil?
+      @ctx
     end
     ##
     # Returns a copy of this parameter on one context. Must have been
@@ -63,6 +94,43 @@ module MXNet::Gluon
     def data(ctx: nil)
       check_and_get(@data, ctx)
     end
+    ##
+    # Returns copies of this parameter on all contexts, in the same
+    # order as creation.
+    #
+    # ====Returns
+    #
+    # List of NDArrays.
+    #
+    def list_data
+      check_and_get(@data, :all)
+    end
+    ##
+    # Returns a gradient buffer for this parameter on one context.
+    # Must have been initialized on this context before.
+    #
+    # ====Parameters
+    #
+    # +ctx+:: (Context) Desired context.
+    #
+    # ====Returns
+    #
+    # NDArray on context.
+    #
+    def grad(ctx: nil)
+      check_and_get(@grad, ctx)
+    end
+    ##
+    # Returns gradient buffers on all contexts, in the same order as
+    # creation.
+    #
+    # ====Returns
+    #
+    # List of NDArrays.
+    #
+    def list_grad
+      check_and_get(@grad, :all)
+    end
     def to_s
       "Parameter #{@name} (shape=#{@shape.inspect}, dtype=#{@dtype.inspect})"
     end
@@ -74,7 +142,9 @@ module MXNet::Gluon
     private
     def check_and_get(arr_list, ctx)
       unless arr_list.nil?
-        if ctx.nil?
+        if ctx == :all
+          return arr_list
+        elsif ctx.nil?
           if arr_list.length == 1
             return arr_list[0]
           end
@@ -83,9 +153,14 @@ module MXNet::Gluon
         if data = arr_list.find { |arr| arr.context == ctx }
           return data
         end
-        raise RuntimeError.new("Parameter '#{self.name}' was not initialized on context #{ctx}.")
+        raise RuntimeError,
+              "Parameter '#{@name}' was not initialized on context #{ctx}."
       end
-      raise RuntimeError.new("Parameter '#{self.name}' has not been initialized. You should initialize parameters.")
+      raise RuntimeError,
+              "Parameter '#{@name}' has not been initialized. You should " \
+              "initialize parameters and create a Trainer with #collect_params " \
+              "instead of #params because the later does not include Parameters " \
+              "of nested child Blocks."
     end
   end
   ##
@@ -109,6 +184,12 @@ module MXNet::Gluon
     end
     def each(&block)
       @params.each(&block)
+    end
+    def keys
+      @params.keys
+    end
+    def values
+      @params.values
     end
     ##
     # Prefix of this dict. It will be prepended to a Parameter's name

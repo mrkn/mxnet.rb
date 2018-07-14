@@ -16,6 +16,16 @@ RSpec.describe MXNet::Gluon::Parameter do
       parameter.init
       expect(parameter.data).to be_a(MXNet::NDArray)
     end
+    it 'initializes the grad array' do
+      parameter.init
+      expect(parameter.grad).to be_a(MXNet::NDArray)
+    end
+    it 'attaches grads' do
+      parameter.init
+      parameter.list_data.zip(parameter.list_grad).each do |p, g|
+        expect(p.grad).to eq(g)
+      end
+    end
   end
   describe '#data' do
     let(:parameter) do
