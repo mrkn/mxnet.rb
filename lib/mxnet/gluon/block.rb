@@ -222,22 +222,29 @@ module MXNet
       # +args+:: (array of Symbol or NDArray) Input tensors.
       #
       def forward(*args)
-        raise NotImplementedError
-        # TODO:
-        # case args.first
-        # when MXNet::Symbol
-        #   kwargs = {}
-        #   hybrid_forward(MXNet::Symbol, *args, **kwargs)
-        # when MXNet::NDArray
-        #   ctx = args.first.context
-        #   kwargs = @reg_parameters.inject({}) do |acc, (i, j)|
-        #     acc[i.to_sym] = j.data(ctx: ctx)
-        #     acc
-        #   end
-        #   hybrid_forward(MXNet::NDArray, *args, **kwargs)
-        # else
-        #   raise ArgumentError, 'only Symbol or NDArray are supported'
-        # end
+        case args.first
+        when MXNet::Symbol
+          kwargs = {}
+          hybrid_forward(MXNet::Symbol, *args, **kwargs)
+        when MXNet::NDArray
+          ctx = args.first.context
+          begin
+            kwargs = @reg_params.inject({}) do |acc, (i, j)|
+              acc[i.to_sym] = j.data(ctx: ctx)
+              acc
+            end
+          rescue DeferredInitializationError
+            deferred_infer_shape(*args)
+            @params.each do |_, param|
+              # NOTE: invoking private method on Parameter
+              param.send(:finish_deferred_init)
+            end
+            retry
+          end
+          hybrid_forward(MXNet::NDArray, *args, **kwargs)
+        else
+          raise ArgumentError, 'only Symbol or NDArray are supported'
+        end
       end
 
       # Override to construct symbolic graph for this Block.
@@ -248,6 +255,13 @@ module MXNet
       #
       #
       def hybrid_forward(clazz, *args)
+        raise NotImplementedError
+      end
+
+      private
+
+      def deferred_infer_shape(*args)
+        # FIXME: for now, punt to the subclass
         raise NotImplementedError
       end
     end

@@ -2,10 +2,15 @@ require 'set'
 
 module MXNet
   module Gluon
+    # Error for unfinished deferred initializations.
     class DeferredInitializationError < MXNet::Error
     end
 
     # A container holding parameters (weights) of blocks.
+    #
+    # Parameter holds a copy of the parameter on each Context after it
+    # is initialized with #init. Also holds a gradient array on each
+    # Context.
     #
     # ====Parameters
     #
@@ -263,6 +268,9 @@ module MXNet
       #                  given contexts.
       # +default_init+:: (Initializer, default MXNet::Uniform)
       #                  Default initializer.
+      # +force_reinit+:: (boolean, default false)
+      #                  Whether to force re-initialization if parameter
+      #                  is already initialized.
       def init(initializer: nil, ctx: nil,
                default_initializer: MXNet::Init::Uniform.new,
                force_reinit: false)
@@ -544,7 +552,9 @@ module MXNet
       # +ctx+:: (Context or array of Context)
       #         Desired contexts. Initialize Parameter on
       #         given contexts.
-      #
+      # +force_reinit+:: (boolean, default false)
+      #                  Whether to force re-initialization if parameters
+      #                  are already initialized.
       def init(initializer: nil, ctx: nil, verbose: false, force_reinit: false)
         initializer ||= MXNet::Init::Uniform.new
         initializer.set_verbosity(verbose) if verbose

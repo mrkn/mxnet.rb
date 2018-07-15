@@ -27,14 +27,27 @@ RSpec.describe MXNet::Gluon::NN::Dense do
     end
   end
   describe '#forward' do
-    let(:layer) do
-      MXNet::Gluon::NN::Dense.new(1, in_units: 2).tap do |layer|
-        layer.collect_params.init
+    context 'with input units specified' do
+      let(:layer) do
+        MXNet::Gluon::NN::Dense.new(1, in_units: 2).tap do |layer|
+          layer.collect_params.init
+        end
+      end
+      it 'runs a forward pass' do
+        data = MXNet::NDArray.array([[2, 1]])
+        expect(layer.forward(data)).to be_a(MXNet::NDArray)
       end
     end
-    it 'runs a forward pass' do
-      data = MXNet::NDArray.array([[2, 1]])
-      expect(layer.forward(data)).to be_a(MXNet::NDArray)
+    context 'with input units inferred' do
+      let(:layer) do
+        MXNet::Gluon::NN::Dense.new(1).tap do |layer|
+          layer.collect_params.init
+        end
+      end
+      it 'runs a forward pass' do
+        data = MXNet::NDArray.array([[2, 1]])
+        expect(layer.forward(data)).to be_a(MXNet::NDArray)
+      end
     end
   end
   describe '#hybrid_forward' do
