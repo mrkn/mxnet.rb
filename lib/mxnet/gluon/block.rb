@@ -131,9 +131,18 @@ module MXNet::Gluon
         hybrid_forward(MXNet::Symbol, *args, **kwargs)
       when MXNet::NDArray
         ctx = args.first.context
-        kwargs = @reg_parameters.inject({}) do |acc, (i, j)|
-          acc[i.to_sym] = j.data(ctx: ctx)
-          acc
+        begin
+          kwargs = @reg_parameters.inject({}) do |acc, (i, j)|
+            acc[i.to_sym] = j.data(ctx: ctx)
+            acc
+          end
+        rescue MXNet::Gluon::DeferredInitializationError
+          deferred_infer_shape(*args)
+          @params.each do |_, param|
+            # NOTE: invoking private method on Parameter
+            param.send(:finish_deferred_init)
+          end
+          retry
         end
         hybrid_forward(MXNet::NDArray, *args, **kwargs)
       else
@@ -149,6 +158,11 @@ module MXNet::Gluon
     #
     #
     def hybrid_forward(clazz, *args)
+      raise NotImplementedError
+    end
+    private
+    def deferred_infer_shape(*args)
+      # FIXME: for now, punt to the subclass
       raise NotImplementedError
     end
   end

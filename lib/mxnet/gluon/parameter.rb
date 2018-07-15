@@ -2,6 +2,10 @@ require 'mxnet/gluon'
 
 module MXNet::Gluon
   ##
+  # Error for unfinished deferred initializations.
+  #
+  DeferredInitializationError = Class.new(RuntimeError)
+  ##
   # A Container holding parameters (weights) of Blocks.
   #
   # Parameter holds a copy of the parameter on each Context after it
@@ -15,13 +19,15 @@ module MXNet::Gluon
   #           By default shape is not specified.
   #
   class Parameter
-    def initialize(name, shape: nil, dtype: 0)
+    def initialize(name, shape: nil, dtype: 0, allow_deferred_init: false)
       @name = name
       shape = [shape] if shape.is_a?(Integer)
-      self.shape = shape
+      @shape = shape
       @dtype = dtype
       @data = nil
       @grad = nil
+      @deferred_init = []
+      @allow_deferred_init = allow_deferred_init
       @trainer = nil
     end
     def name
@@ -31,7 +37,17 @@ module MXNet::Gluon
       @shape
     end
     def shape=(shape)
-      @shape ||= shape
+      if @shape.nil?
+        @shape = shape
+      else
+        unless @shape.length == shape.length &&
+               @shape.zip(shape).all? { |i, j| i == j || i == 0 }
+          raise RuntimeError,
+                "Expected shape #{shape} is incompatible " \
+                "with given shape #{@shape}."
+        end
+        @shape = shape
+      end
     end
     def trainer
       @trainer
@@ -54,30 +70,43 @@ module MXNet::Gluon
     #                  Trainer does this for you.
     # +default_init+:: (Initializer, default MXNet::Uniform)
     #                  Default initializer.
+    # +force_reinit+:: (boolean, default false)
+    #                  Whether to force re-initialization if parameter
+    #                  is already initialized.
     #
-    def init(ctx: nil, default_init: MXNet::Uniform)
+    def init(ctx: nil, default_init: MXNet::Uniform, force_reinit: false)
+      unless @data.nil? || force_reinit
+        return
+      end
       ctx = [MXNet.current_context] if ctx.nil?
       ctx = [ctx] if ctx.is_a?(MXNet::Context)
       @ctx = ctx
       @data = @grad = nil
-      MXNet::Autograd.pause do
-        data = MXNet::NDArray.zeros(@shape, dtype: @dtype, ctx: MXNet.cpu)
-        default_init.new[data]
-        @data = ctx.map { |c| data.copy_to(c) }
-        grad = MXNet::NDArray.zeros(@shape, dtype: @dtype, ctx: MXNet.cpu)
-        @grad = ctx.map { |c| grad.copy_to(c) }
-        MXNet::Autograd.mark_variables(
-          check_and_get(@data, :all),
-          check_and_get(@grad, :all)
-        )
+      if @shape.nil? || @shape.flatten.inject(&:*) <= 0
+        unless @allow_deferred_init
+          raise RuntimeError,
+                "Cannot initialize Parameter '#{@name}' because it has " \
+                "invalid shape: #{@shape}."
+        end
+        @deferred_init = [ctx, default_init]
+        return
       end
+      @deferred_init = [ctx, default_init]
+      finish_deferred_init
     end
     ##
     # Returns a list of contexts this parameter is initialized on.
     #
     def list_ctx
-      raise RuntimeError, "Parameter '#{@name}' has not been initialized." if @data.nil?
-      @ctx
+      if @data.nil?
+        unless @deferred_init.empty?
+          @deferred_init[0]
+        else
+          raise RuntimeError, "Parameter '#{@name}' has not been initialized."
+        end
+      else
+        @ctx
+      end
     end
     ##
     # Returns a copy of this parameter on one context. Must have been
@@ -156,11 +185,39 @@ module MXNet::Gluon
         raise RuntimeError,
               "Parameter '#{@name}' was not initialized on context #{ctx}."
       end
+      unless @deferred_init.empty?
+        raise DeferredInitializationError,
+              "Parameter '#{@name}' has not been initialized yet because " \
+              "initialization was deferred. Actual initialization happens " \
+              "during the first forward pass. Please pass one batch of " \
+              "data through the network before accessing Parameters."
+      end
       raise RuntimeError,
-              "Parameter '#{@name}' has not been initialized. You should " \
-              "initialize parameters and create a Trainer with #collect_params " \
-              "instead of #params because the later does not include Parameters " \
-              "of nested child Blocks."
+            "Parameter '#{@name}' has not been initialized. You should " \
+            "initialize parameters and create a Trainer with #collect_params " \
+            "instead of #params because the later does not include Parameters " \
+            "of nested child Blocks."
+    end
+    def finish_deferred_init
+      return if @deferred_init.empty?
+      ctx, default_init = @deferred_init
+      @deferred_init = []
+      if @shape.nil? || @shape.flatten.inject(&:*) <= 0
+        raise RuntimeError,
+              "Cannot initialize Parameter '#{@name}' because it has " \
+              "invalid shape: #{@shape}."
+      end
+      MXNet::Autograd.pause do
+        data = MXNet::NDArray.zeros(@shape, dtype: @dtype, ctx: MXNet.cpu)
+        default_init.new[data]
+        @data = ctx.map { |c| data.copy_to(c) }
+        grad = MXNet::NDArray.zeros(@shape, dtype: @dtype, ctx: MXNet.cpu)
+        @grad = ctx.map { |c| grad.copy_to(c) }
+        MXNet::Autograd.mark_variables(
+          check_and_get(@data, :all),
+          check_and_get(@grad, :all)
+        )
+      end
     end
   end
   ##
@@ -238,12 +295,15 @@ module MXNet::Gluon
     # Initializes all Parameters managed by this dict to be used for
     # NDArray API. It has no effect when using Symbol API.
     #
-    # +ctx+:: (Context or array of Context)
-    #         Desired contexts. Initialize Parameter on
-    #         given contexts.
+    # +ctx+::          (Context or array of Context)
+    #                  Desired contexts. Initialize Parameter on given
+    #                  contexts.
+    # +force_reinit+:: (boolean, default false)
+    #                  Whether to force re-initialization if parameters
+    #                  are already initialized.
     #
-    def init(ctx: nil)
-      self.each { |_, v| v.init(ctx: ctx) }
+    def init(ctx: nil, force_reinit: false)
+      self.each { |_, v| v.init(ctx: ctx, force_reinit: force_reinit) }
     end
     def to_s
       "ParameterDict (\n" +

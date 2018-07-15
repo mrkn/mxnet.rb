@@ -9,21 +9,64 @@ RSpec.describe MXNet::Gluon::Parameter do
     end
   end
   describe '#init' do
-    let(:parameter) do
-      MXNet::Gluon::Parameter.new('foo', shape: [1])
+    context 'without deferred initialization' do
+      let(:parameter) do
+        MXNet::Gluon::Parameter.new('foo', shape: [1]).tap do |parameter|
+          parameter.init
+        end
+      end
+      it 'initializes the data array' do
+        expect(parameter.data).to be_a(MXNet::NDArray)
+      end
+      it 'initializes the grad array' do
+        expect(parameter.grad).to be_a(MXNet::NDArray)
+      end
+      it 'attaches grads' do
+        parameter.list_data.zip(parameter.list_grad).each do |p, g|
+          expect(p.grad).to eq(g)
+        end
+      end
     end
-    it 'initializes the data array' do
-      parameter.init
-      expect(parameter.data).to be_a(MXNet::NDArray)
+    context 'with deferred initialization' do
+      let(:parameter) do
+        MXNet::Gluon::Parameter.new('foo', allow_deferred_init: true).tap do |parameter|
+          parameter.init
+          parameter.shape = [1]
+          parameter.send(:finish_deferred_init)
+        end
+      end
+      it 'initializes the data array' do
+        expect(parameter.data).to be_a(MXNet::NDArray)
+      end
+      it 'initializes the grad array' do
+        expect(parameter.grad).to be_a(MXNet::NDArray)
+      end
+      it 'attaches grads' do
+        parameter.list_data.zip(parameter.list_grad).each do |p, g|
+          expect(p.grad).to eq(g)
+        end
+      end
     end
-    it 'initializes the grad array' do
-      parameter.init
-      expect(parameter.grad).to be_a(MXNet::NDArray)
+  end
+  describe '#list_ctx' do
+    context 'without deferred initialization' do
+      let(:parameter) do
+        MXNet::Gluon::Parameter.new('foo', shape: [1, 2]).tap do |parameter|
+          parameter.init
+        end
+      end
+      it 'returns the contexts' do
+        expect(parameter.list_ctx).to eq([MXNet.cpu])
+      end
     end
-    it 'attaches grads' do
-      parameter.init
-      parameter.list_data.zip(parameter.list_grad).each do |p, g|
-        expect(p.grad).to eq(g)
+    context 'with deferred initialization' do
+      let(:parameter) do
+        MXNet::Gluon::Parameter.new('foo', allow_deferred_init: true).tap do |parameter|
+          parameter.init
+        end
+      end
+      it 'returns the contexts' do
+        expect(parameter.list_ctx).to eq([MXNet.cpu])
       end
     end
   end
@@ -45,6 +88,54 @@ RSpec.describe MXNet::Gluon::Parameter do
     it 'returns the initialized data' do
       parameter.init
       expect(parameter.data).to be_a(MXNet::NDArray)
+    end
+  end
+  describe '#grad' do
+    let(:parameter) do
+      MXNet::Gluon::Parameter.new('foo', shape: [1])
+    end
+    it 'fails if the parameter has not been initialized' do
+      expect{parameter.grad}.to raise_error(RuntimeError)
+    end
+    it 'fails if the parameter has not been initialized on the specified context' do
+      parameter.init(ctx: MXNet.cpu)
+      expect{parameter.grad(ctx: MXNet.gpu)}.to raise_error(RuntimeError)
+    end
+    it 'succeeds if the parameter has been initialized on the specified context' do
+      parameter.init(ctx: MXNet.cpu)
+      expect{parameter.grad(ctx: MXNet.cpu)}.not_to raise_error
+    end
+    it 'returns the initialized grad' do
+      parameter.init
+      expect(parameter.grad).to be_a(MXNet::NDArray)
+    end
+  end
+  describe '#shape=' do
+    context 'with no shape' do
+      let(:parameter) do
+        MXNet::Gluon::Parameter.new('foo')
+      end
+      it 'assigns the shape' do
+        parameter.shape = [1, 2]
+        expect(parameter.shape).to eq([1, 2])
+      end
+    end
+    context 'with incomplete shape' do
+      let(:parameter) do
+        MXNet::Gluon::Parameter.new('foo', shape: [1, 0, 3])
+      end
+      it 'completes the shape' do
+        parameter.shape = [1, 2, 3]
+        expect(parameter.shape).to eq([1, 2, 3])
+      end
+    end
+    context 'with shape' do
+      let(:parameter) do
+        MXNet::Gluon::Parameter.new('foo', shape: [1, 2])
+      end
+      it 'raises an error' do
+        expect{parameter.shape = [1, 3]}.to raise_error(RuntimeError)
+      end
     end
   end
   describe '#==' do
