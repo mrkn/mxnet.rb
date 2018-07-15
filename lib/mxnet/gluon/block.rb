@@ -89,8 +89,8 @@ module MXNet::Gluon
       raise NotImplementedError
     end
     private
-    def method_missing(name, value = nil)
-      name = name.to_s
+    def method_missing(sym, value = nil)
+      name = sym.to_s
       if name[-1] == '='
         name = name[0...-1]
         case value
@@ -98,11 +98,12 @@ module MXNet::Gluon
         when MXNet::Gluon::Parameter
           @reg_parameters[name] = value
         else
-          raise NoMethodError
+          raise TypeError, "value must be either " \
+                           "MXNet::Gluon::Block or " \
+                           "MXNet::Gluon::Parameter"
         end
       else
-        @reg_parameters[name] or
-          raise NoMethodError
+        @reg_parameters[name] or super
       end
     end
     def hint
