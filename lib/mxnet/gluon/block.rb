@@ -83,7 +83,7 @@ module MXNet
         @prefix, @params = BlockScope.make_prefix_and_params(prefix, params, alias_name)
         @name = @prefix.end_with?('_') ? @prefix[0...-1] : @prefix
         @scope = BlockScope.new(self)
-        @children = []
+        @children = {}
         @reg_params = {}
         @attributes = {}
       end
@@ -192,7 +192,17 @@ module MXNet
         else
           ret.update(@params)
         end
+        @children.each_value do |child|
+          ret.update(child.collect_params(select))
+        end
         ret
+      end
+
+      # Registers block as a child of self. `Block` s assigned to self as
+      # attributes will be registered automatically.
+      def register_child(block, name=nil)
+        name ||= @children.length
+        @children[name] = block
       end
 
       # Override to implement forward computation using NDArray. Only
@@ -214,6 +224,17 @@ module MXNet
     #
     # ...
     class HybridBlock < Block
+      def register_child(block, name=nil)
+        unless block.is_a? HybridBlock
+          raise ArgumentError,
+                "Children of HybridBlock must also be HybridBlock, " +
+                "but #{block} has type #{block.class}. If you are using " +
+                "Sequential, please try HybridSequential instead."
+        end
+        super
+        # _clear_cached_op
+      end
+
       # Defines the forward computation. Arguments can be either Symbol
       # or NDArray.
       #
