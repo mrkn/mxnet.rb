@@ -4,12 +4,30 @@ require 'mxnet/gluon/parameter'
 require 'mxnet/ndarray'
 
 RSpec.describe MXNet::Gluon::Block do
+  describe 'assignment' do
+    let(:block) do
+      MXNet::Gluon::Block.new
+    end
+    it 'automagically creates a block accessor' do
+      a = block.a = MXNet::Gluon::Block.new
+      expect(block.a).to equal(a)
+    end
+    it 'automagically creates a parameter accessor' do
+      b = block.b = MXNet::Gluon::Parameter.new('b')
+      expect(block.b).to equal(b)
+    end
+  end
   describe '#collect_params' do
     let(:block) do
       MXNet::Gluon::Block.new.tap do |block|
         block.params.get('foo')
         block.params.get('bar')
         block.params.get('baz')
+      end
+    end
+    let(:child) do
+      MXNet::Gluon::Block.new.tap do |block|
+        block.params.get('qoz')
       end
     end
     it 'returns all its parameters' do
@@ -26,6 +44,13 @@ RSpec.describe MXNet::Gluon::Block do
         params.get('baz')
       end
       expect(block.collect_params(/_ba/)).to eq(params)
+    end
+    it 'returns matching parameters from children' do
+      block.qoz = child
+      params = MXNet::Gluon::ParameterDict.new(prefix: 'block_').tap do |params|
+        params.get('qoz')
+      end
+      expect(block.collect_params(/_q/)).to eq(params)
     end
   end
   describe '#forward' do

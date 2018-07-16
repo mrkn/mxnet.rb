@@ -28,6 +28,7 @@ module MXNet::Gluon
       super()
       @prefix, @params = BlockScope.create(prefix, params, hint)
       @reg_parameters = {}
+      @reg_children = {}
     end
     ##
     # Prefix of this Block.
@@ -68,7 +69,17 @@ module MXNet::Gluon
       else
         ret.update(@params)
       end
+      @reg_children.each do |_, child|
+        ret.update(child.collect_params(select))
+      end
       ret
+    end
+    ##
+    # Registers block as a child of self. Blocks assigned as
+    # attributes will be registered automatically.
+    #
+    def register_child(block, name)
+      @reg_children[name] = block
     end
     ##
     # Calls #forward. Only accepts positional arguments.
@@ -95,6 +106,7 @@ module MXNet::Gluon
         name = name[0...-1]
         case value
         when MXNet::Gluon::Block
+          register_child(value, name)
         when MXNet::Gluon::Parameter
           @reg_parameters[name] = value
         else
@@ -103,7 +115,9 @@ module MXNet::Gluon
                            "MXNet::Gluon::Parameter"
         end
       else
-        @reg_parameters[name] or super
+        @reg_children[name] or
+          @reg_parameters[name] or
+          super
       end
     end
     def hint
@@ -116,6 +130,15 @@ module MXNet::Gluon
   class HybridBlock < Block
     def initialize(**kwargs)
       super(**kwargs)
+    end
+    def register_child(block, name)
+      unless block.is_a?(MXNet::Gluon::HybridBlock)
+        raise RuntimeError,
+              "Children of a HybridBlock must also be a HybridBlock, " \
+              "but #{block} has type #{block.class}. If you are using " \
+              "Sequential, please try HybridSequential instead."
+      end
+      super
     end
     ##
     # Defines the forward computation. Arguments can be either Symbol
