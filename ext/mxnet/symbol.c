@@ -340,6 +340,9 @@ symbol_infer_type(int argc, VALUE *argv, VALUE obj)
 
   rb_scan_args(argc, argv, "0*:", &args, &kwargs);
 
+  if (NIL_P(kwargs)) {
+    kwargs = rb_hash_new();
+  }
   if (RARRAY_LEN(args) != 0 && RHASH_SIZE(kwargs) != 0) {
     rb_raise(rb_eArgError, "Can only specify known argument shapes either by positional or kwargs way.");
   }
@@ -822,6 +825,9 @@ symbol_infer_shape_impl(int argc, VALUE *argv, VALUE obj)
 
   rb_scan_args(argc, argv, "1*:", &partial, &args, &kwargs);
 
+  if (NIL_P(kwargs)) {
+    kwargs = rb_hash_new();
+  }
   if (RARRAY_LEN(args) != 0 && RHASH_SIZE(kwargs) != 0) {
     rb_raise(rb_eArgError, "Can only specify known argument shapes either by positional or kwargs way.");
   }
