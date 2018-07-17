@@ -53,7 +53,7 @@ symbol_initialize(VALUE obj, VALUE handle_v)
 
 /* Gets name of the MXNet::Symbol, this function only works for non-grouped symbol.
  *
- * @return [Symbol]  The name of this symbol, returns `nil` for groupd symbol.
+ * @return [Symbol]  The name of this symbol, returns `nil` for grouped symbol.
  */
 static VALUE
 symbol_get_name(VALUE obj)
