@@ -172,6 +172,7 @@ module MXNet::Gluon
   class HybridBlock < Block
     def initialize(**kwargs)
       super(**kwargs)
+      @cached_graph = nil
     end
     def register_child(block, name)
       unless block.is_a?(MXNet::Gluon::HybridBlock)
@@ -230,6 +231,22 @@ module MXNet::Gluon
     def deferred_infer_shape(*args)
       # FIXME: for now, punt to the subclass
       raise NotImplementedError
+    end
+    def get_graph(*args)
+      @cached_graph ||=
+        begin
+          inputs = (0...args.length).map do |i|
+            MXNet::Symbol.var("data#{i}")
+          end
+          params = @reg_parameters.inject({}) do |acc, (i, j)|
+            acc[i.to_sym] = j.var
+            acc
+          end
+          [inputs, hybrid_forward(MXNet::Symbol, *inputs, **params)]
+        end
+    end
+    def clear_cache
+      @cached_graph = nil
     end
   end
 end

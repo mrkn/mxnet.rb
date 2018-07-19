@@ -20,6 +20,7 @@ module MXNet::Gluon
   #
   class Parameter
     def initialize(name, shape: nil, dtype: 0, allow_deferred_init: false)
+      @var = nil
       @name = name
       shape = [shape] if shape.is_a?(Integer)
       @shape = shape
@@ -107,6 +108,12 @@ module MXNet::Gluon
       else
         @ctx
       end
+    end
+    ##
+    # Returns a symbol representing this parameter.
+    #
+    def var
+      @var ||= MXNet::Symbol.var(@name, shape: @shape, dtype: @dtype)
     end
     ##
     # Returns a copy of this parameter on one context. Must have been
