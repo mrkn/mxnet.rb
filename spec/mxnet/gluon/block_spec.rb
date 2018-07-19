@@ -17,16 +17,61 @@ RSpec.describe MXNet::Gluon::Block do
       expect(block.b).to equal(b)
     end
   end
+  describe '#new' do
+    let(:block) do
+      MXNet::Gluon::Block.new
+    end
+    it 'assigns a unique prefix' do
+      expect(block.prefix).to match(/^block[0-9]+_$/)
+      expect(block.prefix).not_to eq(MXNet::Gluon::Block.new.prefix)
+    end
+    context 'with prefix' do
+      let(:block) do
+        MXNet::Gluon::Block.new(prefix: 'foo')
+      end
+      it 'uses the assigned prefix' do
+        expect(block.prefix).to eq('foo')
+      end
+    end
+    context 'with params' do
+      let(:params) do
+        MXNet::Gluon::ParameterDict.new.tap do |params|
+          params.get('foo')
+        end
+      end
+      let(:block) do
+        MXNet::Gluon::Block.new(params: params)
+      end
+      it 'shares the assigned params' do
+        expect(block.params.get('foo')).to equal(params.get('foo'))
+      end
+    end
+  end
+  describe '#with_name_scope' do
+    let(:block) do
+      MXNet::Gluon::Block.new
+    end
+    it 'prepends prefixes to scoped blocks' do
+      block.with_name_scope do
+        block.foo = MXNet::Gluon::Block.new
+        block.foo.with_name_scope do
+          block.foo.bar = MXNet::Gluon::Block.new
+        end
+      end
+      expect(block.foo.prefix).to match(/^block[0-9]+_block0_$/)
+      expect(block.foo.bar.prefix).to match(/^block[0-9]+_block0_block0_$/)
+    end
+  end
   describe '#collect_params' do
     let(:block) do
-      MXNet::Gluon::Block.new.tap do |block|
+      MXNet::Gluon::Block.new(prefix: 'block_').tap do |block|
         block.params.get('foo')
         block.params.get('bar')
         block.params.get('baz')
       end
     end
     let(:child) do
-      MXNet::Gluon::Block.new.tap do |block|
+      MXNet::Gluon::Block.new(prefix: 'block_').tap do |block|
         block.params.get('qoz')
       end
     end

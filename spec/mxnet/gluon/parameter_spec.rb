@@ -172,11 +172,13 @@ RSpec.describe MXNet::Gluon::ParameterDict do
     end
     context 'with a shared dict' do
       let(:shared_dict) do
-        MXNet::Gluon::ParameterDict.new
+        MXNet::Gluon::ParameterDict.new.tap do |shared_dict|
+          shared_dict.get('foo')
+        end
       end
       let(:parameter_dict) do
         MXNet::Gluon::ParameterDict.new(shared: shared_dict).tap do |parameter_dict|
-          shared_dict.get('foo')
+          parameter_dict.get('bar')
         end
       end
       it 'retrieves a parameter from the shared dict' do

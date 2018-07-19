@@ -7,16 +7,44 @@ module MXNet::Gluon
   # Scope for collecting child Blocks.
   #
   class BlockScope
+    def initialize(block = nil)
+      @block = block
+      @counters = Hash.new(-1)
+    end
+    attr_accessor :block
+    attr_accessor :counters
     def self.create(prefix, params, hint)
-      if prefix.nil?
-        prefix = hint + '_'
-      end
-      if params.nil?
-        params = ParameterDict.new(prefix: prefix)
+      current =
+        Thread.current['mxnet_gluon_blockscope_current'] ||=
+        BlockScope.new
+      if current.block
+        if prefix.nil?
+          prefix = "#{hint}#{current.counters[hint] += 1}_"
+        end
+        if params.nil?
+          params = ParameterDict.new(prefix: "#{current.block.prefix}#{prefix}")
+        else
+          params = ParameterDict.new(prefix: "#{current.block.prefix}#{prefix}", shared: params)
+        end
+        ["#{current.block.prefix}#{prefix}", params]
       else
-        params = ParameterDict.new(prefix: prefix, params: params)
+        if prefix.nil?
+          prefix = "#{hint}#{current.counters[hint] += 1}_"
+        end
+        if params.nil?
+          params = ParameterDict.new(prefix: prefix)
+        else
+          params = ParameterDict.new(prefix: params.prefix, shared: params)
+        end
+        [prefix, params]
       end
-      [prefix, params]
+    end
+    def call(block)
+      previous = Thread.current['mxnet_gluon_blockscope_current']
+      Thread.current['mxnet_gluon_blockscope_current'] = block.scope
+      yield
+    ensure
+      Thread.current['mxnet_gluon_blockscope_current'] = previous
     end
   end
   ##
@@ -25,11 +53,15 @@ module MXNet::Gluon
   #
   class Block
     def initialize(prefix: nil, params: nil, **kwargs)
-      super()
+      @scope = BlockScope.new(self)
       @prefix, @params = BlockScope.create(prefix, params, hint)
       @reg_parameters = {}
       @reg_children = {}
     end
+    ##
+    # Scope of this block.
+    #
+    attr_reader :scope
     ##
     # Prefix of this Block.
     #
@@ -39,6 +71,16 @@ module MXNet::Gluon
     # children's parameters).
     #
     attr_reader :params
+    ##
+    # Enters a name space managing Block names.
+    #
+    #     self.with_name_scope do
+    #       self.dense = MXNet::Gluon::NN.Dense(20)
+    #     end
+    #
+    def with_name_scope(&proc)
+      @scope.call(self, &proc)
+    end
     ##
     # Returns a ParameterDict containing this Block's and all of its
     # children's Parameters. Also can return the Parameters that match
