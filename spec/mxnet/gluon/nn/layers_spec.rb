@@ -16,11 +16,10 @@ RSpec.describe MXNet::Gluon::NN::Dense do
   end
   describe '#collect_params' do
     let(:layer) do
-      MXNet::Gluon::NN::Dense.new(1, in_units: 2)
+      MXNet::Gluon::NN::Dense.new(1, in_units: 2, prefix: 'dense_')
     end
     it 'should return params for weight and bias' do
-      count = MXNet::Name::NameManager.current.next_count_for('dense')
-      params = MXNet::Gluon::ParameterDict.new(prefix: "dense#{count}_")
+      params = MXNet::Gluon::ParameterDict.new(prefix: "dense_")
       params.get('weight', shape: [1, 2])
       params.get('bias', shape: [1])
       expect(layer.collect_params.keys).to eq(params.keys)

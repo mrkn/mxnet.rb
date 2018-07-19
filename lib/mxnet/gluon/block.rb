@@ -4,15 +4,20 @@ module MXNet
   module Gluon
     # Scope for collecting child Blocks.
     class BlockScope
-      @current = nil
+      TLS_KEY = :"#{self.name}.current"
+      private_constant :TLS_KEY
 
-      class << self
-        attr_accessor :current
+      def self.current
+        Thread.current[TLS_KEY]
+      end
+
+      def self.current=(block_scope)
+        Thread.current[TLS_KEY] = block_scope
       end
 
       # Create prefix and params for new `Block`.
       def self.make_prefix_and_params(prefix, params, hint)
-        unless @current
+        unless self.current
           prefix ||= MXNet::Name::NameManager.current.get(nil, hint) + '_'
           if params
             params = ParameterDict.new(params.prefix, shared: params)
@@ -23,17 +28,17 @@ module MXNet
         end
 
         unless prefix
-          count = @current.counter[hint] || 0
+          count = self.current.counter[hint] || 0
           prefix = "#{hint}#{count}_"
-          @current.counter[hint] = count + 1
+          self.current.counter[hint] = count + 1
         end
         if params
           params = ParameterDict.new(params.prefix, shared: params)
         else
-          parent = @current.block.params
+          parent = self.current.block.params
           params = ParameterDict.new(parent.prefix + prefix, shared: parent.shared)
         end
-        [@current.block.prefix + prefix, params]
+        [self.current.block.prefix + prefix, params]
       end
 
       def initialize(block)
