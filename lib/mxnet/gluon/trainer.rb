@@ -1,4 +1,5 @@
 require 'mxnet/gluon'
+require 'mxnet/optimizer'
 
 module MXNet::Gluon
   ##
@@ -82,12 +83,7 @@ module MXNet::Gluon
       @contexts = contexts
     end
     def init_optimizer(optimizer, optimizer_params)
-      @optimizer =
-        unless optimizer.is_a?(MXNet::Optimizer)
-          optimizer.new(**optimizer_params)
-        else
-          optimizer
-        end
+      @optimizer = MXNet::Optimizer.create(optimizer, **optimizer_params)
     end
     def _update
       @params.each.with_index do |param, i|

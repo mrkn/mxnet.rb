@@ -4,7 +4,38 @@ module MXNet
   ##
   # The base class inherited by all optimizers.
   #
+  # Custom optimizers can be created by subclassing Optimizer and
+  # implementing the required function #update. By default, the
+  # created optimizer will be registered under its simplified class
+  # name (`class.name.split('::').last.downcase.to_sym`) but it may be
+  # registered under another name by calling #register.
+  #
+  #     class MyOptimizer < Optimizer
+  #       register :myopt
+  #       def update(index, weight, gradient, state)
+  #         ...
+  #       end
+  #     end
+  #
   class Optimizer
+    def self.inherited(child)
+      default = child.name.split('::').last.downcase
+      child.register(default)
+    end
+    def self.register(name)
+      $mxnet_optimizer_registry ||= {}
+      $mxnet_optimizer_registry[name.to_sym] = self
+    end
+    def self.create(optimizer, **kwargs)
+      case optimizer
+      when ::Class
+        optimizer.new(**kwargs)
+      when ::String, ::Symbol
+        $mxnet_optimizer_registry[optimizer.to_sym].new(**kwargs)
+      else
+        optimizer
+      end
+    end
     ##
     # Creates a new instance.
     #
@@ -80,34 +111,37 @@ module MXNet
     def get_wd(index)
       @wd
     end
-  end
-  ##
-  # The SGD optimizer with momentum and weight decay.
-  #
-  class SGD < Optimizer
     ##
-    # Creates a new instance.
+    # The SGD optimizer with momentum and weight decay.
     #
-    # This optimizer accepts the following parameters in addition to
-    # those accepted by Optimizer.
-    #
-    # ====Parameters
-    #
-    # +momentum+:: (float, optional)
-    #              The momentum value.
-    #
-    def initialize(momentum: 0.0, **kwargs)
-      super(**kwargs)
-      @momentum = momentum
-    end
-    def update(index, weight, gradient, state)
-      lr = get_lr(index)
-      wd = get_wd(index)
-      kwargs = {}.tap do |kwargs|
-        kwargs[:momentum] = @momentum if @momentum > 0
-        kwargs[:rescale_grad] = @rescale_grad
+    class SGD < Optimizer
+      ##
+      # Creates a new instance.
+      #
+      # This optimizer accepts the following parameters in addition to
+      # those accepted by Optimizer.
+      #
+      # ====Parameters
+      #
+      # +momentum+:: (float, optional)
+      #              The momentum value.
+      #
+      def initialize(momentum: 0.0, **kwargs)
+        super(**kwargs)
+        @momentum = momentum
       end
-      MXNet::NDArray.sgd_update(weight, gradient, out: weight, lr: lr, wd: wd, **kwargs)
+      def update(index, weight, gradient, state)
+        lr = get_lr(index)
+        wd = get_wd(index)
+        kwargs = {}.tap do |kwargs|
+          kwargs[:momentum] = @momentum if @momentum > 0
+          kwargs[:rescale_grad] = @rescale_grad
+        end
+        MXNet::NDArray.sgd_update(weight, gradient, out: weight, lr: lr, wd: wd, **kwargs)
+      end
+    end
+    def self.SGD(*args)
+      SGD.new(*args)
     end
   end
 end
