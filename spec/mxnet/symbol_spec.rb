@@ -19,6 +19,16 @@ module MXNet
         expect(x.attr(:__dtype__)).to eq(MXNet::DType.name2id(:float64).to_s)
       end
 
+      specify do
+        x = MXNet::Symbol.var(:x, shape: [2, 3], dtype: 'float64')
+        expect(x.attr(:__dtype__)).to eq(MXNet::DType.name2id('float64').to_s)
+      end
+
+      specify do
+        x = MXNet::Symbol.var(:x, shape: [2, 3], dtype: 1)
+        expect(x.attr(:__dtype__)).to eq('1')
+      end
+
       specify 'symbol values in attributes are not allowed' do
         expect {
           MXNet::Symbol.var(:x, __foo__: :bar)
