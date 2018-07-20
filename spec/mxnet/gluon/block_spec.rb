@@ -129,4 +129,48 @@ RSpec.describe MXNet::Gluon::HybridBlock do
       expect{block.forward(MXNet::NDArray.array([]))}.to raise_error(NotImplementedError)
     end
   end
+
+  context 'given a simple model' do
+    before do
+      stub_const 'Foo', Class.new(MXNet::Gluon::HybridBlock)
+
+      Foo.class_eval do
+        def initialize(**kwargs)
+          super
+          self[:c] = params.get('c', allow_deferred_init: true, dtype: nil)
+        end
+
+        def hybrid_forward(clazz, i, **kwargs)
+          c = kwargs[:c]
+          i + c
+        end
+      end
+    end
+
+    let(:foo) do
+      Foo.new
+    end
+
+    describe '#infer_shape' do
+      let(:data) do
+        MXNet::NDArray.array([1, 2, 3, 4]).reshape([2, 2])
+      end
+
+      it 'should infer the shape' do
+        foo.infer_shape(data)
+        expect(foo[:c].shape).to eq(data.shape)
+      end
+    end
+
+    describe '#infer_type' do
+      let(:data) do
+        MXNet::NDArray.array([1], dtype: :float16)
+      end
+
+      it 'should infer the type' do
+        foo.infer_type(data)
+        expect(foo[:c].dtype).to eq(data.dtype)
+      end
+    end
+  end
 end

@@ -58,12 +58,5 @@ module MXNet::Gluon::NN
       bias ||= kwargs[:bias]
       clazz.FullyConnected(data, weight, bias, no_bias: bias.nil?, num_hidden: @units)
     end
-
-    private
-
-    def deferred_infer_shape(*args)
-      # FIXME: for now, punted to the subclass
-      self[:weight].shape = [@units, args.first.shape[1]]
-    end
   end
 end

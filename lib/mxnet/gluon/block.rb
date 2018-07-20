@@ -289,11 +289,31 @@ module MXNet
         raise NotImplementedError
       end
 
-      private
+      def infer_type(*args)
+        infer_attrs('infer_type', 'dtype', *args)
+      end
+
+      def infer_shape(*args)
+        infer_attrs('infer_shape', 'shape', *args)
+      end
 
       def deferred_infer_shape(*args)
-        # FIXME: for now, punt to the subclass
-        raise NotImplementedError
+        infer_shape(*args)
+      end
+
+      private
+
+      # Infer attributes.
+      def infer_attrs(fn, attr, *args)
+        inputs, output = get_graph(*args)
+        args, _ = _flatten(args)
+        arg_attrs, _, aux_attrs =
+          output.send(fn, inputs.zip(args).inject({}) { |a, (i, j)| a[i.name] = j.send(attr) ; a })
+        sdict = output.list_arguments.zip(arg_attrs).to_h
+          .merge(output.list_auxiliary_states.zip(aux_attrs).to_h)
+        collect_params.values.each do |value|
+          value.send("#{attr}=", sdict[value.name.to_sym])
+        end
       end
 
       def get_graph(*args)
