@@ -19,12 +19,12 @@ module MXNet::Gluon
   #           By default shape is not specified.
   #
   class Parameter
-    def initialize(name, shape: nil, dtype: 0, allow_deferred_init: false)
+    def initialize(name, shape: nil, dtype: :float32, allow_deferred_init: false)
       @var = nil
       @name = name
       shape = [shape] if shape.is_a?(Integer)
-      @shape = shape
-      @dtype = dtype
+      self.shape = shape
+      self.dtype = dtype
       @data = nil
       @grad = nil
       @deferred_init = []
@@ -49,6 +49,14 @@ module MXNet::Gluon
         end
         @shape = shape
       end
+    end
+    def dtype
+      @dtype
+    end
+    def dtype=(dtype)
+      @dtype = dtype.is_a?(::String) || dtype.is_a?(::Symbol) ?
+                 MXNet::DType.name2id(dtype) :
+                 dtype
     end
     def trainer
       @trainer
@@ -168,7 +176,7 @@ module MXNet::Gluon
       check_and_get(@grad, :all)
     end
     def to_s
-      "Parameter #{@name} (shape=#{@shape.inspect}, dtype=#{@dtype.inspect})"
+      "Parameter #{@name} (shape=#{@shape.inspect}, dtype=#{MXNet::DType.id2name(@dtype)})"
     end
     def ==(other)
       self.name == other.name && self.shape == other.shape
