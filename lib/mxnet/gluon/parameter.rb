@@ -77,13 +77,13 @@ module MXNet::Gluon
     #                  arrays. Programmer is responsible for keeping
     #                  values consistent when updating. Normally
     #                  Trainer does this for you.
-    # +default_init+:: (Initializer, default MXNet::Uniform)
+    # +default_init+:: (Initializer, default `:uniform`)
     #                  Default initializer.
     # +force_reinit+:: (boolean, default false)
     #                  Whether to force re-initialization if parameter
     #                  is already initialized.
     #
-    def init(ctx: nil, default_init: MXNet::Uniform, force_reinit: false)
+    def init(ctx: nil, default_init: :uniform, force_reinit: false)
       unless @data.nil? || force_reinit
         return
       end
@@ -224,7 +224,7 @@ module MXNet::Gluon
       end
       MXNet::Autograd.pause do
         data = MXNet::NDArray.zeros(@shape, dtype: @dtype, ctx: MXNet.cpu)
-        default_init.new[data]
+        MXNet::Initializer.create(default_init)[data]
         @data = ctx.map { |c| data.copy_to(c) }
         grad = MXNet::NDArray.zeros(@shape, dtype: @dtype, ctx: MXNet.cpu)
         @grad = ctx.map { |c| grad.copy_to(c) }
