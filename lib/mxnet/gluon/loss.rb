@@ -62,36 +62,39 @@ module MXNet::Gluon
       end
       loss
     end
-  end
-  ##
-  # Calculates the mean squared error between prediction and label.
-  #
-  # Inputs "prediction" and "label" can have arbitrary shape as long
-  # as they have the same number of elements.
-  #
-  class L2Loss < Loss
     ##
-    # Creates a new instance.
+    # Calculates the mean squared error between prediction and label.
     #
-    # ====Parameters
+    # Inputs "prediction" and "label" can have arbitrary shape as long
+    # as they have the same number of elements.
     #
-    # +weight+::     (float or +nil+)
-    #                Global scalar weight for loss.
-    # +batch_axis+:: (integer, default 0)
-    #                The axis that represents mini-batch.
-    #
-    def initialize(weight: 1.0, batch_axis: 0, **kwargs)
-      super(**kwargs)
-      @weight = weight
-      @batch_axis = batch_axis
+    class L2Loss < Loss
+      ##
+      # Creates a new instance.
+      #
+      # ====Parameters
+      #
+      # +weight+::     (float or +nil+)
+      #                Global scalar weight for loss.
+      # +batch_axis+:: (integer, default 0)
+      #                The axis that represents mini-batch.
+      #
+      def initialize(weight: 1.0, batch_axis: 0, **kwargs)
+        super(**kwargs)
+        @weight = weight
+        @batch_axis = batch_axis
+      end
+      def hybrid_forward(clazz, prediction = nil, label = nil, sample_weight: nil, **kwargs)
+        prediction ||= kwargs[:prediction]
+        label ||= kwargs[:label]
+        label = reshape_like(clazz, label, prediction)
+        loss = clazz.square(prediction - label)
+        loss = apply_weighting(clazz, loss, @weight/2, sample_weight)
+        clazz.mean(loss, axis: @batch_axis, exclude: true)
+      end
     end
-    def hybrid_forward(clazz, prediction = nil, label = nil, sample_weight: nil, **kwargs)
-      prediction ||= kwargs[:prediction]
-      label ||= kwargs[:label]
-      label = reshape_like(clazz, label, prediction)
-      loss = clazz.square(prediction - label)
-      loss = apply_weighting(clazz, loss, @weight/2, sample_weight)
-      clazz.mean(loss, axis: @batch_axis, exclude: true)
+    def self.L2Loss(*args)
+      L2Loss.new(*args)
     end
   end
 end
