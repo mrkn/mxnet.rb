@@ -1,5 +1,27 @@
 require 'spec_helper'
 
+RSpec.describe MXNet::Optimizer do
+  describe '.create' do
+    it 'does not accept a class' do
+      expect {
+        MXNet::Optimizer.create(MXNet::Optimizer::SGD)
+      }.to raise_error(ArgumentError)
+    end
+    it 'accepts an instance' do
+      opt = MXNet::Optimizer.create(MXNet::Optimizer::SGD.new)
+      expect(opt).to be_a(MXNet::Optimizer::SGD)
+    end
+    it 'accepts a string' do
+      opt = MXNet::Optimizer.create('sgd')
+      expect(opt).to be_a(MXNet::Optimizer::SGD)
+    end
+    it 'accepts a symbol' do
+      opt = MXNet::Optimizer.create(:sgd)
+      expect(opt).to be_a(MXNet::Optimizer::SGD)
+    end
+  end
+end
+
 RSpec.describe MXNet::Optimizer::Base do
   describe '#learning_rate' do
     it 'is changed by #learning_rate=' do
@@ -67,39 +89,39 @@ RSpec.describe MXNet::Optimizer::Base do
       expect((args1[:fc2_weight] - args2[:fc2_weight]).abs.max).not_to be <= 1e-1
     end
   end
+end
 
-  describe 'SGD' do
-    context 'with lr_scheduler' do
-      specify do
-        opt = MXNet::Optimizer::SGD.new(
-          momentum: 0.9,
-          learning_rate: 0.1,
-          lr_scheduler: MXNet::LRScheduler::FactorScheduler.new(step: 10, factor: 0.2)
-        )
-        expect(opt.learning_rate).to eq(0.1)
-        expect { opt.learning_rate = 0.02 }.to raise_error
-      end
-    end
-
-    describe '#update' do
-      let(:optimizer) do
-        MXNet::Optimizer::SGD.new(learning_rate: 0.1)
-      end
-
-      it 'updates the weight' do
-        weight = MXNet::NDArray.array([1])
-        gradient = MXNet::NDArray.array([0.5])
-        optimizer.update(0, weight, gradient, nil)
-        expect(weight.as_scalar).to be_within(0.01).of(0.95)
-      end
+RSpec.describe MXNet::Optimizer::SGD do
+  context 'with lr_scheduler' do
+    specify do
+      opt = MXNet::Optimizer::SGD.new(
+        momentum: 0.9,
+        learning_rate: 0.1,
+        lr_scheduler: MXNet::LRScheduler::FactorScheduler.new(step: 10, factor: 0.2)
+      )
+      expect(opt.learning_rate).to eq(0.1)
+      expect { opt.learning_rate = 0.02 }.to raise_error
     end
   end
 
-  xdescribe 'Sparse SGD' # TODO:
-  xdescribe 'FTML' # TODO:
-  xdescribe 'ADAM' # TODO:
-  xdescribe 'Signum' # TODO:
-  xdescribe 'RMSProp' # TODO:
-  xdescribe 'Ftrl' # TODO:
-  xdescribe 'NADAM' # TODO:
+  describe '#update' do
+    let(:optimizer) do
+      MXNet::Optimizer::SGD.new(learning_rate: 0.1)
+    end
+
+    it 'updates the weight' do
+      weight = MXNet::NDArray.array([1])
+      gradient = MXNet::NDArray.array([0.5])
+      optimizer.update(0, weight, gradient, nil)
+      expect(weight.as_scalar).to be_within(0.01).of(0.95)
+    end
+  end
 end
+
+RSpec.xdescribe 'Sparse SGD' # TODO:
+RSpec.xdescribe 'FTML' # TODO:
+RSpec.xdescribe 'ADAM' # TODO:
+RSpec.xdescribe 'Signum' # TODO:
+RSpec.xdescribe 'RMSProp' # TODO:
+RSpec.xdescribe 'Ftrl' # TODO:
+RSpec.xdescribe 'NADAM' # TODO:

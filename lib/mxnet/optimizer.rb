@@ -1,5 +1,14 @@
 module MXNet
   module Optimizer
+    def self.registry_manager
+      @registry_manager ||= MXNet::Registry::Manager.new(Base, :optimizer)
+    end
+    private_class_method :registry_manager
+
+    def self.create(*args, **kwargs)
+      registry_manager.create(*args, **kwargs)
+    end
+
     module Registry
       @opt_registry = {}
 
@@ -25,9 +34,21 @@ module MXNet
       end
     end
 
-    extend Registry
-
     # The base class inherited by all optimizers.
+    #
+    # Custom optimizers can be created by subclassing MXNet::Optimizer::Base
+    # and implementing the required function #update. By default, the created
+    # optimizer will be registered under its simplified class name
+    # (`class.name.split('::').last.downcase.to_sym`) but it may be registered
+    # under another name by calling MXNet::Optimizer.register.
+    #
+    #     class MyOptimizer < Optimizer
+    #       def update(index, weight, gradient, state)
+    #         ...
+    #       end
+    #     end
+    #     register MyOptimizer, :myopt
+    #
     class Base
       # Creates a new instance.
       #
@@ -328,6 +349,8 @@ module MXNet
         nil
       end
     end
+
+    registry_manager.register SGD
 
     # TODO: Signum
 

@@ -68,8 +68,7 @@ module MXNet
           @optimizer = optimizer
           @optimizer.param_dict = param_dict
         else
-          # TODO: use registry
-          @optimizer = Optimizer[optimizer].new(param_dict: param_dict, **optimizer_params)
+          @optimizer = Optimizer.create(optimizer, param_dict: param_dict, **optimizer_params)
         end
 
         @updaters = @contexts.map { Optimizer::Updater.new(@optimizer) }
