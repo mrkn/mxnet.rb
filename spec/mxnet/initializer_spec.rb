@@ -1,6 +1,29 @@
 require 'spec_helper'
 require 'mxnet/initializer'
 
+RSpec.describe MXNet::Init do
+  describe '.create' do
+    it 'does not accept a class' do
+      expect {
+        MXNet::Init.create(MXNet::Init::Zero)
+      }.to raise_error(ArgumentError)
+    end
+    it 'accepts an instance and returns it' do
+      init0 = MXNet::Init::Zero.new
+      init1 = MXNet::Init.create(init0)
+      expect(init1).to be_equal(init0)
+    end
+    it 'accepts a string' do
+      init = MXNet::Init.create('zeros')
+      expect(init).to be_a(MXNet::Init::Zero)
+    end
+    it 'accepts a symbol' do
+      init = MXNet::Init.create(:zeros)
+      expect(init).to be_a(MXNet::Init::Zero)
+    end
+  end
+end
+
 RSpec.describe MXNet::Init::Xavier do
   specify do
     initializer = MXNet::Init::Xavier.new
@@ -11,7 +34,7 @@ RSpec.describe MXNet::Init::Xavier do
 
   specify 'registered' do
     expect {
-      init = MXNet::Init.registry_manager.create(:xavier)
+      init = MXNet::Init.create(:xavier)
       expect(init).to be_instance_of(MXNet::Init::Xavier)
     }.not_to raise_error
   end

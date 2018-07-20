@@ -60,7 +60,7 @@ module MXNet
           if name.respond_to?(:to_str)
             name = name.to_str
           else
-            raise ArgumentError, "#{@nickname} must be a String or a Symbol"
+            raise ArgumentError, "#{@nickname} must be a String or a Symbol (#{name.inspect})"
           end
         end
 

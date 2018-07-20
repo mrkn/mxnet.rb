@@ -3,6 +3,15 @@ require 'json'
 
 module MXNet
   module Init
+    def self.registry_manager
+      @registry_manager ||= MXNet::Registry::Manager.new(Initializer, :initializer)
+    end
+    private_class_method :registry_manager
+
+    def self.create(*args, **kwargs)
+      registry_manager.create(*args, **kwargs)
+    end
+
     # Descriptor for the initialization pattern
     class InitDesc < String
       # @param name [String] Name of variable
@@ -25,6 +34,21 @@ module MXNet
     end
 
     # The base class of initializers.
+    #
+    # Custom initializers can be created by subclassing Initializer and
+    # implementing the required functions, such as #init_weight, and so on.
+    # By default, the created initializer will be registered under its
+    # simplified class name (`class.name.split('::').last.downcase.to_sym`)
+    # but it may be registered under another name by calling
+    # `registry_manager.register` like:
+    #
+    #     class CustomInit < Initializer
+    #       def init_array(array)
+    #         array[0..-1] = 1.0
+    #       end
+    #     end
+    #     registry_manager.register CustomInit, :myinit
+    #
     class Initializer
       def initialize(**kwargs)
         @kwargs = kwargs
@@ -89,7 +113,7 @@ module MXNet
         desc.global_init ||= self
         init = desc.attrs[:__init__]
         if init
-          MXNet::Init.registry_manager.create(init).send :init_weight, desc, arr
+          MXNet::Init.create(init).send :init_weight, desc, arr
           verbose_print(desc, init, arr)
         else
           # register nnvm::FSetInputVariableAttrs in the backend for new patterns
@@ -167,13 +191,30 @@ module MXNet
       end
     end
 
-    def self.registry_manager
-      @registry_manager ||= MXNet::Registry::Manager.new(Initializer, :initializer)
-    end
-
     # TODO: Load
     # TODO: Mixed
     # TODO: Zero
+
+    # Initializes weights to zero.
+    #
+    # == Example:
+    #
+    #     init = MXNet::Init::Zero.new()
+    #     module.init_params(init)
+    #     module.each_param do |dict|
+    #       dict.each do |key, val|
+    #         puts "#{key} => #{val.to_narray}"
+    #       end
+    #     end
+    #     #=> fullyconnected0_weight => [[0, 0, 0, 0]]
+    class Zero < Initializer
+      private def init_weight(_, arr)
+        arr[0..-1] = 0.0
+      end
+    end
+
+    registry_manager.register Zero
+    registry_manager.alias Zero, :zeros
 
     # Initializes weights to one.
     #
@@ -193,6 +234,9 @@ module MXNet
       end
     end
 
+    registry_manager.register One
+    registry_manager.alias One, :ones
+
     # TODO: Constant
 
     # Initializes weights with random variables uniformly sampled from a given range.
@@ -206,6 +250,8 @@ module MXNet
         MXNet::NDArray::Random.uniform(-@scale, @scale, out: arr)
       end
     end
+
+    registry_manager.register Uniform
 
     # Initializes weights with random values sampled from a normal distribution
     # with a mean of zero and standard deviation of `sigma`.
@@ -221,6 +267,8 @@ module MXNet
         MXNet::NDArray::Random.Normal(0, @sigma, out: arr)
       end
     end
+
+    registry_manager.register Normal
 
     # TODO: Orthogonal
 

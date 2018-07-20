@@ -99,6 +99,7 @@ RSpec.describe MXNet::Gluon::Parameter do
         end
       end
     end
+
     context 'with deferred initialization' do
       let(:parameter) do
         MXNet::Gluon::Parameter.new('foo', allow_deferred_init: true).tap do |parameter|
@@ -119,7 +120,31 @@ RSpec.describe MXNet::Gluon::Parameter do
         end
       end
     end
+
+    context 'for "default_init"' do
+      let(:parameter) do
+        MXNet::Gluon::Parameter.new('foo', shape: 1)
+      end
+      it 'does not accept a class' do
+        expect {
+          parameter.init(default_init: MXNet::Init::Zero)
+        }.to raise_error(ArgumentError)
+      end
+      it 'accepts an instance' do
+        parameter.init(default_init: MXNet::Init::Zero.new)
+        expect(parameter.data.to_a).to eq([0])
+      end
+      it 'accepts a string' do
+        parameter.init(default_init: 'zeros')
+        expect(parameter.data.to_a).to eq([0])
+      end
+      it 'accepts a symbol' do
+        parameter.init(default_init: :zeros)
+        expect(parameter.data.to_a).to eq([0])
+      end
+    end
   end
+
   describe '#list_ctx' do
     context 'without deferred initialization' do
       let(:parameter) do

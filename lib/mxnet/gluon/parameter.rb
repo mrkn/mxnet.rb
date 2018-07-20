@@ -210,7 +210,7 @@ module MXNet
       private def _finish_deferred_init
         return if @_deferred_init.empty?
 
-        initializer, ctx, default_initializer, data = *@_deferred_init
+        initializer, ctx, default_init, data = *@_deferred_init
         @_deferred_init = []
         unless self.shape && self.shape.inject(:*) > 0
           raise "Cannot initialize Parameter '#{@name}' because it has " +
@@ -221,7 +221,7 @@ module MXNet
         MXNet::Autograd.pause do
           if data.nil?
             data = MXNet::NDArray.zeros(self.shape, dtype: self.dtype, ctx: MXNet.cpu)
-            MXNet::Init.registry_manager.create(default_initializer).call(
+            MXNet::Init.create(default_init).call(
               MXNet::Init::InitDesc.new(@name, {__init__: initializer}),
               data
             )
@@ -268,13 +268,13 @@ module MXNet
       # +ctx+::          (Context or array of Contexts)
       #                  Desired contexts. Initialize Parameter on
       #                  given contexts.
-      # +default_init+:: (Initializer, default MXNet::Uniform)
+      # +default_init+:: (Initializer, default `:uniform`)
       #                  Default initializer.
       # +force_reinit+:: (boolean, default false)
       #                  Whether to force re-initialization if parameter
       #                  is already initialized.
       def init(initializer: nil, ctx: nil,
-               default_initializer: MXNet::Init::Uniform.new,
+               default_init: :uniform,
                force_reinit: false)
         if @_data && !force_reinit
           warn "Parameter '#{@name}' is already initialized, ignoreing. " +
@@ -284,17 +284,17 @@ module MXNet
         @_data = @_grad = nil
 
         ctx = Array(ctx || MXNet::Context.current)
-        initializer ||= @initializer || default_initializer
+        initializer ||= @initializer || default_init
         if self.shape.nil? || self.shape.inject(:*) <= 0
           if @_allow_deferred_init
-            @_deferred_init = [initializer, ctx, default_initializer, nil]
+            @_deferred_init = [initializer, ctx, default_init, nil]
             return
           end
           raise "Cannot initialize Parameter '#{@name}' because it has " +
                 "invalid shape: #{self.shape}."
         end
 
-        @_deferred_init = [initializer, ctx, default_initializer, nil]
+        @_deferred_init = [initializer, ctx, default_init, nil]
         _finish_deferred_init
       end
 
@@ -575,7 +575,7 @@ module MXNet
         initializer ||= MXNet::Init::Uniform.new
         initializer.set_verbosity(verbose) if verbose
         each do |_, v|
-          v.init(initializer: nil, ctx: ctx, default_initializer: initializer, force_reinit: force_reinit)
+          v.init(initializer: nil, ctx: ctx, default_init: initializer, force_reinit: force_reinit)
         end
       end
 
