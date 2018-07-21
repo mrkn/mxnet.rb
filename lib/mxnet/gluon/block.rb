@@ -51,8 +51,47 @@ module MXNet::Gluon
   # Base class for all neural network layers and models. Your models
   # should subclass this class.
   #
+  # Blocks can be nested recursively in a tree structure. You can
+  # create and assign child blocks as regular attributes. Blocks
+  # assigned this way will be registered and #collect_params will
+  # collect their parameters recursively. You can also manually
+  # register child blocks with #register_child.
+  #
+  #     class Model < MXNet::Gluon::Block
+  #       def initialize(**kwargs)
+  #         super(**kwargs)
+  #         self.with_name_scope do
+  #           self.dense0 = MXNet::Gluon::NN.Dense(20)
+  #           self.dense1 = MXNet::Gluon::NN.Dense(20)
+  #         end
+  #       end
+  #       def forward(input)
+  #         act = MXNet::Gluon::NN.Activation(:relu)
+  #         input = act[self.dense0[input]]
+  #         act[self.dense1[input]]
+  #       end
+  #     end
+  #
+  #     model = Model.new
+  #     model.collect_params.init
+  #     model[...]
+  #
   class Block
-    def initialize(prefix: nil, params: nil, **kwargs)
+    ##
+    # Creates a new instance.
+    #
+    # ====Parameters
+    #
+    # +prefix+:: (string, optional)
+    #            Prefix acts like a name space. All child blocks
+    #            created inside the parent block's "name scope" (via
+    #            #with_name_scope) will have the parent block's prefix
+    #            in their name.
+    # +params+:: (ParameterDict, optional)
+    #            ParameterDict for sharing weights with the new
+    #            Block.
+    #
+    def initialize(prefix: nil, params: nil)
       @scope = BlockScope.new(self)
       @prefix, @params = BlockScope.create(prefix, params, hint)
       @reg_parameters = {}
