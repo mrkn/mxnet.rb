@@ -2,15 +2,54 @@ require 'spec_helper'
 require 'mxnet/gluon/parameter'
 require 'mxnet/gluon/nn/layers'
 
-RSpec.describe MXNet::Gluon::NN::Dense do
-  describe 'Dense' do
+RSpec.describe MXNet::Gluon::NN do
+  describe '.Sequential' do
     let(:layer) do
-      MXNet::Gluon::NN::Dense(1)
+      MXNet::Gluon::NN.Sequential
     end
     specify do
-      expect(layer.class).to eq(MXNet::Gluon::NN::Dense)
+      expect(layer).to be_a(MXNet::Gluon::NN::Sequential)
     end
   end
+  describe '.Dense' do
+    let(:layer) do
+      MXNet::Gluon::NN.Dense(1)
+    end
+    specify do
+      expect(layer).to be_a(MXNet::Gluon::NN::Dense)
+    end
+  end
+end
+
+RSpec.describe MXNet::Gluon::NN::Sequential do
+  describe '#add' do
+    let(:layer) do
+      MXNet::Gluon::NN::Sequential.new
+    end
+    let(:block) do
+      MXNet::Gluon::Block.new
+    end
+    it 'should register block as a child' do
+      layer.add(block)
+      expect(layer.children).to eq([block])
+    end
+  end
+  describe '#forward' do
+    let(:layer) do
+      MXNet::Gluon::NN::Sequential.new
+    end
+    let(:block) do
+      MXNet::Gluon::Block.new
+    end
+    it 'should run a forward pass on its children' do
+      layer.add(block)
+      expect(block).to receive(:forward)
+      layer.forward(MXNet::Symbol.var('input'))
+    end
+  end
+end
+
+RSpec.describe MXNet::Gluon::NN::Dense do
   describe '.new' do
     let(:layer) do
       MXNet::Gluon::NN::Dense.new(1)

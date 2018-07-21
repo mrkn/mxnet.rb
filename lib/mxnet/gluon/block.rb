@@ -83,6 +83,12 @@ module MXNet::Gluon
       @scope.call(self, &proc)
     end
     ##
+    # Returns this block's registered children.
+    #
+    def children
+      @reg_children.values
+    end
+    ##
     # Returns a ParameterDict containing this Block's and all of its
     # children's Parameters. Also can return the Parameters that match
     # some given regular expressions.
@@ -121,7 +127,8 @@ module MXNet::Gluon
     # Registers block as a child of self. Blocks assigned as
     # attributes will be registered automatically.
     #
-    def register_child(block, name)
+    def register_child(block, name = nil)
+      name = @reg_children.length.to_s if name.nil?
       @reg_children[name] = block
     end
     ##
