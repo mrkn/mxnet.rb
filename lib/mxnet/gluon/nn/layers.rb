@@ -2,9 +2,6 @@ require 'mxnet/gluon/block'
 require 'mxnet/gluon/nn'
 
 module MXNet::Gluon::NN
-  def self.Dense(*args)
-    Dense.new(*args)
-  end
   ##
   # Just your regular densely-connected neural network layer.
   #
@@ -21,19 +18,26 @@ module MXNet::Gluon::NN
   # convert it to rank two if necessary.
   #
   class Dense < MXNet::Gluon::HybridBlock
+    ##
     # Creates a new instance.
     #
     # ====Parameters
     #
-    # +use_bias+:: (boolean)
-    #              Whether the layer uses a bias vector.
-    # +in_units+:: (integer, optional)
-    #              Size of the input data. If not specified,
-    #              initialization will be deferred to the first time
-    #              #forward is called and `in_units` will be inferred
-    #              from the shape of input data.
+    # +units_::      (integer)
+    #                Dimensionality of the output space.
+    # +use_bias+::   (boolean, default +true+)
+    #                Whether the layer uses a bias vector.
+    # +activation+:: (string, optional)
+    #                Activation function to use. If nothing is
+    #                specified, no activation is applied (it acts like
+    #                "linear" activation: `a(x) = x`).
+    # +in_units+::   (integer, optional)
+    #                Size of the input data. If not specified,
+    #                initialization will be deferred to the first time
+    #                #forward is called and `in_units` will be
+    #                inferred from the shape of input data.
     #
-    def initialize(units, use_bias: true, in_units: 0, **kwargs)
+    def initialize(units, use_bias: true, activation: nil, in_units: 0, **kwargs)
       super(**kwargs)
       @units = units
       @in_units = in_units
@@ -51,11 +55,32 @@ module MXNet::Gluon::NN
       else
         self.bias = nil
       end
+      if activation
+        self.act = MXNet::Gluon::NN.Activation(
+          activation,
+          prefix: "#{activation}_"
+        )
+      else
+        self.act = nil
+      end
     end
     def hybrid_forward(clazz, data, weight = nil, bias = nil, **kwargs)
       weight ||= kwargs[:weight]
       bias ||= kwargs[:bias]
-      clazz.FullyConnected(data, weight, bias, no_bias: bias.nil?, num_hidden: @units)
+      out = clazz.FullyConnected(
+        data,
+        weight,
+        bias,
+        no_bias: bias.nil?,
+        num_hidden: @units
+      )
+      if self.act
+        out = self.act[out]
+      end
+      out
     end
+  end
+  def self.Dense(*args)
+    Dense.new(*args)
   end
 end

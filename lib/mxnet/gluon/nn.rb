@@ -5,4 +5,5 @@ module MXNet::Gluon
   end
 end
 
+require_relative 'nn/activations'
 require_relative 'nn/layers'
