@@ -57,6 +57,7 @@ module MXNet::Gluon
       @prefix, @params = BlockScope.create(prefix, params, hint)
       @reg_parameters = {}
       @reg_children = {}
+      @reg_other = {}
     end
     ##
     # Scope of this block.
@@ -142,25 +143,33 @@ module MXNet::Gluon
       raise NotImplementedError
     end
     private
-    def method_missing(sym, value = nil)
+    def method_missing(sym, *args)
       name = sym.to_s
       if name[-1] == '='
-        name = name[0...-1]
-        case value
-        when MXNet::Gluon::Block
-          register_child(value, name)
-        when MXNet::Gluon::Parameter
-          @reg_parameters[name] = value
-        else
-          raise TypeError, "value must be either " \
-                           "MXNet::Gluon::Block or " \
-                           "MXNet::Gluon::Parameter"
-        end
+        args.length == 1 or
+          raise ArgumentError, "wrong number of arguments (#{args.length} for 1)"
+        set_attr(name[0...-1], *args)
       else
-        @reg_children[name] or
-          @reg_parameters[name] or
-          super
+        args.length == 0 or
+          raise ArgumentError, "wrong number of arguments (#{args.length} for 0)"
+        get_attr(name)
       end
+    end
+    def set_attr(name, value)
+      case value
+      when MXNet::Gluon::Block
+        register_child(value, name)
+      when MXNet::Gluon::Parameter
+        @reg_parameters[name] = value
+      else
+        @reg_other[name] = value
+      end
+    end
+    def get_attr(name)
+      [@reg_children, @reg_parameters, @reg_other].each do |h|
+        return h[name] if h.has_key?(name)
+      end
+      raise NoMethodError, "undefined method `#{name}' for #{self}"
     end
     def hint
       self.class.name.split('::').last.downcase

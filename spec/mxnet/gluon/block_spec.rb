@@ -8,11 +8,18 @@ RSpec.describe MXNet::Gluon::Block do
     let(:block) do
       MXNet::Gluon::Block.new
     end
-    it 'automagically creates a block accessor' do
+    it 'raises exception if accessor is undefined' do
+      expect{block.b}.to raise_error(NoMethodError)
+    end
+    it 'raises exception if called with too many arguments' do
+      expect{block.send(:b, 1)}.to raise_error(ArgumentError)
+      expect{block.send(:b=)}.to raise_error(ArgumentError)
+    end
+    it 'automagically defines a block accessor' do
       a = block.a = MXNet::Gluon::Block.new
       expect(block.a).to equal(a)
     end
-    it 'automagically creates a parameter accessor' do
+    it 'automagically defines a parameter accessor' do
       b = block.b = MXNet::Gluon::Parameter.new('b')
       expect(block.b).to equal(b)
     end
