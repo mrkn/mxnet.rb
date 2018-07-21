@@ -4,14 +4,36 @@ require 'mxnet/gluon'
 RSpec.describe MXNet::Gluon::NN::Dense do
   describe '.new' do
     let(:layer) do
-      MXNet::Gluon::NN::Dense.new(1, in_units: 2)
-    end
-    specify do
-      expect(layer.class).to eq(MXNet::Gluon::NN::Dense)
+      MXNet::Gluon::NN::Dense.new(1)
     end
     it 'should set the weight and bias' do
-      expect(layer[:weight].shape).to eq([1, 2])
+      expect(layer[:weight].shape).to eq([1, 0])
       expect(layer[:bias].shape).to eq([1])
+    end
+    context 'for "in_units"' do
+      let(:layer) do
+        MXNet::Gluon::NN::Dense.new(1, in_units: 2)
+      end
+      it 'should set the weight and bias' do
+        expect(layer[:weight].shape).to eq([1, 2])
+        expect(layer[:bias].shape).to eq([1])
+      end
+    end
+    context 'for "use_bias"' do
+      let(:layer) do
+        MXNet::Gluon::NN::Dense.new(1, use_bias: false)
+      end
+      it 'should disable bias' do
+        expect(layer[:bias]).to be_nil
+      end
+    end
+    context 'for "activation"' do
+      let(:layer) do
+        MXNet::Gluon::NN::Dense.new(1, activation: :relu)
+      end
+      it 'add activation' do
+        expect(layer[:act]).to be_a(MXNet::Gluon::NN::Activation)
+      end
     end
   end
   describe '#collect_params' do
