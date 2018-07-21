@@ -5,7 +5,19 @@ module MXNet::Gluon
   # Base class for loss.
   #
   class Loss < MXNet::Gluon::HybridBlock
-    def initialize(**kwargs)
+    ##
+    # Creates a new instance.
+    #
+    # ====Parameters
+    #
+    # +weight+::     (float or +nil+)
+    #                Global scalar weight for loss.
+    # +batch_axis+:: (integer, default 0)
+    #                The axis that represents mini-batch.
+    #
+    def initialize(weight: 1.0, batch_axis: 0, **kwargs)
+      @weight = weight
+      @batch_axis = batch_axis
       super(**kwargs)
     end
     ##
@@ -63,6 +75,36 @@ module MXNet::Gluon
       loss
     end
     ##
+    # Calculates the mean absolute error between prediction and label.
+    #
+    # Inputs "prediction" and "label" can have arbitrary shape as long
+    # as they have the same number of elements.
+    #
+    class L1Loss < Loss
+      ##
+      # Creates a new instance.
+      #
+      # ====Parameters
+      #
+      # +weight+::     (float or +nil+)
+      #                Global scalar weight for loss.
+      # +batch_axis+:: (integer, default 0)
+      #                The axis that represents mini-batch.
+      #
+      def initialize(**kwargs)
+        super(**kwargs)
+      end
+      def hybrid_forward(clazz, prediction, label, sample_weight: nil)
+        label = reshape_like(clazz, label, prediction)
+        loss = clazz.abs(prediction - label)
+        loss = apply_weighting(clazz, loss, @weight, sample_weight)
+        clazz.mean(loss, axis: @batch_axis, exclude: true)
+      end
+    end
+    def self.L1Loss(*args)
+      L1Loss.new(*args)
+    end
+    ##
     # Calculates the mean squared error between prediction and label.
     #
     # Inputs "prediction" and "label" can have arbitrary shape as long
@@ -79,14 +121,10 @@ module MXNet::Gluon
       # +batch_axis+:: (integer, default 0)
       #                The axis that represents mini-batch.
       #
-      def initialize(weight: 1.0, batch_axis: 0, **kwargs)
+      def initialize(**kwargs)
         super(**kwargs)
-        @weight = weight
-        @batch_axis = batch_axis
       end
-      def hybrid_forward(clazz, prediction = nil, label = nil, sample_weight: nil, **kwargs)
-        prediction ||= kwargs[:prediction]
-        label ||= kwargs[:label]
+      def hybrid_forward(clazz, prediction, label, sample_weight: nil)
         label = reshape_like(clazz, label, prediction)
         loss = clazz.square(prediction - label)
         loss = apply_weighting(clazz, loss, @weight/2, sample_weight)
@@ -95,6 +133,53 @@ module MXNet::Gluon
     end
     def self.L2Loss(*args)
       L2Loss.new(*args)
+    end
+    ##
+    # Computes the softmax cross-entropy loss.
+    #
+    class SoftmaxCrossEntropyLoss < Loss
+      ##
+      # Creates a new instance.
+      #
+      # ====Parameters
+      #
+      # +axis+::         (integer, default -1)
+      #                  The axis to sum over when computing softmax
+      #                  and entropy.
+      # +sparse_label+:: (boolean, default +true+)
+      #                  Whether label is an integer array instead of
+      #                  probability distribution.
+      # +from_logits+::  (boolean, default +false+)
+      #                  Whether input is a log probability (usually
+      #                  from #log_softmax) instead of unnormalized
+      #                  numbers.
+      # +weight+::       (float or +nil+)
+      #                  Global scalar weight for loss.
+      # +batch_axis+::   (integer, default 0)
+      #                  The axis that represents mini-batch.
+      #
+      def initialize(axis: -1, sparse_label: true, from_logits: false, **kwargs)
+        @axis = axis
+        @sparse_label = sparse_label
+        @from_logits = from_logits
+        super(**kwargs)
+      end
+      def hybrid_forward(clazz, prediction, label, sample_weight: nil)
+        unless @from_logits
+          prediction = clazz.log_softmax(prediction, axis: @axis)
+        end
+        if @sparse_label
+          loss = -clazz.pick(prediction, label, axis: @axis, keepdims: true)
+        else
+          label = reshape_like(clazz, label, prediction)
+          loss = -clazz.sum(prediction * label, axis: @axis, keepdims: true)
+        end
+        loss = apply_weighting(clazz, loss, @weight, sample_weight)
+        clazz.mean(loss, axis: @batch_axis, exclude: true)
+      end
+    end
+    def self.SoftmaxCrossEntropyLoss(*args)
+      SoftmaxCrossEntropyLoss.new(*args)
     end
   end
 end
