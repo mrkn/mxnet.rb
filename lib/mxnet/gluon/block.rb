@@ -206,7 +206,7 @@ module MXNet
       # Registers block as a child of self. `Block` s assigned to self as
       # attributes will be registered automatically.
       def register_child(block, name=nil)
-        name ||= @children.length
+        name ||= @children.length.to_s
         @children[name] = block
       end
 
@@ -222,7 +222,9 @@ module MXNet
       end
 
       # Calls #forward. Only accepts positional arguments.
-      alias call forward
+      def call(*args)
+        forward(*args)
+      end
     end
 
     # `HybridBlock` supports forwarding with both Symbol and NDArray.

@@ -3,6 +3,43 @@ require 'mxnet/gluon/nn'
 
 module MXNet::Gluon::NN
   ##
+  # Stacks blocks sequentially.
+  #
+  #     net = MXNet::Gluon::NN.Sequential
+  #     net.with_name_scope do
+  #       net.add(MXNet::Gluon::NN.Dense(10, activation: :relu))
+  #       net.add(MXNet::Gluon::NN.Dense(20))
+  #     end
+  #
+  class Sequential < MXNet::Gluon::Block
+    ##
+    # Creates a new instance.
+    #
+    def initialize(**kwargs)
+      super(**kwargs)
+    end
+
+    ##
+    # Adds blocks on top of the stack.
+    #
+    def add(*blocks)
+      blocks.each { |block| register_child(block) }
+    end
+
+    def <<(block)
+      add(block)
+      self
+    end
+
+    ##
+    # Runs a forward pass on all child blocks.
+    #
+    def forward(data)
+      @children.each_value.inject(data) { |data, child| child.(data) }
+    end
+  end
+
+  ##
   # Just your regular densely-connected neural network layer.
   #
   # Implements the operation:

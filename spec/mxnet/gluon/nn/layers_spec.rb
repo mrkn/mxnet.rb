@@ -1,6 +1,37 @@
 require 'spec_helper'
 require 'mxnet/gluon'
 
+RSpec.describe MXNet::Gluon::NN::Sequential do
+  describe '#add' do
+    let(:layer) do
+      MXNet::Gluon::NN::Sequential.new
+    end
+
+    it 'should register block as a child' do
+      layer.add(MXNet::Gluon::NN::Dense.new(1))
+      expect(layer.collect_params.keys).to contain_exactly('dense0_weight', 'dense0_bias')
+    end
+  end
+
+  describe '#forward' do
+    let(:layer) do
+      MXNet::Gluon::NN::Sequential.new
+    end
+
+    let(:block) do
+      MXNet::Gluon::Block.new
+    end
+
+    it 'should run a forward pass on its children' do
+      mock_result = Object.new
+      symbol = MXNet::Symbol.var('input')
+      expect(block).to receive(:forward).with(symbol).and_return(mock_result)
+      layer.add(block)
+      expect(layer.forward(symbol)).to be_equal(mock_result)
+    end
+  end
+end
+
 RSpec.describe MXNet::Gluon::NN::Dense do
   describe '.new' do
     let(:layer) do
