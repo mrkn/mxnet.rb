@@ -6,7 +6,7 @@ require 'mxnet/ndarray'
 RSpec.describe MXNet::Gluon::Block do
   describe 'assignment' do
     let(:block) do
-      MXNet::Gluon::Block.new
+      described_class.new
     end
     it 'raises exception if accessor is undefined' do
       expect{block.b}.to raise_error(NoMethodError)
@@ -16,7 +16,7 @@ RSpec.describe MXNet::Gluon::Block do
       expect{block.send(:b=)}.to raise_error(ArgumentError)
     end
     it 'automagically defines a block accessor' do
-      a = block.a = MXNet::Gluon::Block.new
+      a = block.a = described_class.new
       expect(block.a).to equal(a)
     end
     it 'automagically defines a parameter accessor' do
@@ -26,15 +26,15 @@ RSpec.describe MXNet::Gluon::Block do
   end
   describe '#new' do
     let(:block) do
-      MXNet::Gluon::Block.new
+      described_class.new
     end
     it 'assigns a unique prefix' do
       expect(block.prefix).to match(/^block[0-9]+_$/)
-      expect(block.prefix).not_to eq(MXNet::Gluon::Block.new.prefix)
+      expect(block.prefix).not_to eq(described_class.new.prefix)
     end
     context 'with prefix' do
       let(:block) do
-        MXNet::Gluon::Block.new(prefix: 'foo')
+        described_class.new(prefix: 'foo')
       end
       it 'uses the assigned prefix' do
         expect(block.prefix).to eq('foo')
@@ -47,7 +47,7 @@ RSpec.describe MXNet::Gluon::Block do
         end
       end
       let(:block) do
-        MXNet::Gluon::Block.new(params: params)
+        described_class.new(params: params)
       end
       it 'shares the assigned params' do
         expect(block.params.get('foo')).to equal(params.get('foo'))
@@ -56,13 +56,13 @@ RSpec.describe MXNet::Gluon::Block do
   end
   describe '#with_name_scope' do
     let(:block) do
-      MXNet::Gluon::Block.new
+      described_class.new
     end
     it 'prepends prefixes to scoped blocks' do
       block.with_name_scope do
-        block.foo = MXNet::Gluon::Block.new
+        block.foo = described_class.new
         block.foo.with_name_scope do
-          block.foo.bar = MXNet::Gluon::Block.new
+          block.foo.bar = described_class.new
         end
       end
       expect(block.foo.prefix).to match(/^block[0-9]+_block0_$/)
@@ -71,14 +71,14 @@ RSpec.describe MXNet::Gluon::Block do
   end
   describe '#collect_params' do
     let(:block) do
-      MXNet::Gluon::Block.new(prefix: 'block_').tap do |block|
+      described_class.new(prefix: 'block_').tap do |block|
         block.params.get('foo')
         block.params.get('bar')
         block.params.get('baz')
       end
     end
     let(:child) do
-      MXNet::Gluon::Block.new(prefix: 'block_').tap do |block|
+      described_class.new(prefix: 'block_').tap do |block|
         block.params.get('qoz')
       end
     end
@@ -107,7 +107,7 @@ RSpec.describe MXNet::Gluon::Block do
   end
   describe '#forward' do
     let(:block) do
-      MXNet::Gluon::Block.new
+      described_class.new
     end
     it 'is not implemented' do
       expect{block.forward(MXNet::NDArray.array([]))}.to raise_error(NotImplementedError)
@@ -118,7 +118,7 @@ end
 RSpec.describe MXNet::Gluon::HybridBlock do
   describe '#forward' do
     let(:block) do
-      MXNet::Gluon::HybridBlock.new
+      described_class.new
     end
     it 'is not implemented' do
       expect{block.forward(MXNet::NDArray.array([]))}.to raise_error(NotImplementedError)
@@ -126,7 +126,7 @@ RSpec.describe MXNet::Gluon::HybridBlock do
   end
   context 'given a simple model' do
     before do
-      stub_const 'Foo', Class.new(MXNet::Gluon::HybridBlock)
+      stub_const 'Foo', Class.new(described_class)
       Foo.class_eval do
         def initialize(**kwargs)
           super

@@ -4,19 +4,19 @@ require 'mxnet/optimizer'
 RSpec.describe MXNet::Optimizer do
   describe '.create' do
     it 'accepts a class' do
-      opt = MXNet::Optimizer.create(MXNet::Optimizer::SGD)
+      opt = described_class.create(MXNet::Optimizer::SGD)
       expect(opt).to be_a(MXNet::Optimizer::SGD)
     end
     it 'accepts an instance' do
-      opt = MXNet::Optimizer.create(MXNet::Optimizer::SGD.new)
+      opt = described_class.create(MXNet::Optimizer::SGD.new)
       expect(opt).to be_a(MXNet::Optimizer::SGD)
     end
     it 'accepts a string' do
-      opt = MXNet::Optimizer.create('sgd')
+      opt = described_class.create('sgd')
       expect(opt).to be_a(MXNet::Optimizer::SGD)
     end
     it 'accepts a symbol' do
-      opt = MXNet::Optimizer.create(:sgd)
+      opt = described_class.create(:sgd)
       expect(opt).to be_a(MXNet::Optimizer::SGD)
     end
   end
@@ -25,7 +25,7 @@ end
 RSpec.describe MXNet::Optimizer::SGD do
   describe '#update' do
     let(:optimizer) do
-      MXNet::Optimizer::SGD.new(learning_rate: 0.1)
+      described_class.new(learning_rate: 0.1)
     end
     it 'updates the weight' do
       weight = MXNet::NDArray.array([1])

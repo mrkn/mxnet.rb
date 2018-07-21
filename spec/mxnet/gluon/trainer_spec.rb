@@ -18,7 +18,7 @@ RSpec.describe MXNet::Gluon::Trainer do
       p = parameter
       o = optimizer
       expect(o).to receive(:update).with(0, p.data, p.grad, nil).exactly(1).times
-      trainer = MXNet::Gluon::Trainer.new({p: p}, o)
+      trainer = described_class.new({p: p}, o)
       trainer.update(1)
     end
   end

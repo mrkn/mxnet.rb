@@ -4,14 +4,14 @@ require 'mxnet/gluon/parameter'
 RSpec.describe MXNet::Gluon::Parameter do
   describe '.new' do
     specify do
-      expect(MXNet::Gluon::Parameter.new('test', shape: 1).shape).to eq([1])
-      expect(MXNet::Gluon::Parameter.new('test', shape: [1]).shape).to eq([1])
+      expect(described_class.new('test', shape: 1).shape).to eq([1])
+      expect(described_class.new('test', shape: [1]).shape).to eq([1])
     end
   end
   describe '#init' do
     context 'without deferred initialization' do
       let(:parameter) do
-        MXNet::Gluon::Parameter.new('foo', shape: [1]).tap do |parameter|
+        described_class.new('foo', shape: [1]).tap do |parameter|
           parameter.init
         end
       end
@@ -29,7 +29,7 @@ RSpec.describe MXNet::Gluon::Parameter do
     end
     context 'with deferred initialization' do
       let(:parameter) do
-        MXNet::Gluon::Parameter.new('foo', allow_deferred_init: true).tap do |parameter|
+        described_class.new('foo', allow_deferred_init: true).tap do |parameter|
           parameter.init
           parameter.shape = [1]
           parameter.send(:finish_deferred_init)
@@ -49,7 +49,7 @@ RSpec.describe MXNet::Gluon::Parameter do
     end
     context 'for "default_init"' do
       let(:parameter) do
-        MXNet::Gluon::Parameter.new('foo', shape: 1)
+        described_class.new('foo', shape: 1)
       end
       it 'accepts a class' do
         parameter.init(default_init: MXNet::Initializer::Zero)
@@ -72,7 +72,7 @@ RSpec.describe MXNet::Gluon::Parameter do
   describe '#list_ctx' do
     context 'without deferred initialization' do
       let(:parameter) do
-        MXNet::Gluon::Parameter.new('foo', shape: [1, 2]).tap do |parameter|
+        described_class.new('foo', shape: [1, 2]).tap do |parameter|
           parameter.init
         end
       end
@@ -82,7 +82,7 @@ RSpec.describe MXNet::Gluon::Parameter do
     end
     context 'with deferred initialization' do
       let(:parameter) do
-        MXNet::Gluon::Parameter.new('foo', allow_deferred_init: true).tap do |parameter|
+        described_class.new('foo', allow_deferred_init: true).tap do |parameter|
           parameter.init
         end
       end
@@ -93,7 +93,7 @@ RSpec.describe MXNet::Gluon::Parameter do
   end
   describe '#data' do
     let(:parameter) do
-      MXNet::Gluon::Parameter.new('foo', shape: [1])
+      described_class.new('foo', shape: [1])
     end
     it 'fails if the parameter has not been initialized' do
       expect{parameter.data}.to raise_error(RuntimeError)
@@ -113,7 +113,7 @@ RSpec.describe MXNet::Gluon::Parameter do
   end
   describe '#grad' do
     let(:parameter) do
-      MXNet::Gluon::Parameter.new('foo', shape: [1])
+      described_class.new('foo', shape: [1])
     end
     it 'fails if the parameter has not been initialized' do
       expect{parameter.grad}.to raise_error(RuntimeError)
@@ -134,7 +134,7 @@ RSpec.describe MXNet::Gluon::Parameter do
   describe '#shape=' do
     context 'with no shape' do
       let(:parameter) do
-        MXNet::Gluon::Parameter.new('foo')
+        described_class.new('foo')
       end
       it 'assigns the shape' do
         parameter.shape = [1, 2]
@@ -143,7 +143,7 @@ RSpec.describe MXNet::Gluon::Parameter do
     end
     context 'with incomplete shape' do
       let(:parameter) do
-        MXNet::Gluon::Parameter.new('foo', shape: [1, 0, 3])
+        described_class.new('foo', shape: [1, 0, 3])
       end
       it 'completes the shape' do
         parameter.shape = [1, 2, 3]
@@ -152,7 +152,7 @@ RSpec.describe MXNet::Gluon::Parameter do
     end
     context 'with shape' do
       let(:parameter) do
-        MXNet::Gluon::Parameter.new('foo', shape: [1, 2])
+        described_class.new('foo', shape: [1, 2])
       end
       it 'raises an error' do
         expect{parameter.shape = [1, 3]}.to raise_error(RuntimeError)
@@ -161,16 +161,16 @@ RSpec.describe MXNet::Gluon::Parameter do
   end
   describe '#==' do
     let(:parameter) do
-      MXNet::Gluon::Parameter.new('foo', shape: [1])
+      described_class.new('foo', shape: [1])
     end
     it 'is true if name and shape are equal' do
-      expect(parameter == MXNet::Gluon::Parameter.new('foo', shape: [1])).to be(true)
+      expect(parameter == described_class.new('foo', shape: [1])).to be(true)
     end
     it 'is false if name is not equal' do
-      expect(parameter == MXNet::Gluon::Parameter.new('boo', shape: [1])).to be(false)
+      expect(parameter == described_class.new('boo', shape: [1])).to be(false)
     end
     it 'is false if shape is not equal' do
-      expect(parameter == MXNet::Gluon::Parameter.new('foo', shape: [2])).to be(false)
+      expect(parameter == described_class.new('foo', shape: [2])).to be(false)
     end
   end
 end
@@ -179,7 +179,7 @@ RSpec.describe MXNet::Gluon::ParameterDict do
   describe '#get' do
     context 'without a shared dict' do
       let(:parameter_dict) do
-        MXNet::Gluon::ParameterDict.new
+        described_class.new
       end
       it 'creates a new parameter if not in dict' do
         expect(parameter_dict.get('foo')).to be_a(MXNet::Gluon::Parameter)
@@ -193,12 +193,12 @@ RSpec.describe MXNet::Gluon::ParameterDict do
     end
     context 'with a shared dict' do
       let(:shared_dict) do
-        MXNet::Gluon::ParameterDict.new.tap do |shared_dict|
+        described_class.new.tap do |shared_dict|
           shared_dict.get('foo')
         end
       end
       let(:parameter_dict) do
-        MXNet::Gluon::ParameterDict.new(shared: shared_dict).tap do |parameter_dict|
+        described_class.new(shared: shared_dict).tap do |parameter_dict|
           parameter_dict.get('bar')
         end
       end
@@ -209,10 +209,10 @@ RSpec.describe MXNet::Gluon::ParameterDict do
   end
   describe '#update' do
     let(:parameter_dict) do
-      MXNet::Gluon::ParameterDict.new
+      described_class.new
     end
     let(:other_dict) do
-      MXNet::Gluon::ParameterDict.new.tap do |other_dict|
+      described_class.new.tap do |other_dict|
         other_dict.get('foo', shape: 1)
       end
     end
@@ -227,7 +227,7 @@ RSpec.describe MXNet::Gluon::ParameterDict do
   end
   describe '#init' do
     let(:parameter_dict) do
-      MXNet::Gluon::ParameterDict.new(prefix: 'name').tap do |parameter_dict|
+      described_class.new(prefix: 'name').tap do |parameter_dict|
         parameter_dict.get('foo', shape: 1)
       end
     end
@@ -238,24 +238,24 @@ RSpec.describe MXNet::Gluon::ParameterDict do
   end
   describe '#==' do
     let(:parameter_dict) do
-      MXNet::Gluon::ParameterDict.new(prefix: 'name').tap do |parameter_dict|
+      described_class.new(prefix: 'name').tap do |parameter_dict|
         parameter_dict.get('test')
       end
     end
     it 'is true if prefix and items are equal' do
-      other_dict = MXNet::Gluon::ParameterDict.new(prefix: 'name').tap do |other_dict|
+      other_dict = described_class.new(prefix: 'name').tap do |other_dict|
         other_dict.get('test')
       end
       expect(parameter_dict == other_dict).to be(true)
     end
     it 'is false if prefix is not equal' do
-      other_dict = MXNet::Gluon::ParameterDict.new(prefix: 'other').tap do |other_dict|
+      other_dict = described_class.new(prefix: 'other').tap do |other_dict|
         other_dict.get('test')
       end
       expect(parameter_dict == other_dict).to be(false)
     end
     it 'is false items is not equal' do
-      other_dict = MXNet::Gluon::ParameterDict.new(prefix: 'name').tap do |other_dict|
+      other_dict = described_class.new(prefix: 'name').tap do |other_dict|
         other_dict.get('other')
       end
       expect(parameter_dict == other_dict).to be(false)
