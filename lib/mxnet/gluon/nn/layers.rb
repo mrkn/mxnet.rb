@@ -71,29 +71,31 @@ module MXNet::Gluon::NN
     #
     def initialize(units, use_bias: true, activation: nil, in_units: 0, **kwargs)
       super(**kwargs)
-      @units = units
-      @in_units = in_units
-      self.weight = params.get(
-        'weight',
-        shape: [units, in_units],
-        allow_deferred_init: true
-      )
-      if use_bias
-        self.bias = params.get(
-          'bias',
-          shape: [units],
+      self.with_name_scope do
+        @units = units
+        @in_units = in_units
+        self.weight = params.get(
+          'weight',
+          shape: [units, in_units],
           allow_deferred_init: true
         )
-      else
-        self.bias = nil
-      end
-      if activation
-        self.act = MXNet::Gluon::NN.Activation(
-          activation,
-          prefix: "#{activation}_"
-        )
-      else
-        self.act = nil
+        if use_bias
+          self.bias = params.get(
+            'bias',
+            shape: [units],
+            allow_deferred_init: true
+          )
+        else
+          self.bias = nil
+        end
+        if activation
+          self.act = MXNet::Gluon::NN.Activation(
+            activation,
+            prefix: "#{activation}_"
+          )
+        else
+          self.act = nil
+        end
       end
     end
     def hybrid_forward(clazz, data, weight = nil, bias = nil, **kwargs)
