@@ -273,6 +273,15 @@ module MXNet
       # +force_reinit+:: (boolean, default false)
       #                  Whether to force re-initialization if parameter
       #                  is already initialized.
+      #
+      #
+      # ====Examples
+      #
+      #     weight = MXNet::Gluon::Parameter.new('weight', shape: [2, 2])
+      #     weight.init(ctx: MXNet.cpu)
+      #     weight.data # => [[0.0068339, 0.0129982],...
+      #     weight.grad # => [[0, 0],...
+      #
       def init(initializer: nil, ctx: nil,
                default_init: :uniform,
                force_reinit: false)
