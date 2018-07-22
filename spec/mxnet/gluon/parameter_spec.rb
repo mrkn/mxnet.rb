@@ -47,6 +47,27 @@ RSpec.describe MXNet::Gluon::Parameter do
         end
       end
     end
+    context 'for "init"' do
+      let(:parameter) do
+        described_class.new('foo', shape: 1)
+      end
+      it 'accepts a class' do
+        parameter.init(init: MXNet::Initializer::Zero)
+        expect(parameter.data.to_a).to eq([0])
+      end
+      it 'accepts an instance' do
+        parameter.init(init: MXNet::Initializer::Zero.new)
+        expect(parameter.data.to_a).to eq([0])
+      end
+      it 'accepts a string' do
+        parameter.init(init: 'zeros')
+        expect(parameter.data.to_a).to eq([0])
+      end
+      it 'accepts a symbol' do
+        parameter.init(init: :zeros)
+        expect(parameter.data.to_a).to eq([0])
+      end
+    end
     context 'for "default_init"' do
       let(:parameter) do
         described_class.new('foo', shape: 1)

@@ -128,6 +128,23 @@ module MXNet::Gluon
       @reg_children.values
     end
     ##
+    # Initializes parameters of this block and its children.
+    # Equivalent to `self.collect_params.init(...)`.
+    #
+    # ====Parameters
+    #
+    # +init+::         (Initializer, default +nil+)
+    #                  The initializer to use.
+    # +ctx+::          (Context or array of Contexts, default +nil+)
+    #                  Desired contexts.
+    # +force_reinit+:: (boolean, default false)
+    #                  Whether to force re-initialization if parameter
+    #                  is already initialized.
+    #
+    def init(init: nil, ctx: nil, force_reinit: false)
+      collect_params.init(init: init, ctx: ctx, force_reinit: force_reinit)
+    end
+    ##
     # Returns a ParameterDict containing this Block's and all of its
     # children's Parameters. Also can return the Parameters that match
     # some given regular expressions.

@@ -70,7 +70,9 @@ module MXNet::Gluon
     #
     # ====Parameters
     #
-    # +ctx+::          (Context or array of Contexts)
+    # +init+::         (Initializer, default +nil+)
+    #                  The initializer to use. Overrides `default_init`.
+    # +ctx+::          (Context or array of Contexts, default +nil+)
     #                  Desired contexts. Initialize Parameter on given
     #                  contexts. A copy will be made for each
     #                  context. Note: copies are independent
@@ -90,10 +92,11 @@ module MXNet::Gluon
     #     weight.data # => [[0.0068339, 0.0129982],...
     #     weight.grad # => [[0, 0],...
     #
-    def init(ctx: nil, default_init: :uniform, force_reinit: false)
+    def init(init: nil, ctx: nil, default_init: :uniform, force_reinit: false)
       unless @data.nil? || force_reinit
         return
       end
+      init = default_init if init.nil?
       ctx = [MXNet.current_context] if ctx.nil?
       ctx = [ctx] if ctx.is_a?(MXNet::Context)
       @ctx = ctx
@@ -104,10 +107,10 @@ module MXNet::Gluon
                 "Cannot initialize Parameter '#{@name}' because it has " \
                 "invalid shape: #{@shape}."
         end
-        @deferred_init = [ctx, default_init]
+        @deferred_init = [ctx, init]
         return
       end
-      @deferred_init = [ctx, default_init]
+      @deferred_init = [ctx, init]
       finish_deferred_init
     end
     ##
@@ -317,6 +320,8 @@ module MXNet::Gluon
     # Initializes all Parameters managed by this dict to be used for
     # NDArray API. It has no effect when using Symbol API.
     #
+    # +init+::         (Initializer, default +nil+)
+    #                  The initializer to use.
     # +ctx+::          (Context or array of Context)
     #                  Desired contexts. Initialize Parameter on given
     #                  contexts.
@@ -324,8 +329,8 @@ module MXNet::Gluon
     #                  Whether to force re-initialization if parameters
     #                  are already initialized.
     #
-    def init(ctx: nil, force_reinit: false)
-      self.each { |_, v| v.init(ctx: ctx, force_reinit: force_reinit) }
+    def init(init: nil, ctx: nil, force_reinit: false)
+      values.each { |v| v.init(init: init, ctx: ctx, force_reinit: force_reinit) }
     end
     def to_s
       "ParameterDict (\n" +

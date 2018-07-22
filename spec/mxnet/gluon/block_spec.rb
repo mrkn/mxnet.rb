@@ -69,6 +69,17 @@ RSpec.describe MXNet::Gluon::Block do
       expect(block.foo.bar.prefix).to match(/^block[0-9]+_block0_block0_$/)
     end
   end
+  describe '#init' do
+    let(:block) do
+      described_class.new.tap do |block|
+        block.params.get('foo', shape: 1)
+      end
+    end
+    it 'initializes all parameters' do
+      block.init
+      expect(block.params.get('foo').data).to be_a(MXNet::NDArray)
+    end
+  end
   describe '#collect_params' do
     let(:block) do
       described_class.new(prefix: 'block_').tap do |block|
