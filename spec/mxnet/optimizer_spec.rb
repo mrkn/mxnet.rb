@@ -71,7 +71,7 @@ RSpec.describe MXNet::Optimizer::Base do
 
       mod = MXNet::Module.new(symbol: fc2, label_names: nil, context: MXNet.default_context)
       mod.bind(data_shapes: [[:data, [5, 10]]])
-      mod.init_params(initializer: MXNet::Init::Uniform.new(1.0))
+      mod.init_params(init: MXNet::Init::Uniform.new(1.0))
       mod.init_optimizer(optimizer_params: {learning_rate: 1.0})
       args1, _ = mod.get_params
       args1.transform_values!(&:to_narray)

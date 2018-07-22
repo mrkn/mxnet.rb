@@ -72,6 +72,19 @@ RSpec.describe MXNet::Gluon::Block do
     end
   end
 
+  describe '#init' do
+    let(:block) do
+      described_class.new.tap do |block|
+        block.params.get('foo', shape: 1)
+      end
+    end
+
+    it 'initializes all parameters' do
+      block.init
+      expect(block.params.get('foo').data).to be_a(MXNet::NDArray)
+    end
+  end
+
   describe '#collect_params' do
     let(:block) do
       MXNet::Gluon::Block.new(prefix: 'block_').tap do |block|

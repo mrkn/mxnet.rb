@@ -20,7 +20,7 @@ module MXNet
     #
     class Parameter
       def initialize(name, grad_req: :write, shape: nil, dtype: :float32,
-                     lr_mult: 1.0, wd_mult: 1.0, initializer: nil,
+                     lr_mult: 1.0, wd_mult: 1.0, init: nil,
                      allow_deferred_init: false, differentiable: true)
         @_var = nil
         @_data = nil
@@ -38,7 +38,7 @@ module MXNet
         @lr_mult = lr_mult
         @wd_mult = wd_mult
         self.grad_req = grad_req
-        @initializer = initializer
+        @init = init
         @attributes = {}
       end
 
@@ -265,6 +265,8 @@ module MXNet
       #
       # ====Parameters
       #
+      # +init+::         (Initializer, default +nil+)
+      #                  The initializer to use. Overrides `default_init`.
       # +ctx+::          (Context or array of Contexts)
       #                  Desired contexts. Initialize Parameter on
       #                  given contexts.
@@ -282,9 +284,7 @@ module MXNet
       #     weight.data # => [[0.0068339, 0.0129982],...
       #     weight.grad # => [[0, 0],...
       #
-      def init(initializer: nil, ctx: nil,
-               default_init: :uniform,
-               force_reinit: false)
+      def init(init: nil, ctx: nil, default_init: :uniform, force_reinit: false)
         if @_data && !force_reinit
           warn "Parameter '#{@name}' is already initialized, ignoreing. " +
                "Set force_reinit: true to re-initialize."
@@ -293,17 +293,17 @@ module MXNet
         @_data = @_grad = nil
 
         ctx = Array(ctx || MXNet::Context.current)
-        initializer ||= @initializer || default_init
+        init ||= @init || default_init
         if self.shape.nil? || self.shape.inject(:*) <= 0
           if @_allow_deferred_init
-            @_deferred_init = [initializer, ctx, default_init, nil]
+            @_deferred_init = [init, ctx, default_init, nil]
             return
           end
           raise "Cannot initialize Parameter '#{@name}' because it has " +
                 "invalid shape: #{self.shape}."
         end
 
-        @_deferred_init = [initializer, ctx, default_init, nil]
+        @_deferred_init = [init, ctx, default_init, nil]
         _finish_deferred_init
       end
 
@@ -404,7 +404,7 @@ module MXNet
       def var
         @_var ||= MXNet::Symbol.var(@name, shape: shape, dtype: dtype,
                                     lr_mult: lr_mult, wd_mult: wd_mult,
-                                    init: @initializer) # FIXME: init -> initializer
+                                    init: @init) # FIXME: init -> initializer
       end
 
       def cast(dtype)
@@ -441,7 +441,7 @@ module MXNet
         end
         @value = value
         initializer = Init.new(value)
-        super(name, grad_req: :null, shape: value.shape, dtype: value.dtype, initializer: initializer)
+        super(name, grad_req: :null, shape: value.shape, dtype: value.dtype, init: initializer)
       end
     end
 
@@ -580,11 +580,11 @@ module MXNet
       # +force_reinit+:: (boolean, default false)
       #                  Whether to force re-initialization if parameters
       #                  are already initialized.
-      def init(initializer: nil, ctx: nil, verbose: false, force_reinit: false)
-        initializer ||= MXNet::Init::Uniform.new
-        initializer.set_verbosity(verbose) if verbose
+      def init(init: nil, ctx: nil, verbose: false, force_reinit: false)
+        init ||= MXNet::Init::Uniform.new
+        init.set_verbosity(verbose) if verbose
         each do |_, v|
-          v.init(initializer: nil, ctx: ctx, default_init: initializer, force_reinit: force_reinit)
+          v.init(init: nil, ctx: ctx, default_init: init, force_reinit: force_reinit)
         end
       end
 

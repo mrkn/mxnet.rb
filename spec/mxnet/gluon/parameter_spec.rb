@@ -72,7 +72,7 @@ RSpec.describe MXNet::Gluon::Parameter do
 
     specify do
       param = MXNet::Gluon::Parameter.new(:weight, shape: [10, 10])
-      param.init(initializer: :xavier, ctx: [MXNet.cpu(0), MXNet.cpu(1)])
+      param.init(init: :xavier, ctx: [MXNet.cpu(0), MXNet.cpu(1)])
       expect(param.list_data.length).to eq(2)
       expect(param.list_grad.length).to eq(2)
       expect(param.list_ctx).to eq([MXNet.cpu(0), MXNet.cpu(1)])
@@ -118,6 +118,29 @@ RSpec.describe MXNet::Gluon::Parameter do
         parameter.list_data.zip(parameter.list_grad).each do |p, g|
           expect(p.grad).to eq(g)
         end
+      end
+    end
+
+    context 'for "init"' do
+      let(:parameter) do
+        described_class.new('foo', shape: 1)
+      end
+      it 'does not accept a class' do
+        expect {
+          parameter.init(init: MXNet::Init::Zero)
+        }.to raise_error(ArgumentError)
+      end
+      it 'accepts an instance' do
+        parameter.init(init: MXNet::Init::Zero.new)
+        expect(parameter.data.to_a).to eq([0])
+      end
+      it 'accepts a string' do
+        parameter.init(init: 'zeros')
+        expect(parameter.data.to_a).to eq([0])
+      end
+      it 'accepts a symbol' do
+        parameter.init(init: :zeros)
+        expect(parameter.data.to_a).to eq([0])
       end
     end
 
@@ -264,7 +287,7 @@ RSpec.describe MXNet::Gluon::Parameter do
   describe '#reset_ctx' do
     specify do
       param = MXNet::Gluon::Parameter.new(:weight, shape: [10, 10])
-      param.init(initializer: :xavier, ctx: [MXNet.cpu(0), MXNet.cpu(1)])
+      param.init(init: :xavier, ctx: [MXNet.cpu(0), MXNet.cpu(1)])
       expect(param.list_ctx).to eq([MXNet.cpu(0), MXNet.cpu(1)])
       param.reset_ctx([MXNet.cpu(1), MXNet.cpu(2)])
       expect(param.list_ctx).to eq([MXNet.cpu(1), MXNet.cpu(2)])
@@ -440,7 +463,7 @@ RSpec.describe MXNet::Gluon::ParameterDict do
         expect(initializer).to receive(:set_verbosity).with(true).and_call_original
 
         expect { x.data }.to raise_error(RuntimeError)
-        params.init(initializer: initializer, verbose: true)
+        params.init(init: initializer, verbose: true)
         expect(x.data).to be_a(MXNet::NDArray)
         expect(x.data.shape).to eq([2, 3])
       end
