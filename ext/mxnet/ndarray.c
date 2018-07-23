@@ -346,7 +346,7 @@ ndarray_reshape(VALUE obj, VALUE shape_v)
   int ndim, *dims, i;
 
   handle = mxnet_ndarray_get_handle(obj);
-  shape_v = rb_check_convert_type(shape_v, T_ARRAY, "Array", "to_ary");
+  shape_v = rb_convert_type(shape_v, T_ARRAY, "Array", "to_ary");
 
   /* TODO: check INT_MAX */
   ndim = (int)RARRAY_LEN(shape_v);

@@ -146,6 +146,7 @@ module MXNet
         expect(x.reshape([3, 2]).shape).to eq([3, 2])
         expect(x.reshape([2, 2]).shape).to eq([2, 2])
         expect { x.reshape([2, 2, 2]) }.to raise_error(MXNet::Error, /target shape size is larger current shape/)
+        expect { x.reshape({1 => 2}) }.to raise_error(TypeError, /no implicit conversion of Hash into Array/)
       end
     end
 
