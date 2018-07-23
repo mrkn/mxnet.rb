@@ -124,11 +124,11 @@ imperative_invoke(VALUE mod, VALUE handle, VALUE ndargs, VALUE keys, VALUE vals,
   void **inputs, **outputs = NULL;
   char const **params_keys, **params_vals;
 
-  ndargs = rb_check_convert_type(ndargs, T_ARRAY, "Array", "to_ary");
-  keys = rb_check_convert_type(keys, T_ARRAY, "Array", "to_ary");
-  vals = rb_check_convert_type(vals, T_ARRAY, "Array", "to_ary");
+  ndargs = rb_convert_type(ndargs, T_ARRAY, "Array", "to_ary");
+  keys = rb_convert_type(keys, T_ARRAY, "Array", "to_ary");
+  vals = rb_convert_type(vals, T_ARRAY, "Array", "to_ary");
   if (!NIL_P(out) && !RTEST(rb_obj_is_kind_of(out, mxnet_cNDArray))) {
-    out = rb_check_convert_type(out, T_ARRAY, "Array", "to_ary");
+    out = rb_convert_type(out, T_ARRAY, "Array", "to_ary");
   }
 
   num_inputs = (int)RARRAY_LEN(ndargs);
@@ -164,7 +164,7 @@ imperative_invoke(VALUE mod, VALUE handle, VALUE ndargs, VALUE keys, VALUE vals,
       outputs[0] = mxnet_ndarray_get_handle(out);
     }
     else {
-      out = rb_check_convert_type(out, T_ARRAY, "Array", "to_ary");
+      out = rb_convert_type(out, T_ARRAY, "Array", "to_ary");
       if (RARRAY_LEN(out) > INT_MAX) {
         rb_raise(rb_eArgError, "too many outputs (%ld)", RARRAY_LEN(out));
       }
@@ -227,8 +227,8 @@ symbol_creator(VALUE mod, VALUE handle, VALUE args, VALUE kwargs, VALUE keys, VA
   char const **params_keys, **params_vals, **sym_keys;
   void **sym_handle, **sym_args;
 
-  keys = rb_check_convert_type(keys, T_ARRAY, "Array", "to_ary");
-  vals = rb_check_convert_type(vals, T_ARRAY, "Array", "to_ary");
+  keys = rb_convert_type(keys, T_ARRAY, "Array", "to_ary");
+  vals = rb_convert_type(vals, T_ARRAY, "Array", "to_ary");
 
   num_params = (int)RARRAY_LEN(keys);
   keys_str = rb_str_tmp_new(sizeof(char const **)*num_params);
