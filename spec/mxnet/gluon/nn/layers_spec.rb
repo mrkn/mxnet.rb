@@ -133,22 +133,34 @@ RSpec.describe MXNet::Gluon::NN::Dense do
       MXNet::NDArray.array([-1])
     end
 
-    let(:kwargs) do
-      {weight: weight, bias: bias}
+    context 'without bias' do
+      let(:kwargs) do
+        {weight: weight}
+      end
+
+      let(:output) do
+        [[1.5]]
+      end
+
+      it 'runs a forward pass' do
+        expect(layer.hybrid_forward(MXNet::NDArray, data, kwargs).to_narray.to_a)
+          .to eq(output)
+      end
     end
 
-    let(:output) do
-      [[0.5]]
-    end
+    context 'with bias' do
+      let(:kwargs) do
+        {weight: weight, bias: bias}
+      end
 
-    it 'accepts keyword arguments' do
-      expect(layer.hybrid_forward(MXNet::NDArray, data, kwargs).to_narray.to_a)
-        .to eq(output)
-    end
+      let(:output) do
+        [[0.5]]
+      end
 
-    it 'accepts positional arguments' do
-      expect(layer.hybrid_forward(MXNet::NDArray, data, weight, bias).to_narray.to_a)
-        .to eq(output)
+      it 'runs a forward pass' do
+        expect(layer.hybrid_forward(MXNet::NDArray, data, kwargs).to_narray.to_a)
+          .to eq(output)
+      end
     end
   end
 end
@@ -214,28 +226,43 @@ RSpec.describe MXNet::Gluon::NN::Internal::Conv do
     end
 
     let(:bias) do
-      MXNet::NDArray.zeros(1)
+      MXNet::NDArray.array([-1])
     end
 
-    let(:kwargs) do
-      {weight: weight, bias: bias}
+    context 'without bias' do
+      let(:kwargs) do
+        {weight: weight}
+      end
+
+      let(:output) do
+        [[[[10, 14, 18],
+           [26, 30, 34],
+           [42, 46, 50]
+          ]]]
+      end
+
+      it 'runs a forward pass' do
+        expect(layer.hybrid_forward(MXNet::NDArray, data, kwargs).to_narray.to_a)
+          .to eq(output)
+      end
     end
 
-    let(:output) do
-      [[[[10, 14, 18],
-         [26, 30, 34],
-         [42, 46, 50]
-        ]]]
-    end
+    context 'with bias' do
+      let(:kwargs) do
+        {weight: weight, bias: bias}
+      end
 
-    it 'accepts keyword arguments' do
-      expect(layer.hybrid_forward(MXNet::NDArray, data, kwargs).to_narray.to_a)
-        .to eq(output)
-    end
+      let(:output) do
+        [[[[ 9, 13, 17],
+           [25, 29, 33],
+           [41, 45, 49]
+          ]]]
+      end
 
-    it 'accepts positional arguments' do
-      expect(layer.hybrid_forward(MXNet::NDArray, data, weight, bias).to_narray.to_a)
-        .to eq(output)
+      it 'runs a forward pass' do
+        expect(layer.hybrid_forward(MXNet::NDArray, data, kwargs).to_narray.to_a)
+          .to eq(output)
+      end
     end
 
     context 'with `strides: 2`' do
@@ -243,9 +270,13 @@ RSpec.describe MXNet::Gluon::NN::Internal::Conv do
         described_class.new(**newargs.merge(strides: 2))
       end
 
+      let(:kwargs) do
+        {weight: weight, bias: bias}
+      end
+
       let(:output) do
-        [[[[10, 18],
-           [42, 50]
+        [[[[ 9, 17],
+           [41, 49]
           ]]]
       end
 
@@ -260,12 +291,16 @@ RSpec.describe MXNet::Gluon::NN::Internal::Conv do
         described_class.new(**newargs.merge(padding: 1))
       end
 
+      let(:kwargs) do
+        {weight: weight, bias: bias}
+      end
+
       let(:output) do
-        [[[[ 0,  1,  3,  5,  3],
-           [ 4, 10, 14, 18, 10],
-           [12, 26, 30, 34, 18],
-           [20, 42, 46, 50, 26],
-           [12, 25, 27, 29, 15]
+        [[[[-1,  0,  2,  4,  2],
+           [ 3,  9, 13, 17,  9],
+           [11, 25, 29, 33, 17],
+           [19, 41, 45, 49, 25],
+           [11, 24, 26, 28, 14]
           ]]]
       end
 
@@ -280,9 +315,13 @@ RSpec.describe MXNet::Gluon::NN::Internal::Conv do
         described_class.new(**newargs.merge(dilation: 2))
       end
 
+      let(:kwargs) do
+        {weight: weight, bias: bias}
+      end
+
       let(:output) do
-        [[[[20, 24],
-           [36, 40]
+        [[[[19, 23],
+           [35, 39]
           ]]]
       end
 
