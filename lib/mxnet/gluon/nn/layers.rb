@@ -112,9 +112,7 @@ module MXNet::Gluon::NN
         end
       end
     end
-    def hybrid_forward(clazz, data, weight = nil, bias = nil, **kwargs)
-      weight ||= kwargs[:weight]
-      bias ||= kwargs[:bias]
+    def hybrid_forward(clazz, data, weight:, bias: nil)
       out = clazz.FullyConnected(
         data,
         weight,
@@ -239,14 +237,9 @@ module MXNet::Gluon::NN
           end
         end
       end
-      def hybrid_forward(clazz, data, weight = nil, bias = nil, **kwargs)
-        weight ||= kwargs[:weight]
-        bias ||= kwargs[:bias]
-        if bias.nil?
-          out = clazz.send(@op_name, data, weight, **@kwargs)
-        else
-          out = clazz.send(@op_name, data, weight, bias, **@kwargs)
-        end
+      def hybrid_forward(clazz, data, weight:, bias: nil)
+        kwargs = @kwargs.merge(no_bias: bias.nil?)
+        out = clazz.send(@op_name, data, weight, bias, **kwargs)
         if self.act
           out = self.act[out]
         end
