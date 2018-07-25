@@ -12,14 +12,21 @@ module MXNet::Gluon
   # is initialized with #init. Also holds a gradient array on each
   # Context.
   #
-  # ====Parameters
-  #
-  # +name+::  (string) Name of this parameter.
-  # +shape+:: (integer or array of integers) Shape of this parameter.
-  #           By default shape is not specified.
-  #
   class Parameter
-    def initialize(name, shape: nil, dtype: :float32, allow_deferred_init: false)
+    ##
+    # Creates a new instance.
+    #
+    # ====Parameters
+    #
+    # +name+::  (string)
+    #           Name of this parameter.
+    # +shape+:: (integer or array of integers)
+    #           Shape of this parameter.  By default, shape is not
+    #           specified.
+    # +dtype+:: (symbol or string, default +:float32+)
+    #           Data type of this parameter.
+    #
+    def initialize(name, shape: nil, dtype: :float32)
       @var = nil
       @name = name
       shape = [shape] if shape.is_a?(Integer)
@@ -139,7 +146,8 @@ module MXNet::Gluon
     #
     # ====Parameters
     #
-    # +ctx+:: (Context) Desired context.
+    # +ctx+:: (Context)
+    #         Desired context.
     #
     # ====Returns
     #
@@ -248,17 +256,22 @@ module MXNet::Gluon
   ##
   # A dictionary managing a set of Parameters.
   #
-  # ====Parameters
-  #
-  # +prefix+:: (string, default "") The prefix to be prepended to all
-  #            Parameters' names created by this dict.
-  # +shared+:: (ParameterDict or +nil+) If not +nil+, when this dict's
-  #            #get method creates a new parameter, will first try to
-  #            retrieve it from "shared" dict. Usually used for
-  #            sharing parameters with another Block.
-  #
   class ParameterDict
     include Enumerable
+    ##
+    # Creates a new instance.
+    #
+    # ====Parameters
+    #
+    # +prefix+:: (string, default "")
+    #            The prefix to be prepended to all Parameters' names
+    #            created by this dict.
+    # +shared+:: (ParameterDict or +nil+)
+    #            If not +nil+, when this dict's #get method creates a
+    #            new parameter, will first try to retrieve it from
+    #            "shared" dict. Usually used for sharing parameters
+    #            with another Block.
+    #
     def initialize(prefix: '', shared: nil)
       @params = {}
       @prefix = prefix
@@ -288,8 +301,9 @@ module MXNet::Gluon
     #
     # ====Parameters
     #
-    # +name+:: (string) Name of the desired Parameter. It will be
-    #          prepended with this dict's prefix.
+    # +name+:: (string)
+    #          Name of the desired Parameter. It will be prepended
+    #          with this dict's prefix.
     #
     # ====Returns
     #
@@ -319,6 +333,8 @@ module MXNet::Gluon
     ##
     # Initializes all Parameters managed by this dict to be used for
     # NDArray API. It has no effect when using Symbol API.
+    #
+    # ====Parameters
     #
     # +init+::         (Initializer, default +nil+)
     #                  The initializer to use.
