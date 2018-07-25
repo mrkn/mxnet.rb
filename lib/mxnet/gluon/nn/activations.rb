@@ -22,5 +22,11 @@ module MXNet::Gluon::NN
     def hybrid_forward(clazz, data)
       clazz.Activation(data, act_type: @activation)
     end
+
+    private
+
+    def hint
+      @activation
+    end
   end
 end
