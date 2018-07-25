@@ -25,6 +25,8 @@ module MXNet
       #           specified.
       # +dtype+:: (symbol or string, default +:float32+)
       #           Data type of this parameter.
+      # +init+::  (Initializer, default +nil+)
+      #           The initializer to use.
       def initialize(name, grad_req: :write, shape: nil, dtype: :float32,
                      lr_mult: 1.0, wd_mult: 1.0, init: nil,
                      allow_deferred_init: false, differentiable: true)
@@ -272,7 +274,9 @@ module MXNet
       # ====Parameters
       #
       # +init+::         (Initializer, default +nil+)
-      #                  The initializer to use. Overrides `default_init`.
+      #                  The initializer to use. Overrides both `init`,
+      #                  set when this instance was created, and
+      #                  `default_init` in this call.
       # +ctx+::          (Context or array of Contexts)
       #                  Desired contexts. Initialize Parameter on
       #                  given contexts.
