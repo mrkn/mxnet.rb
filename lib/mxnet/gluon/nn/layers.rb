@@ -32,6 +32,20 @@ module MXNet::Gluon::NN
     end
 
     ##
+    # Returns the number of blocks in the sequential stack.
+    #
+    def length
+      children.length
+    end
+
+    ##
+    # Returns the block at the specified index.
+    #
+    def at(index)
+      children[index]
+    end
+
+    ##
     # Runs a forward pass on all child blocks.
     #
     def forward(data)
