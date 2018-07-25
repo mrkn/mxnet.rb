@@ -77,12 +77,14 @@ module MXNet::Gluon::NN
         self.weight = params.get(
           'weight',
           shape: [units, in_units],
+          init: nil,
           allow_deferred_init: true
         )
         if use_bias
           self.bias = params.get(
             'bias',
             shape: [units],
+            init: :zeros,
             allow_deferred_init: true
           )
         else
@@ -202,12 +204,14 @@ module MXNet::Gluon::NN
           self.weight = self.params.get(
             'weight',
             shape: wshape,
+            init: nil,
             allow_deferred_init: true
           )
           if use_bias
             self.bias = self.params.get(
               'bias',
               shape: bshape,
+              init: :zeros,
               allow_deferred_init: true
             )
           else

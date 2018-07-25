@@ -25,13 +25,17 @@ module MXNet::Gluon
     #           specified.
     # +dtype+:: (symbol or string, default +:float32+)
     #           Data type of this parameter.
+    # +init+::  (Initializer, default +nil+)
+    #           The initializer to use.
     #
-    def initialize(name, shape: nil, dtype: :float32)
+    def initialize(name, shape: nil, dtype: :float32, init: nil,
+                   allow_deferred_init: false)
       @var = nil
       @name = name
       shape = [shape] if shape.is_a?(Integer)
       self.shape = shape
       self.dtype = dtype
+      @init = init
       @data = nil
       @grad = nil
       @deferred_init = []
@@ -78,7 +82,9 @@ module MXNet::Gluon
     # ====Parameters
     #
     # +init+::         (Initializer, default +nil+)
-    #                  The initializer to use. Overrides `default_init`.
+    #                  The initializer to use. Overrides both `init`,
+    #                  set when this instance was created, and
+    #                  `default_init` in this call.
     # +ctx+::          (Context or array of Contexts, default +nil+)
     #                  Desired contexts. Initialize Parameter on given
     #                  contexts. A copy will be made for each
@@ -103,7 +109,7 @@ module MXNet::Gluon
       unless @data.nil? || force_reinit
         return
       end
-      init = default_init if init.nil?
+      init = (@init || default_init) if init.nil?
       ctx = [MXNet.current_context] if ctx.nil?
       ctx = [ctx] if ctx.is_a?(MXNet::Context)
       @ctx = ctx
