@@ -58,7 +58,7 @@ RSpec.describe MXNet::Gluon::Loss::SoftmaxCrossEntropyLoss do
       end
 
       it 'calculates softmax cross-entropy loss' do
-        prediction = MXNet::NDArray.array([0.0, -1.0, 0.0])
+        prediction = MXNet::NDArray.array([0, -1, 0])
         label = MXNet::NDArray.array([1])
         expect(loss.(prediction, label).as_scalar).to be_within(0.001).of(1.000)
       end

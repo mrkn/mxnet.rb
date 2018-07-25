@@ -7,19 +7,20 @@ module MXNet
       # Base class for loss.
       #
       class Base < MXNet::Gluon::HybridBlock
-	##
-	# Creates a new instance.
-	#
-	# ====Parameters
-	#
-	# +weight+::     (float or +nil+)
-	#                Global scalar weight for loss.
-	# +batch_axis+:: (integer, default 0)
-	#                The axis that represents mini-batch.
-	#
-        def initialize(weight: 1.0, batch_axis: 0, **kwargs)
-	  @weight = weight
-	  @batch_axis = batch_axis
+        ##
+        # Creates a new instance.
+        #
+        # ====Parameters
+        #
+        # +weight+::     (float or +nil+)
+        #                Global scalar weight for loss.
+        # +batch_axis+:: (integer)
+        #                The axis that represents the
+        #                mini-batch.
+        #
+        def initialize(weight:, batch_axis:, **kwargs)
+          @weight = weight
+          @batch_axis = batch_axis
           super(**kwargs)
         end
 
@@ -36,18 +37,6 @@ module MXNet
         end
 
         protected
-
-        ##
-        # Reshapes x to be the same shape as y.
-        #
-        def reshape_like(clazz, x, y)
-          case clazz
-          when MXNet::NDArray
-            x.reshape(y.shape)
-          else
-            clazz.reshape_like(x, y)
-          end
-        end
 
         ##
         # Apply weighting to loss.
@@ -69,14 +58,13 @@ module MXNet
         #
         # Weighted loss
         #
-        #
         def apply_weighting(clazz, loss, weight = nil, sample_weight = nil)
+          unless sample_weight.nil?
+            loss = clazz.broadcast_mul(loss, sample_weight)
+          end
           unless weight.nil?
             raise ArgumentError, 'weight must be numeric' unless weight.is_a?(Numeric)
             loss = loss * weight
-          end
-          unless sample_weight.nil?
-            loss = clazz.broadcast_mul(loss, sample_weight)
           end
           loss
         end
@@ -94,17 +82,17 @@ module MXNet
         #
         # ====Parameters
         #
-        # +weight+::     (float or +nil+)
+        # +weight+::     (float or +nil+, default +nil+)
         #                Global scalar weight for loss.
         # +batch_axis+:: (integer, default 0)
         #                The axis that represents mini-batch.
         #
-        def initialize(**kwargs)
-          super(**kwargs)
+        def initialize(weight: nil, batch_axis: 0, **kwargs)
+          super(weight: weight, batch_axis: batch_axis, **kwargs)
         end
 
         def hybrid_forward(clazz, prediction, label, sample_weight: nil)
-          label = reshape_like(clazz, label, prediction)
+          label = clazz.reshape_like(label, prediction)
           loss = clazz.abs(prediction - label)
           loss = apply_weighting(clazz, loss, @weight, sample_weight)
           clazz.mean(loss, axis: @batch_axis, exclude: true)
@@ -123,19 +111,19 @@ module MXNet
         #
         # ====Parameters
         #
-        # +weight+::     (float or +nil+)
+        # +weight+::     (float or +nil+, default 1.0)
         #                Global scalar weight for loss.
         # +batch_axis+:: (integer, default 0)
         #                The axis that represents mini-batch.
         #
-        def initialize(**kwargs)
-          super(**kwargs)
+        def initialize(weight: 1.0, batch_axis: 0, **kwargs)
+          super(weight: weight, batch_axis: batch_axis, **kwargs)
         end
 
         def hybrid_forward(clazz, prediction = nil, label = nil, sample_weight: nil, **kwargs)
           prediction ||= kwargs[:prediction]
           label ||= kwargs[:label]
-          label = reshape_like(clazz, label, prediction)
+          label = clazz.reshape_like(label, prediction)
           loss = clazz.square(prediction - label)
           loss = apply_weighting(clazz, loss, @weight/2, sample_weight)
           clazz.mean(loss, axis: @batch_axis, exclude: true)
@@ -144,6 +132,16 @@ module MXNet
 
       ##
       # Computes the softmax cross-entropy loss.
+      #
+      # If +sparse_label+ is +true+ (default), labels should contain
+      # integer category indicators. The labels' shape should be the
+      # predictions' shape with the +axis+ dimension removed -- i.e. for
+      # predictions with shape <tt>[1, 2, 3, 4]</tt> and <tt>axis: 2</tt>,
+      # labels' shape should be <tt>[1, 2, 4]</tt>.
+      #
+      # If +sparse_label+ is +false+, labels should contain probability
+      # distributions and labels' shape should be the same as
+      # predictions' shape.
       #
       class SoftmaxCrossEntropyLoss < Base
         ##
@@ -158,19 +156,20 @@ module MXNet
         #                  Whether label is an integer array instead of
         #                  probability distribution.
         # +from_logits+::  (boolean, default +false+)
-        #                  Whether input is a log probability (usually
-        #                  from #log_softmax) instead of unnormalized
-        #                  numbers.
-        # +weight+::       (float or +nil+)
+        #                  Whether prediction is a log probability
+        #                  (usually from #log_softmax) instead of
+        #                  unnormalized numbers.
+        # +weight+::       (float or +nil+, default +nil+)
         #                  Global scalar weight for loss.
         # +batch_axis+::   (integer, default 0)
         #                  The axis that represents mini-batch.
         #
-        def initialize(axis: -1, sparse_label: true, from_logits: false, **kwargs)
+        def initialize(axis: -1, sparse_label: true, from_logits: false,
+                       weight: nil, batch_axis: 0, **kwargs)
           @axis = axis
           @sparse_label = sparse_label
           @from_logits = from_logits
-          super(**kwargs)
+          super(weight: weight, batch_axis: batch_axis, **kwargs)
         end
 
         def hybrid_forward(clazz, prediction, label, sample_weight: nil)
@@ -180,7 +179,7 @@ module MXNet
           if @sparse_label
             loss = -clazz.pick(prediction, label, axis: @axis, keepdims: true)
           else
-            label = reshape_like(clazz, label, prediction)
+            label = clazz.reshape_like(label, prediction)
             loss = -clazz.sum(prediction * label, axis: @axis, keepdims: true)
           end
           loss = apply_weighting(clazz, loss, @weight, sample_weight)
