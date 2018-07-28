@@ -227,7 +227,7 @@ module MXNet
         end
 
         MXNet::Autograd.pause do
-          if data.nil?
+          unless data
             data = MXNet::NDArray.zeros(self.shape, dtype: self.dtype, ctx: MXNet.cpu)
             MXNet::Init.create(default_init).call(
               MXNet::Init::InitDesc.new(@name, {__init__: initializer}),
@@ -336,7 +336,19 @@ module MXNet
 
       # Sets this parameter's value on all contexts.
       def data=(data)
-        # TODO:
+        self.shape = data.shape
+
+        unless @_data
+          unless @deferred_init.empty?
+            @deferred_init[2] = data
+          else
+            raise RuntimeError, "Parameter '#{@name}' has not been initialized."
+          end
+        end
+
+        list_data.each do |arr|
+          arr[0..-1] = data
+        end
       end
 
       # Returns a copy of this parameter on one context. Must have been

@@ -191,6 +191,20 @@ RSpec.describe MXNet::Gluon::Parameter do
     end
   end
 
+  describe '#var' do
+    let(:parameter) do
+      described_class.new('foo')
+    end
+
+    it 'returns a symbol' do
+      expect(parameter.var).to be_a(MXNet::Symbol)
+    end
+
+    it 'has the symbolized name of the parameter' do
+      expect(parameter.var.name).to eq(:foo)
+    end
+  end
+
   describe '#data' do
     let(:parameter) do
       MXNet::Gluon::Parameter.new('foo', shape: [1])
@@ -216,10 +230,23 @@ RSpec.describe MXNet::Gluon::Parameter do
     end
   end
 
-  describe '#zero_grad' do
-    # TODO:
-    xspecify do
-      param = MXNet::Gluon::Parameter.new(:param)
+  describe '#data=' do
+    let(:parameter) do
+      described_class.new('foo', shape: [1])
+    end
+
+    let(:data) do
+      MXNet::NDArray.ones([1])
+    end
+
+    it 'fails if the parameter has not been initialized' do
+      expect { parameter.data = data }.to raise_error(RuntimeError)
+    end
+
+    it 'sets the data' do
+      parameter.init
+      parameter.data = data
+      expect(parameter.data.to_a).to eq([1])
     end
   end
 
@@ -227,22 +254,43 @@ RSpec.describe MXNet::Gluon::Parameter do
     let(:parameter) do
       MXNet::Gluon::Parameter.new('foo', shape: [1])
     end
+
     it 'fails if the parameter has not been initialized' do
       expect{parameter.grad}.to raise_error(RuntimeError)
     end
+
     it 'fails if the parameter has not been initialized on the specified context' do
       parameter.init(ctx: MXNet.cpu)
       expect{parameter.grad(ctx: MXNet.gpu)}.to raise_error(RuntimeError)
     end
+
     it 'succeeds if the parameter has been initialized on the specified context' do
       parameter.init(ctx: MXNet.cpu)
       expect{parameter.grad(ctx: MXNet.cpu)}.not_to raise_error
     end
+
     it 'returns the initialized grad' do
       parameter.init
       expect(parameter.grad).to be_a(MXNet::NDArray)
     end
   end
+
+  describe '#zero_grad' do
+    let(:parameter) do
+      described_class.new('foo', shape: [1])
+    end
+
+    it 'fails if the parameter has not been initialized' do
+      expect{parameter.zero_grad}.to raise_error(RuntimeError)
+    end
+
+    it 'sets the grad' do
+      parameter.init
+      parameter.zero_grad
+      expect(parameter.grad.to_a).to eq([0])
+    end
+  end
+
   describe '#shape=' do
     context 'with no shape' do
       let(:parameter) do
@@ -253,6 +301,7 @@ RSpec.describe MXNet::Gluon::Parameter do
         expect(parameter.shape).to eq([1, 2])
       end
     end
+
     context 'with incomplete shape' do
       let(:parameter) do
         MXNet::Gluon::Parameter.new('foo', shape: [1, 0, 3])
@@ -262,6 +311,7 @@ RSpec.describe MXNet::Gluon::Parameter do
         expect(parameter.shape).to eq([1, 2, 3])
       end
     end
+
     context 'with shape' do
       let(:parameter) do
         MXNet::Gluon::Parameter.new('foo', shape: [1, 2])
