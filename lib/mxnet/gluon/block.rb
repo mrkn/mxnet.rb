@@ -180,6 +180,74 @@ module MXNet::Gluon
       ret
     end
     ##
+    # Saves parameters to file.
+    #
+    # Note that this method only saves parameters, not model
+    # structure. If you want to save model structures, use
+    # HybridBlock#export.
+    #
+    # For reference see: "Saving and Loading Gluon Models"
+    # (https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html).
+    #
+    # ====Parameters
+    #
+    # +filename+:: (string)
+    #              Path to file.
+    #
+    def save_parameters(filename)
+      # NOTE: invoking private method on Parameter
+      params = collect_params_for_storage.transform_values { |p| p.send(:reduce) }
+      MXNet::NDArray.save(filename, params)
+    end
+    ##
+    # Loads parameters from file.
+    #
+    # For reference see: "Saving and Loading Gluon Models"
+    # (https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html).
+    #
+    # ====Parameters
+    #
+    # +filename+::      (string)
+    #                   Path to file.
+    # +ctx+::           (Context or array of Context, default cpu)
+    #                   Context(s) to initialize loaded parameters on.
+    # +allow_missing+:: (boolean, default +false+)
+    #                   Whether to silently skip parameters not
+    #                   present in the file.
+    # +ignore_extra+::  (boolean, default +false+)
+    #                   Whether to silently ignore parameters not
+    #                   present in this block.
+    #
+    def load_parameters(filename, ctx = MXNet.cpu,
+                        allow_missing: false,
+                        ignore_extra: false)
+      params = collect_params_for_storage
+      loaded = MXNet::NDArray.load(filename)
+      unless allow_missing
+        params.each do |key, value|
+          unless loaded.has_key?(key)
+            raise RuntimeError,
+                  "Parameter '#{key}' is missing in file '#{filename}'. " \
+                  "Set allow_missing: true to ignore missing parameters."
+          end
+        end
+      end
+      unless ignore_extra
+        loaded.each do |key, value|
+          unless params.has_key?(key)
+            raise RuntimeError,
+                  "Parameter '#{key}' loaded from file '#{filename}' is " \
+                  "not present in this block. Set ignore_extra: true to " \
+                  "ignore extra parameters."
+          end
+        end
+      end
+      params.each do |key, value|
+        # NOTE: invoking private method on Parameter
+        params[key].send(:load_and_init, ctx, loaded[key])
+      end
+    end
+    ##
     # Registers block as a child of self. Blocks assigned as
     # attributes will be registered automatically.
     #
@@ -204,6 +272,18 @@ module MXNet::Gluon
     #
     def forward(*args)
       raise NotImplementedError
+    end
+    protected
+    def collect_params_for_storage(prefix = '')
+      prefix += '.' unless prefix.empty?
+      {}.tap do |hash|
+        @reg_parameters.each do |key, param|
+          hash[prefix + key] = param
+        end
+        @reg_children.each do |key, child|
+          hash.merge!(child.collect_params_for_storage(prefix + key))
+        end
+      end
     end
     private
     def method_missing(sym, *args)

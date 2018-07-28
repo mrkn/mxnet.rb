@@ -120,10 +120,10 @@ module MXNet::Gluon
                 "Cannot initialize Parameter '#{@name}' because it has " \
                 "invalid shape: #{@shape}."
         end
-        @deferred_init = [ctx, init]
+        @deferred_init = [ctx, init, nil]
         return
       end
-      @deferred_init = [ctx, init]
+      @deferred_init = [ctx, init, nil]
       finish_deferred_init
     end
     ##
@@ -174,6 +174,23 @@ module MXNet::Gluon
       check_and_get(@data, :all)
     end
     ##
+    # Sets this parameter's value on all contexts.
+    #
+    def set_data(data)
+      @shape = data.shape
+      if @data
+        check_and_get(@data, :all).each do |arr|
+          arr[0..-1] = data
+        end
+      else
+        unless @deferred_init.empty?
+          @deferred_init[2] = data
+        else
+          raise RuntimeError, "Parameter '#{@name}' has not been initialized."
+        end
+      end
+    end
+    ##
     # Returns a gradient buffer for this parameter on one context.
     # Must have been initialized on this context before.
     #
@@ -199,6 +216,20 @@ module MXNet::Gluon
     def list_grad
       check_and_get(@grad, :all)
     end
+    ##
+    # Sets gradient buffer to zero on all contexts.
+    #
+    def zero_grad
+      if @grad
+        check_and_get(@grad, :all).each do |arr|
+          arr[0..-1] = 0
+        end
+      else
+        if @deferred_init.empty?
+          raise RuntimeError, "Parameter '#{@name}' has not been initialized."
+        end
+      end
+    end
     def to_s
       "Parameter #{@name} (shape=#{@shape.inspect}, dtype=#{MXNet::DType.id2name(@dtype)})"
     end
@@ -208,6 +239,13 @@ module MXNet::Gluon
       false
     end
     private
+    ##
+    # Reduce data from multiple contexts to cpu.
+    #
+    def reduce
+      data = list_data.map { |d| d.copy_to(MXNet.cpu) }
+      MXNet::NDArray.add_n(*data) / data.length
+    end
     def check_and_get(arr_list, ctx)
       unless arr_list.nil?
         if ctx == :all
@@ -237,9 +275,17 @@ module MXNet::Gluon
             "instead of #params because the later does not include Parameters " \
             "of nested child Blocks."
     end
+    def load_and_init(ctx, data)
+      ctx = ctx.is_a?(MXNet::Context) ? [ctx] : ctx
+      if @data
+        set_data(data)
+      else
+        init_impl(ctx, data)
+      end
+    end
     def finish_deferred_init
       return if @deferred_init.empty?
-      ctx, default_init = @deferred_init
+      ctx, default_init, data = @deferred_init
       @deferred_init = []
       if @shape.nil? || @shape.flatten.inject(&:*) <= 0
         raise RuntimeError,
@@ -247,16 +293,24 @@ module MXNet::Gluon
               "invalid shape: #{@shape}."
       end
       MXNet::Autograd.pause do
-        data = MXNet::NDArray.zeros(@shape, dtype: @dtype, ctx: MXNet.cpu)
-        MXNet::Initializer.create(default_init)[data]
-        @data = ctx.map { |c| data.copy_to(c) }
-        grad = MXNet::NDArray.zeros(@shape, dtype: @dtype, ctx: MXNet.cpu)
-        @grad = ctx.map { |c| grad.copy_to(c) }
-        MXNet::Autograd.mark_variables(
-          check_and_get(@data, :all),
-          check_and_get(@grad, :all)
-        )
+        unless data
+          data = MXNet::NDArray.zeros(@shape, dtype: @dtype, ctx: MXNet.cpu)
+          MXNet::Initializer.create(default_init)[data]
+        end
+        init_impl(ctx, data)
       end
+    end
+    def init_impl(ctx, data)
+      @data = ctx.map { |c| data.copy_to(c) }
+      grad = MXNet::NDArray.zeros(@shape, dtype: @dtype, ctx: MXNet.cpu)
+      init_grad(ctx, grad)
+    end
+    def init_grad(ctx, grad)
+      @grad = ctx.map { |c| grad.copy_to(c) }
+      MXNet::Autograd.mark_variables(
+        check_and_get(@data, :all),
+        check_and_get(@grad, :all)
+      )
     end
   end
   ##

@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'tempfile'
 require 'mxnet/gluon/block'
 require 'mxnet/gluon/parameter'
 require 'mxnet/ndarray'
@@ -114,6 +115,71 @@ RSpec.describe MXNet::Gluon::Block do
         params.get('qoz')
       end
       expect(block.collect_params(/_q/)).to eq(params)
+    end
+  end
+  describe '#save_parameters' do
+    let(:file) do
+      Tempfile.new('foo').path
+    end
+    let(:data) do
+      ['120100000000000000000000000000000100000000000000c9fa93f900000000' \
+       '0100000002000000000000000100000000000000000000000000000000000000' \
+       '01000000000000000300000000000000666f6f'
+      ].pack('H*').force_encoding('utf-8')
+    end
+    let(:block) do
+      described_class.new.tap do |block|
+        block.foo = block.params.get('foo', shape: [2], init: :zeros)
+        block.init
+      end
+    end
+    it 'creates a file with the parameter data' do
+      block.save_parameters(file)
+      expect(File.open(file).read).to eq(data)
+    end
+  end
+  describe '#load_parameters' do
+    let(:file) do
+      Tempfile.new('foo').path
+    end
+    let(:data) do
+      ['120100000000000000000000000000000100000000000000c9fa93f900000000' \
+       '01000000020000000000000001000000000000000000000098f6543cdccbf63c' \
+       '01000000000000000300000000000000666f6f'
+      ].pack('H*').force_encoding('utf-8')
+    end
+    let(:block) do
+      described_class.new.tap do |block|
+        block.foo = block.params.get('foo', shape: [2], init: :zeros)
+        block.init
+      end
+    end
+    before do
+      File.open(file, 'wb') { |f| f.write(data) }
+    end
+    it 'loads parameter data from a file' do
+      block.load_parameters(file)
+      expect(block.foo.data.to_a)
+        .to match_array([
+                          be_within(0.0001).of(0.0129982),
+                          be_within(0.0001).of(0.0301265)
+                        ])
+    end
+    context 'with mismatched parameters' do
+      let(:block) do
+        described_class.new.tap do |block|
+          block.bar = block.params.get('bar', shape: [2], init: :zeros)
+          block.init
+        end
+      end
+      it 'to raise error about missing parameter' do
+        expect{block.load_parameters(file, ignore_extra: true)}
+          .to raise_error(RuntimeError, /allow_missing: true/)
+      end
+      it 'to raise error about extra parameter' do
+        expect{block.load_parameters(file, allow_missing: true)}
+          .to raise_error(RuntimeError, /ignore_extra: true/)
+      end
     end
   end
   describe '#forward' do
