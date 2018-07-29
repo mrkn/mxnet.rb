@@ -353,6 +353,20 @@ module MXNet
         @children[name] = block
       end
 
+      # Activates or deactivates HybridBlock children recursively. Has
+      # no effect on non-hybrid children.
+      #
+      # ====Parameters
+      #
+      # +active+:: (boolean, default +true+)
+      #            Whether to turn hybridization on or off.
+      #
+      def hybridize(active: true, **kwargs)
+        @children.each_value do |child|
+          child.hybridize(active: active, **kwargs)
+        end
+      end
+
       # Override to implement forward computation using NDArray. Only
       # accepts positional arguments.
       #
@@ -377,6 +391,9 @@ module MXNet
       def initialize(*args, **kwargs)
         super
         @cached_graph = nil
+        @cached_op = nil
+        @active = false
+        @flags = []
       end
 
       def register_child(block, name=nil)
@@ -387,7 +404,19 @@ module MXNet
                 "Sequential, please try HybridSequential instead."
         end
         super
-        # _clear_cached_op
+        _clear_cached_op
+      end
+
+      def __setattr__(name, value)
+        super
+        _clear_cached_op if value.is_a?(HybridBlock)
+      end
+
+      def hybridize(active: true, **kwargs)
+        @active = active
+        @flags = kwargs
+        _clear_cached_op
+        super
       end
 
       # Defines the forward computation. Arguments can be either Symbol
@@ -400,10 +429,16 @@ module MXNet
       def forward(*args)
         case args.first
         when MXNet::Symbol
-          kwargs = {}
+          kwargs = @reg_params.inject({}) do |acc, (i, j)|
+            acc[i.to_sym] = j.var
+            acc
+          end
           hybrid_forward(MXNet::Symbol, *args, **kwargs)
         when MXNet::NDArray
           ctx = args.first.context
+          if @active
+            return call_cached_graph(*args)
+          end
           begin
             kwargs = @reg_params.inject({}) do |acc, (i, j)|
               acc[i.to_sym] = j.data(ctx: ctx)
@@ -419,7 +454,9 @@ module MXNet
           end
           hybrid_forward(MXNet::NDArray, *args, **kwargs)
         else
-          raise ArgumentError, 'only Symbol or NDArray are supported'
+          raise ArgumentError,
+                'only Symbol or NDArray are supported, ' \
+                "not #{args.first.class}"
         end
       end
 
@@ -486,6 +523,30 @@ module MXNet
           end
       end
 
+      def get_cached_op(*args)
+        @cached_op ||=
+          begin
+            _, output = get_graph(*args)
+            inputs = collect_params.values
+            [inputs, output, MXNet::CachedOp.new(output, @flags)]
+          end
+      end
+
+      def call_cached_graph(*args)
+        inputs, _, cached_op = get_cached_op(*args)
+        begin
+          data = inputs.map(&:data)
+          cached_op.call(*(args + data))
+        rescue MXNet::Gluon::DeferredInitializationError
+          deferred_infer_shape(*args)
+          inputs.each do |input|
+            # NOTE: invoking private method on Parameter
+            input.send(:finish_deferred_init)
+          end
+          retry
+        end
+      end
+
       private def _flatten(args)
         case args
         when MXNet::NDArray
@@ -528,8 +589,9 @@ module MXNet
               "NDArray, but got #{args} of type #{args.class}"
       end
 
-      def clear_cacheed_op
+      def _clear_cached_op
         @cached_graph = nil
+        @cached_op = nil
       end
     end
   end
