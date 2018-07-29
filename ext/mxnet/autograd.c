@@ -57,7 +57,7 @@ autograd_s_mark_variables(int argc, VALUE *argv, VALUE mod)
 {
   int state = 0;
   VALUE result;
-  struct mark_variables_args args;
+  struct mark_variables_args args = {0};
 
   rb_scan_args(argc, argv, "2:", &args.vars, &args.grads, &args.opts);
 
