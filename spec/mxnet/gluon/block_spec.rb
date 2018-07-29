@@ -187,18 +187,31 @@ RSpec.describe MXNet::Gluon::Block do
       described_class.new
     end
     it 'is not implemented' do
-      expect{block.forward(MXNet::NDArray.array([]))}.to raise_error(NotImplementedError)
+      data = MXNet::NDArray.array([])
+      expect{block.forward(data)}.to raise_error(NotImplementedError)
     end
   end
 end
 
 RSpec.describe MXNet::Gluon::HybridBlock do
   describe '#forward' do
-    let(:block) do
-      described_class.new
-    end
-    it 'is not implemented' do
-      expect{block.forward(MXNet::NDArray.array([]))}.to raise_error(NotImplementedError)
+    context 'when hybridized' do
+      before do
+        stub_const 'Foo', Class.new(described_class)
+      end
+      let(:foo) do
+        Foo.new.tap do |foo|
+          foo.hybridize
+        end
+      end
+      it 'caches the forward operation' do
+        expect(foo).to receive(:hybrid_forward).once.with(MXNet::Symbol, instance_of(MXNet::Symbol), {}) do |c, s|
+          s * s
+        end
+        expect(foo.forward(MXNet::NDArray.array([1, 2, 3])).to_a).to eq([1, 4, 9])
+        expect(foo.forward(MXNet::NDArray.array([2, 3, 1])).to_a).to eq([4, 9, 1])
+        expect(foo.forward(MXNet::NDArray.array([3, 1, 2])).to_a).to eq([9, 1, 4])
+      end
     end
   end
   context 'given a simple model' do

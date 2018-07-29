@@ -256,6 +256,20 @@ module MXNet::Gluon
       @reg_children[name] = block
     end
     ##
+    # Activates or deactivates HybridBlock children recursively. Has
+    # no effect on non-hybrid children.
+    #
+    # ====Parameters
+    #
+    # +active+:: (boolean, default +true+)
+    #            Whether to turn hybridization on or off.
+    #
+    def hybridize(active: true, **kwargs)
+      @reg_children.each do |_, child|
+        child.hybridize(active: active, **kwargs)
+      end
+    end
+    ##
     # Calls #forward. Only accepts positional arguments.
     #
     #
@@ -325,14 +339,28 @@ module MXNet::Gluon
     def initialize(**kwargs)
       super(**kwargs)
       @cached_graph = nil
+      @cached_op = nil
+      @active = false
+      @flags = []
     end
-    def register_child(block, name)
+    def register_child(block, name = nil)
       unless block.is_a?(MXNet::Gluon::HybridBlock)
         raise RuntimeError,
               "Children of a HybridBlock must also be a HybridBlock, " \
               "but #{block} has type #{block.class}. If you are using " \
               "Sequential, please try HybridSequential instead."
       end
+      clear_cache
+      super
+    end
+    def set_attr(name, value)
+      clear_cache if value.is_a?(HybridBlock)
+      super
+    end
+    def hybridize(active: true, **kwargs)
+      @active = active
+      @flags = kwargs
+      clear_cache
       super
     end
     ##
@@ -346,9 +374,15 @@ module MXNet::Gluon
     def forward(*args)
       case args.first
       when MXNet::Symbol
-        kwargs = {}
+        kwargs = @reg_parameters.inject({}) do |acc, (i, j)|
+          acc[i.to_sym] = j.var
+          acc
+        end
         hybrid_forward(MXNet::Symbol, *args, **kwargs)
       when MXNet::NDArray
+        if @active
+          return call_cached_graph(*args)
+        end
         ctx = args.first.context
         begin
           kwargs = @reg_parameters.inject({}) do |acc, (i, j)|
@@ -365,7 +399,9 @@ module MXNet::Gluon
         end
         hybrid_forward(MXNet::NDArray, *args, **kwargs)
       else
-        raise ArgumentError, 'only Symbol or NDArray are supported'
+        raise ArgumentError,
+              "only Symbol or NDArray are supported, " \
+              "not #{args.first.class}"
       end
     end
     ##
@@ -402,8 +438,31 @@ module MXNet::Gluon
           [inputs, hybrid_forward(MXNet::Symbol, *inputs, **params)]
         end
     end
+    def get_cached_op(*args)
+      @cached_op ||=
+        begin
+          _, output = get_graph(*args)
+          inputs = collect_params.values
+          [inputs, output, MXNet::CachedOp.new(output, @flags)]
+        end
+    end
+    def call_cached_graph(*args)
+      inputs, _, cached_op = get_cached_op(*args)
+      begin
+        data = inputs.map(&:data)
+        cached_op.call(*(args + data))
+      rescue MXNet::Gluon::DeferredInitializationError
+        deferred_infer_shape(*args)
+        inputs.each do |input|
+          # NOTE: invoking private method on Parameter
+          input.send(:finish_deferred_init)
+        end
+        retry
+      end
+    end
     def clear_cache
       @cached_graph = nil
+      @cached_op = nil
     end
     ##
     # Infer attributes.
