@@ -113,6 +113,10 @@ init_api_table(VALUE handle)
   INIT_API_TABLE_ENTRY(MXSymbolInferType);
   INIT_API_TABLE_ENTRY(MXSymbolSaveToFile);
   INIT_API_TABLE_ENTRY(MXSymbolSaveToJSON);
+
+  INIT_API_TABLE_ENTRY(MXCreateCachedOpEx);
+  INIT_API_TABLE_ENTRY(MXFreeCachedOp);
+  INIT_API_TABLE_ENTRY(MXInvokeCachedOpEx);
 }
 
 static VALUE
