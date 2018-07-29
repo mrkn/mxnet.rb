@@ -73,6 +73,7 @@ typedef unsigned LONG_LONG uint64_t;
 typedef unsigned int mx_uint;
 typedef unsigned int nn_uint;
 typedef float mx_float;
+typedef void *CachedOpHandle;
 typedef void *ExecutorHandle;
 typedef void *DataIterCreator;
 typedef void *DataIterHandle;
@@ -293,6 +294,19 @@ struct mxnet_api_table {
                             int *complete);
   int (* MXSymbolSaveToFile)(SymbolHandle symbol, const char *fname);
   int (* MXSymbolSaveToJSON)(SymbolHandle symbol, const char **out_json);
+
+  int (* MXCreateCachedOpEx)(SymbolHandle symbol,
+                             int num_flags,
+                             const char **keys,
+                             const char **vals,
+                             CachedOpHandle *cached_op);
+  int (* MXFreeCachedOp)(CachedOpHandle cached_op);
+  int (* MXInvokeCachedOpEx)(CachedOpHandle cached_op,
+                             int num_inputs,
+                             NDArrayHandle *inputs,
+                             int *num_outputs,
+                             NDArrayHandle **outputs,
+                             int **out_stypes);
 };
 
 struct mxnet_api_table *mxnet_get_api_table(void);
@@ -326,6 +340,7 @@ VALUE mxnet_symbol_list_outputs(VALUE obj);
 
 void mxnet_init_libmxnet(void);
 void mxnet_init_autograd(void);
+void mxnet_init_cached_op(void);
 void mxnet_init_executor(void);
 void mxnet_init_io(void);
 void mxnet_init_ndarray(void);

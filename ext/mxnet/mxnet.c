@@ -123,6 +123,8 @@ Init_mxnet(void)
 
   mxnet_init_autograd();
 
+  mxnet_init_cached_op();
+
   mxnet_init_executor();
 
   mxnet_init_io();
