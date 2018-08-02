@@ -166,6 +166,13 @@ module MXNet
       end
     end
 
+    describe '#infer_shape_impl' do
+      specify do
+        x = MXNet::Symbol.var(:x)
+        expect(x.send :infer_shape_impl, false).to eq([nil, nil, nil])
+      end
+    end
+
     describe '#infer_type' do
       specify do
         x = MXNet::Symbol.var(:x)
@@ -176,6 +183,11 @@ module MXNet
         expect(out_type).to eq([:float32])
 
         expect { z.infer_type(x: :int32, y: :float32) }.to raise_error(MXNet::Error, /Incompatible attr in node _plus\d+ at \d+-th input: expected int32, got float32/)
+      end
+
+      specify do
+        x = MXNet::Symbol.var(:x)
+        expect(x.infer_type).to eq([nil, nil, nil])
       end
     end
 
