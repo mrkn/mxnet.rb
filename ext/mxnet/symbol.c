@@ -53,7 +53,7 @@ symbol_initialize(VALUE obj, VALUE handle_v)
 
 /* Gets name of the MXNet::Symbol, this function only works for non-grouped symbol.
  *
- * @return [Symbol]  The name of this symbol, returns `nil` for groupd symbol.
+ * @return [Symbol]  The name of this symbol, returns `nil` for grouped symbol.
  */
 static VALUE
 symbol_get_name(VALUE obj)
@@ -340,6 +340,9 @@ symbol_infer_type(int argc, VALUE *argv, VALUE obj)
 
   rb_scan_args(argc, argv, "0*:", &args, &kwargs);
 
+  if (NIL_P(kwargs)) {
+    kwargs = rb_hash_new();
+  }
   if (RARRAY_LEN(args) != 0 && RHASH_SIZE(kwargs) != 0) {
     rb_raise(rb_eArgError, "Can only specify known argument shapes either by positional or kwargs way.");
   }
@@ -822,6 +825,9 @@ symbol_infer_shape_impl(int argc, VALUE *argv, VALUE obj)
 
   rb_scan_args(argc, argv, "1*:", &partial, &args, &kwargs);
 
+  if (NIL_P(kwargs)) {
+    kwargs = rb_hash_new();
+  }
   if (RARRAY_LEN(args) != 0 && RHASH_SIZE(kwargs) != 0) {
     rb_raise(rb_eArgError, "Can only specify known argument shapes either by positional or kwargs way.");
   }
