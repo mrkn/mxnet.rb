@@ -9,8 +9,8 @@ module MXNet
     # A container holding parameters (weights) of blocks.
     #
     # Parameter holds a copy of the parameter on each Context after it
-    # is initialized with #init. Also holds a gradient array on each
-    # Context.
+    # is initialized with #init. If +grad_req+ is not `:null`, it also
+    # holds a gradient array on each Context.
     #
     class Parameter
       ##
@@ -18,15 +18,26 @@ module MXNet
       #
       # ====Parameters
       #
-      # +name+::  (string)
-      #           Name of this parameter.
-      # +shape+:: (integer or array of integers)
-      #           Shape of this parameter.  By default, shape is not
-      #           specified.
-      # +dtype+:: (symbol or string, default +:float32+)
-      #           Data type of this parameter.
-      # +init+::  (Initializer, default +nil+)
-      #           The initializer to use.
+      # +name+::                (string)
+      #                         Name of this parameter.
+      # +shape+::               (integer or array of integers)
+      #                         Shape of this parameter.  By default,
+      #                         shape is not specified.
+      # +dtype+::               (symbol or string, default +:float32+)
+      #                         Data type of this parameter.
+      # +init+::                (Initializer, default +nil+)
+      #                         The initializer to use.
+      # +allow_deferred_init+:: (boolean, default +false+)
+      #                         Is deferred initialization allowed.
+      # +grad_req+::            (+:write+|+:add+|+:null+, default: +:write+)
+      #                         Specifies how to update gradients.
+      #                         - +:write+ means update is written to
+      #                           the gradient.
+      #                         - +:add+ means update is added to the
+      #                           gradient. Call #zero_grad to clear the
+      #                           gradient when using this option.
+      #                         - +:null+ means a gradient is not
+      #                           supported on this parameter.
       def initialize(name, grad_req: :write, shape: nil, dtype: :float32,
                      lr_mult: 1.0, wd_mult: 1.0, init: nil,
                      allow_deferred_init: false, differentiable: true)
