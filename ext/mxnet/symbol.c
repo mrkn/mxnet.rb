@@ -924,6 +924,98 @@ symbol_infer_shape_impl(int argc, VALUE *argv, VALUE obj)
   }
 }
 
+struct symbol_compose_args {
+  SymbolHandle symbol_handle;
+  mx_uint num_params;
+  char const **keys;
+  void **vals;
+  int cursor;
+};
+
+static VALUE
+call_symbol_compose(VALUE value) {
+  struct symbol_compose_args *args = (struct symbol_compose_args *)value;
+
+  CHECK_CALL(MXNET_API(NNSymbolCompose)(args->symbol_handle,
+                                        NULL,
+                                        args->num_params,
+                                        args->keys,
+                                        args->vals));
+
+  return Qnil;
+}
+
+static int
+check_symbol_compose_kwargs(VALUE key, VALUE val, VALUE kwargs)
+{
+  if (SYMBOL_P(key)) {
+    key = rb_sym_to_s(key);
+  }
+  StringValue(key);
+
+  if (!RTEST(rb_obj_is_kind_of(val, mxnet_cSymbol))) {
+    rb_raise(rb_eTypeError, "wrong argument type %s (expected %"PRIsVALUE")",
+             rb_obj_classname(val), mxnet_cSymbol);
+  }
+
+  rb_hash_aset(kwargs, key, val);
+
+  return ST_CONTINUE;
+}
+
+static int
+collect_symbol_compose_kwargs(VALUE key, VALUE val, VALUE value)
+{
+  struct symbol_compose_args *args = (struct symbol_compose_args *)value;
+
+  args->keys[args->cursor] = StringValueCStr(key);
+  args->vals[args->cursor] = mxnet_get_handle(val);
+  ++args->cursor;
+
+  return ST_CONTINUE;
+}
+
+static VALUE
+symbol_compose(int argc, VALUE *argv, VALUE obj)
+{
+  int state = 0;
+  VALUE kwargs, result, temp;
+  struct symbol_compose_args args = {0};
+  unsigned long n;
+
+  rb_scan_args(argc, argv, ":", &kwargs);
+
+  if (NIL_P(kwargs)) {
+    kwargs = rb_hash_new();
+  }
+
+  n = RHASH_SIZE(kwargs);
+
+  temp = rb_hash_new();
+  rb_hash_foreach(kwargs, check_symbol_compose_kwargs, temp);
+  kwargs = temp;
+
+  args.num_params = (mx_uint)n;
+  args.keys = ALLOC_N(const char *, n);
+  args.vals = ALLOC_N(void *, n);
+  args.cursor = 0;
+
+  rb_hash_foreach(kwargs, collect_symbol_compose_kwargs, (VALUE)&args);
+
+  args.symbol_handle = (SymbolHandle)mxnet_get_handle(obj);
+
+  result = rb_protect((VALUE (*)(VALUE))call_symbol_compose, (VALUE)&args, &state);
+
+  xfree(args.keys);
+  xfree(args.vals);
+
+  if (state) {
+    rb_jump_tag(state);
+  }
+
+  return obj;
+}
+
 void
 mxnet_init_symbol(void)
 {
@@ -949,6 +1041,7 @@ mxnet_init_symbol(void)
 
   rb_define_private_method(cSymbol, "set_attributes", symbol_set_attributes, -1);
   rb_define_private_method(cSymbol, "infer_shape_impl", symbol_infer_shape_impl, -1);
+  rb_define_private_method(cSymbol, "compose", symbol_compose, -1);
 
   mxnet_cSymbol = cSymbol;
 }

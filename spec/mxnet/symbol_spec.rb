@@ -144,6 +144,16 @@ module MXNet
       end
     end
 
+    describe '#compose' do
+      specify do
+        x = MXNet::Symbol.var(:x)
+        y = MXNet::Symbol.var(:y)
+        z = x * y
+        z.send(:compose, x: y)
+        expect(z.list_arguments).to eq([:y])
+      end
+    end
+
     describe '#list_arguments' do
       specify do
         x = MXNet::Symbol.var(:x)

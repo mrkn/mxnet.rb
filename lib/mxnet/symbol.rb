@@ -78,7 +78,7 @@ module MXNet
     #     Error in operator fc1: Shape inconsistent, Provided=[1, 100], inferred shape=[1000, 100]
     #
     # @param *args  Shape of arguments in a positional way. Unknown shape can be marked as nil.
-    # @param **kwargs  Keyword arguments of the knwon shapes.
+    # @param **kwargs  Keyword arguments of the known shapes.
     #
     # @return [Array<Array<Array, nil>>]  Three arrays of argument shapes.
     #   The first array is array of argument shapes.
@@ -126,7 +126,7 @@ module MXNet
     # NATIVE: save
     # NATIVE: to_json
 
-    # Evaluates a symbol given argumens.
+    # Evaluates a symbol given arguments.
     #
     # The `eval` method combines a call to `bind` (which returns an executer)
     # with a call to `forward` (executor method).
