@@ -393,7 +393,7 @@ module MXNet
         @cached_graph = nil
         @cached_op = nil
         @active = false
-        @flags = []
+        @flags = {}
       end
 
       def __setattr__(name, value)
@@ -529,11 +529,11 @@ module MXNet
           begin
             _, output = _get_graph(*args)
             inputs = collect_params.values
-            [inputs, output, MXNet::CachedOp.new(output, @flags)]
+            [inputs, output, MXNet::CachedOp.new(output, **@flags)]
           end
       end
 
-      private def _call_cached_op(*args)
+      protected def _call_cached_op(*args)
         inputs, _, cached_op = _build_cache(*args)
         begin
           data = inputs.map(&:data)
@@ -542,7 +542,7 @@ module MXNet
           deferred_infer_shape(*args)
           inputs.each do |input|
             # NOTE: invoking private method on Parameter
-            input.send(:finish_deferred_init)
+            input.send(:_finish_deferred_init)
           end
           retry
         end
@@ -594,6 +594,88 @@ module MXNet
         @cached_graph = nil
         @cached_op = nil
       end
+    end
+
+    # A block constructed from a Symbol.
+    #
+    class SymbolBlock < MXNet::Gluon::HybridBlock
+      # Creates a new instance.
+      #
+      # =====Parameters
+      #
+      # +output+:: (Symbol)
+      #            The output.
+      # +inputs+:: (array of Symbols)
+      #            The output's arguments that should be used as inputs.
+      # +params+:: (ParameterDict, default: +nil+)
+      #            Dict of arguments and auxiliary states that are not
+      #            inputs.
+      #
+      def initialize(output, inputs, params: nil)
+        super(
+          prefix: '',
+          params: MXNet::Gluon::ParameterDict.new(prefix: '', shared: params)
+        )
+        input_names = inputs.map { |i| i.name.to_sym }
+        output.list_arguments.each do |i|
+          unless input_names.include?(i)
+            self.params.get(i.to_s, allow_deferred_init: true)
+          end
+        end
+        output.list_auxiliary_states.each do |i|
+          unless input_names.include?(i)
+            self.params.get(i.to_s, allow_deferred_init: true, grad_req: :null)
+          end
+        end
+        @cached_graph = [inputs, output]
+        len = lcp(@params.keys).length
+        @reg_parameters =
+          @params.inject({}) do |acc, (name, param)|
+            acc[name[len..-1]] = param
+            acc
+          end
+      end
+
+      def forward(*args)
+        case args.first
+        when MXNet::Symbol
+          @cached_graph[1].dup.tap do |output|
+            kwargs = @cached_graph[0].zip(args).map { |k, v| [k.name, v] }.to_h
+            # NOTE: invoking private method on Symbol
+            output.send(:compose, **kwargs)
+          end
+        when MXNet::NDArray
+          MXNet::Context.with(args.first.context) do |ctx|
+            self._call_cached_op(*args)
+          end
+        else
+          raise ArgumentError,
+                "only Symbol or NDArray are supported, " \
+                "not #{args.first.class}"
+        end
+      end
+
+      def hybrid_forward(clazz, *args)
+        raise NotImplementedError
+      end
+
+      private
+
+      # Gets the longest common prefix of names.
+      def lcp(names)
+        case names.length
+        when 0, 1
+          names.first || ''
+        else
+          min, max = names.minmax
+          i = min.length.times{ |i| break i if min[i] != max[i] }
+          min[0...i]
+        end
+      end
+    end
+
+    def self.SymbolBlock(*args)
+      SymbolBlock.new(*args)
     end
   end
 end
