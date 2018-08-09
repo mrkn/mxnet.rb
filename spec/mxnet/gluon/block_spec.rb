@@ -251,3 +251,41 @@ RSpec.describe MXNet::Gluon::HybridBlock do
     end
   end
 end
+
+RSpec.describe MXNet::Gluon::SymbolBlock do
+  let(:i) do
+    MXNet::Symbol.var('i')
+  end
+  let(:w) do
+    MXNet::Symbol.var('foo0_w')
+  end
+  let(:b) do
+    MXNet::Symbol.var('foo0_b')
+  end
+  let(:o) do
+    i * w + b
+  end
+  describe '.new' do
+    let(:layer) do
+      described_class.new(o, [i])
+    end
+    it 'does not make the free input into a param' do
+      expect{layer.i}.to raise_error(NoMethodError)
+    end
+    it 'makes the weight and bias into params' do
+      expect(layer.w).to be_a(MXNet::Gluon::Parameter)
+      expect(layer.b).to be_a(MXNet::Gluon::Parameter)
+    end
+  end
+  describe '#forward' do
+    let(:layer) do
+      described_class.new(o, [i]).tap do |layer|
+        layer.init(init: :zeros)
+      end
+    end
+    it 'evaluates the symbolized block' do
+      expect(layer.forward(MXNet::NDArray.array([1])).to_a).to eq([0])
+      expect(layer.forward(MXNet::Symbol.var(:z)).list_arguments).to eq([:z, :foo0_w, :foo0_b])
+    end
+  end
+end

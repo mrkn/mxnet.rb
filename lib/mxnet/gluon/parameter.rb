@@ -399,8 +399,8 @@ module MXNet::Gluon
     #
     def get(name, **kwargs)
       name = @prefix + name
-      unless param = _get(name)
-        param = @params[name] = Parameter.new(name, **kwargs)
+      unless param = _get(name.to_sym)
+        param = @params[name.to_sym] = Parameter.new(name, **kwargs)
       else
         param
       end

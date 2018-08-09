@@ -341,7 +341,7 @@ module MXNet::Gluon
       @cached_graph = nil
       @cached_op = nil
       @active = false
-      @flags = []
+      @flags = {}
     end
     def register_child(block, name = nil)
       unless block.is_a?(MXNet::Gluon::HybridBlock)
@@ -383,21 +383,22 @@ module MXNet::Gluon
         if @active
           return call_cached_graph(*args)
         end
-        ctx = args.first.context
-        begin
-          kwargs = @reg_parameters.inject({}) do |acc, (i, j)|
-            acc[i.to_sym] = j.data(ctx: ctx)
-            acc
+        MXNet::Context.with(ctx = args.first.context) do
+          begin
+            kwargs = @reg_parameters.inject({}) do |acc, (i, j)|
+              acc[i.to_sym] = j.data(ctx: ctx)
+              acc
+            end
+          rescue MXNet::Gluon::DeferredInitializationError
+            deferred_infer_shape(*args)
+            @params.each do |_, param|
+              # NOTE: invoking private method on Parameter
+              param.send(:finish_deferred_init)
+            end
+            retry
           end
-        rescue MXNet::Gluon::DeferredInitializationError
-          deferred_infer_shape(*args)
-          @params.each do |_, param|
-            # NOTE: invoking private method on Parameter
-            param.send(:finish_deferred_init)
-          end
-          retry
+          hybrid_forward(MXNet::NDArray, *args, **kwargs)
         end
-        hybrid_forward(MXNet::NDArray, *args, **kwargs)
       else
         raise ArgumentError,
               "only Symbol or NDArray are supported, " \
@@ -424,6 +425,25 @@ module MXNet::Gluon
     def deferred_infer_shape(*args)
       infer_shape(*args)
     end
+    protected
+    def call_cached_graph(*args)
+      inputs, _, cached_op = get_cached_op(*args)
+      begin
+        data = inputs.map(&:data)
+        cached_op.call(*(args + data))
+      rescue MXNet::Gluon::DeferredInitializationError
+        deferred_infer_shape(*args)
+        inputs.each do |input|
+          # NOTE: invoking private method on Parameter
+          input.send(:finish_deferred_init)
+        end
+        retry
+      end
+    end
+    def clear_cache
+      @cached_graph = nil
+      @cached_op = nil
+    end
     private
     def get_graph(*args)
       @cached_graph ||=
@@ -446,24 +466,6 @@ module MXNet::Gluon
           [inputs, output, MXNet::CachedOp.new(output, @flags)]
         end
     end
-    def call_cached_graph(*args)
-      inputs, _, cached_op = get_cached_op(*args)
-      begin
-        data = inputs.map(&:data)
-        cached_op.call(*(args + data))
-      rescue MXNet::Gluon::DeferredInitializationError
-        deferred_infer_shape(*args)
-        inputs.each do |input|
-          # NOTE: invoking private method on Parameter
-          input.send(:finish_deferred_init)
-        end
-        retry
-      end
-    end
-    def clear_cache
-      @cached_graph = nil
-      @cached_op = nil
-    end
     ##
     # Infer attributes.
     #
@@ -477,5 +479,85 @@ module MXNet::Gluon
         value.send("#{attr}=", sdict[value.name.to_sym])
       end
     end
+  end
+  ##
+  # A block constructed from a Symbol.
+  #
+  class SymbolBlock < MXNet::Gluon::HybridBlock
+    ##
+    # Creates a new instance.
+    #
+    # =====Parameters
+    #
+    # +output+:: (Symbol)
+    #            The output.
+    # +inputs+:: (array of Symbols)
+    #            The output's arguments that should be used as inputs.
+    # +params+:: (ParameterDict, default: +nil+)
+    #            Dict of arguments and auxiliary states that are not
+    #            inputs.
+    #
+    def initialize(output, inputs, params: nil)
+      super(
+        prefix: '',
+        params: MXNet::Gluon::ParameterDict.new(prefix: '', shared: params)
+      )
+      input_names = inputs.map { |i| i.name.to_sym }
+      output.list_arguments.each do |i|
+        unless input_names.include?(i)
+          self.params.get(i.to_s, allow_deferred_init: true)
+        end
+      end
+      output.list_auxiliary_states.each do |i|
+        unless input_names.include?(i)
+          self.params.get(i.to_s, allow_deferred_init: true, grad_req: :null)
+        end
+      end
+      @cached_graph = [inputs, output]
+      len = lcp(@params.keys).length
+      @reg_parameters =
+        @params.inject({}) do |acc, (name, param)|
+          acc[name[len..-1]] = param
+          acc
+        end
+    end
+    def forward(*args)
+      case args.first
+      when MXNet::Symbol
+        @cached_graph[1].dup.tap do |output|
+          kwargs = @cached_graph[0].zip(args).map { |k, v| [k.name, v] }.to_h
+          # NOTE: invoking private method on Symbol
+          output.send(:compose, **kwargs)
+        end
+      when MXNet::NDArray
+        MXNet::Context.with(ctx = args.first.context) do
+          self.call_cached_graph(*args)
+        end
+      else
+        raise ArgumentError,
+              "only Symbol or NDArray are supported, " \
+              "not #{args.first.class}"
+      end
+    end
+    def hybrid_forward(clazz, *args)
+      raise NotImplementedError
+    end
+    private
+    ##
+    # Gets the longest common prefix of names.
+    #
+    def lcp(names)
+      case names.length
+      when 0, 1
+        names.first || ''
+      else
+        min, max = names.minmax
+        i = min.length.times{ |i| break i if min[i] != max[i] }
+        min[0...i]
+      end
+    end
+  end
+  def self.SymbolBlock(*args)
+    SymbolBlock.new(*args)
   end
 end
