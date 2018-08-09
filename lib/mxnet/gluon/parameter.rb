@@ -9,8 +9,8 @@ module MXNet::Gluon
   # A Container holding parameters (weights) of Blocks.
   #
   # Parameter holds a copy of the parameter on each Context after it
-  # is initialized with #init. Also holds a gradient array on each
-  # Context.
+  # is initialized with #init. If +grad_req+ is not `:null`, it also
+  # holds a gradient array on each Context.
   #
   class Parameter
     ##
@@ -18,18 +18,30 @@ module MXNet::Gluon
     #
     # ====Parameters
     #
-    # +name+::  (string)
-    #           Name of this parameter.
-    # +shape+:: (integer or array of integers)
-    #           Shape of this parameter.  By default, shape is not
-    #           specified.
-    # +dtype+:: (symbol or string, default +:float32+)
-    #           Data type of this parameter.
-    # +init+::  (Initializer, default +nil+)
-    #           The initializer to use.
+    # +name+::                (string)
+    #                         Name of this parameter.
+    # +shape+::               (integer or array of integers)
+    #                         Shape of this parameter.  By default,
+    #                         shape is not specified.
+    # +dtype+::               (symbol or string, default +:float32+)
+    #                         Data type of this parameter.
+    # +init+::                (Initializer, default +nil+)
+    #                         The initializer to use.
+    # +allow_deferred_init+:: (boolean, default +false+)
+    #                         Is deferred initialization allowed.
+    # +grad_req+::            (+:write+|+:add+|+:null+, default: +:write+)
+    #                         Specifies how to update gradients.
+    #                         - +:write+ means update is written to
+    #                           the gradient.
+    #                         - +:add+ means update is added to the
+    #                           gradient. Call #zero_grad to clear the
+    #                           gradient when using this option.
+    #                         - +:null+ means a gradient is not
+    #                           supported on this parameter.
     #
     def initialize(name, shape: nil, dtype: :float32, init: nil,
-                   allow_deferred_init: false)
+                   allow_deferred_init: false,
+                   grad_req: :write)
       @var = nil
       @name = name
       shape = [shape] if shape.is_a?(Integer)
@@ -40,6 +52,7 @@ module MXNet::Gluon
       @grad = nil
       @deferred_init = []
       @allow_deferred_init = allow_deferred_init
+      @grad_req = grad_req
       @trainer = nil
     end
     def name
@@ -203,6 +216,11 @@ module MXNet::Gluon
     # NDArray on context.
     #
     def grad(ctx: nil)
+      if !@grad && @data
+        raise RuntimeError,
+              "Cannot get gradient buffer for Parameter '#{name}' " \
+              "because grad_req=:null."
+      end
       check_and_get(@grad, ctx)
     end
     ##
@@ -214,6 +232,11 @@ module MXNet::Gluon
     # List of NDArrays.
     #
     def list_grad
+      if !@grad && @data
+        raise RuntimeError,
+              "Cannot get gradient buffers for Parameter '#{name}' " \
+              "because grad_req=:null."
+      end
       check_and_get(@grad, :all)
     end
     ##
@@ -306,10 +329,15 @@ module MXNet::Gluon
       init_grad(ctx, grad)
     end
     def init_grad(ctx, grad)
+      if @grad_req == :null
+        @grad = nil
+        return
+      end
       @grad = ctx.map { |c| grad.copy_to(c) }
       MXNet::Autograd.mark_variables(
         check_and_get(@data, :all),
-        check_and_get(@grad, :all)
+        check_and_get(@grad, :all),
+        grad_reqs: @grad_req
       )
     end
   end

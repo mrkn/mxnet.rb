@@ -47,6 +47,19 @@ RSpec.describe MXNet::Gluon::Parameter do
         end
       end
     end
+    context 'with `grad_req: :null`' do
+      let(:parameter) do
+        described_class.new('foo', shape: [1], grad_req: :null).tap do |parameter|
+          parameter.init
+        end
+      end
+      it 'does not attach a grad array' do
+        expect{parameter.list_grad}
+          .to raise_error(RuntimeError, /Cannot get gradient buffers/)
+        expect{parameter.grad}
+          .to raise_error(RuntimeError, /Cannot get gradient buffer/)
+      end
+    end
     context 'for "init"' do
       let(:parameter) do
         described_class.new('foo', shape: 1)
