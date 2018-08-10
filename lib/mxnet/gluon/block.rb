@@ -419,6 +419,41 @@ module MXNet
         super
       end
 
+      # Exports HybridBlock to JSON format that can be loaded by
+      # SymbolBlock.import.
+      #
+      # ====Parameters
+      #
+      # +filename+:: (string)
+      #              Path and base filename to which to save
+      #              model. Two files, "[filename]-symbol.json" and
+      #              "[filename]-NNNN.params" will be created, where
+      #              +NNNN+ is the 4 digit epoch number.
+      # +epoch+::    (integer, default +0+)
+      #              Epoch number of saved model.
+      #
+      def export(filename, epoch: 0)
+        unless @cached_graph
+          raise RuntimeError,
+                "Please call hybridize and then run forward " \
+                "at least once before calling export."
+        end
+        output = @cached_graph[1]
+        output.save('%s-symbol.json' % filename)
+        arg_names = output.list_arguments
+        aux_names = output.list_auxiliary_states
+        args = {}
+        collect_params.each do |name, param|
+          # NOTE: invoking private method on Parameter
+          if arg_names.include?(name.to_sym)
+            args["arg:#{name}"] = param.send(:reduce)
+          elsif aux_names.include?(name.to_sym)
+            args["aux:#{name}"] = param.send(:reduce)
+          end
+        end
+        MXNet::NDArray.save('%s-%04d.params' % [filename, epoch], args)
+      end
+
       # Defines the forward computation. Arguments can be either Symbol
       # or NDArray.
       #
@@ -599,6 +634,63 @@ module MXNet
     # A block constructed from a Symbol.
     #
     class SymbolBlock < MXNet::Gluon::HybridBlock
+      # Imports model previously saved to JSON format by
+      # HybridBlock#export as a SymbolBlock for use in Gluon.
+      #
+      # ====Parameters
+      #
+      # +filename+:: (string)
+      #              Path and base filename from which to load
+      #              model. Two files, "[filename]-symbol.json" and
+      #              "[filename]-NNNN.params" will be loaded, where
+      #              +NNNN+ is the 4 digit epoch number.
+      # +inputs+::   (string or array of strings)
+      #              Input names.
+      # +epoch+::    (integer, default +0+)
+      #              Epoch number of saved model.
+      # +ctx+::      (Context or array of Context, default cpu)
+      #              Context(s) to initialize loaded parameters on.
+      #
+      def self.import(filename, inputs, epoch: 0, ctx: MXNet.cpu,
+                      allow_missing: false,
+                      ignore_extra: false)
+        output = MXNet::Symbol.load('%s-symbol.json' % filename)
+        inputs = [inputs] unless inputs.is_a?(Array)
+        inputs = inputs.map { |i| MXNet::Symbol.var(i) }
+        SymbolBlock.new(output, inputs).tap do |block|
+          if epoch
+            filename = '%s-%04d.params' % [filename, epoch]
+            arg_dict = MXNet::NDArray.load(filename)
+            arg_dict = arg_dict.transform_keys { |k| k.gsub(/^(arg:|aux:)/, '') }
+            unless allow_missing
+              block.params.keys.each do |key|
+                unless arg_dict.has_key?(key.to_s)
+                  raise RuntimeError,
+                        "Parameter '#{key}' is missing in file '#{filename}'. " \
+                        "Set allow_missing: true to ignore missing parameters."
+                end
+              end
+            end
+            unless ignore_extra
+              arg_dict.keys.each do |key|
+                unless block.params.keys.include?(key.to_sym)
+                  raise RuntimeError,
+                        "Parameter '#{key}' loaded from file '#{filename}' is " \
+                        "not present in this block. Set ignore_extra: true to " \
+                        "ignore extra parameters."
+                end
+              end
+            end
+            arg_dict.each do |key, value|
+              param = block.params.get(key)
+              param.shape = value.shape
+              # NOTE: invoking private method on Parameter
+              param.send(:load_and_init, ctx, value)
+            end
+          end
+        end
+      end
+
       # Creates a new instance.
       #
       # =====Parameters

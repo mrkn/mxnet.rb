@@ -187,12 +187,12 @@ RSpec.describe MXNet::Gluon::Block do
         end
       end
 
-      it 'to raise error about missing parameter' do
+      it 'raises error about missing parameter' do
         expect{block.load_parameters(file, ignore_extra: true)}
           .to raise_error(RuntimeError, /allow_missing: true/)
       end
 
-      it 'to raise error about extra parameter' do
+      it 'raises error about extra parameter' do
         expect{block.load_parameters(file, allow_missing: true)}
           .to raise_error(RuntimeError, /ignore_extra: true/)
       end
@@ -242,7 +242,9 @@ RSpec.describe MXNet::Gluon::HybridBlock do
       Foo.class_eval do
         def initialize(**kwargs)
           super
-          self[:c] = params.get('c', allow_deferred_init: true, dtype: nil)
+          with_name_scope do
+            self[:c] = params.get('c', init: :zeros, allow_deferred_init: true, dtype: nil)
+          end
         end
 
         def hybrid_forward(clazz, i, **kwargs)
@@ -277,6 +279,41 @@ RSpec.describe MXNet::Gluon::HybridBlock do
         expect(foo[:c].dtype).to eq(data.dtype)
       end
     end
+
+    describe '#export' do
+      let(:file) do
+        Tempfile.new('foo').path
+      end
+
+      let(:data) do
+        ['120100000000000000000000000000000100000000000000c9fa93f900000000' \
+         '0100000002000000000000000100000000000000000000000000000000000000' \
+         '01000000000000000a000000000000006172673a746573745f63'
+        ].pack('H*').force_encoding('utf-8')
+      end
+
+      let(:foo) do
+        Foo.new(prefix: 'test_').tap do |foo|
+          foo.init
+          foo.forward(MXNet::NDArray.array([1, 2]))
+        end
+      end
+
+      it 'writes model data to a file' do
+        foo.export(file)
+        expect(JSON.parse(File.open('%s-symbol.json' % file).read))
+          .to include({'nodes' => include(
+                         include({'name' => match(/_plus[0-9]+/)}),
+                         include({'name' => 'test_c'}),
+                         include({'name' => 'data0'})
+                       )})
+      end
+
+      it 'writes parameter data to a file' do
+        foo.export(file)
+        expect(File.open('%s-0000.params' % file).read).to eq(data)
+      end
+    end
   end
 end
 
@@ -295,6 +332,73 @@ RSpec.describe MXNet::Gluon::SymbolBlock do
 
   let(:o) do
     i * w + b
+  end
+
+  describe '.import' do
+    let(:file) do
+      Tempfile.new('foo').path
+    end
+
+    let(:model) do
+      {nodes: [
+         {op: 'null', name: 'data', inputs: []},
+         {op: 'null', name: 'test_c', inputs: []},
+         {op: 'elemwise_add', name: 'test_plus0', inputs: [[0, 0, 0], [1, 0, 0]]}
+       ],
+       arg_nodes: [0, 1],
+       node_row_ptr: [0, 1, 2, 3],
+       heads: [[2, 0, 0]],
+       attrs: {mxnet_version: ['int', 10100]}
+      }.to_json
+    end
+
+    let(:data) do
+      ['120100000000000000000000000000000100000000000000c9fa93f900000000' \
+       '010000000200000000000000010000000000000000000000e0eedf3b98f6543c' \
+       '01000000000000000a000000000000006172673a746573745f63'
+      ].pack('H*').force_encoding('utf-8')
+    end
+
+    let(:block) do
+      described_class.import(file, 'data')
+    end
+
+    before do
+      File.open('%s-symbol.json' % file, 'wb') { |f| f.write(model) }
+      File.open('%s-0000.params' % file, 'wb') { |f| f.write(data) }
+    end
+
+    it 'loads the parameter data' do
+      expect(block.params.get('test_c').data.to_a)
+        .to match_array([
+                          be_within(0.0001).of(0.0068339),
+                          be_within(0.0001).of(0.0129982)
+                        ])
+    end
+
+    it 'evaluates the symbolized block' do
+      expect(block.forward(MXNet::NDArray.array([1, 1])).to_a)
+        .to match_array([
+                          be_within(0.0001).of(1.0068339),
+                          be_within(0.0001).of(1.0129982)
+                        ])
+    end
+
+    context 'with mismatched parameters' do
+      before do
+        File.open('%s-symbol.json' % file, 'wb') { |f| f.write(model.gsub('test_c', 'foo_c')) }
+      end
+
+      it 'raises error about missing parameter' do
+        expect{described_class.import(file, 'data', ignore_extra: true)}
+          .to raise_error(RuntimeError, /allow_missing: true/)
+      end
+
+      it 'raises error about extra parameter' do
+        expect{described_class.import(file, 'data', allow_missing: true)}
+          .to raise_error(RuntimeError, /ignore_extra: true/)
+      end
+    end
   end
 
   describe '.new' do
