@@ -40,11 +40,56 @@ module MXNet::Gluon::NN
     # Runs a forward pass on all child blocks.
     #
     def forward(data)
-      children.inject(data) { |data, child| child[data] }
+      children.inject(data) { |data, child| child.forward(data) }
     end
   end
   def self.Sequential(*args)
     Sequential.new(*args)
+  end
+  ##
+  # Stacks HybridBlocks sequentially.
+  #
+  #     net = MXNet::Gluon::NN.HybridSequential
+  #     net.with_name_scope do
+  #       net.add(MXNet::Gluon::NN.Dense(10, activation: :relu))
+  #       net.add(MXNet::Gluon::NN.Dense(20))
+  #     end
+  #     net.hybridize
+  #
+  class HybridSequential < MXNet::Gluon::HybridBlock
+    ##
+    # Creates a new instance.
+    #
+    def initialize(**kwargs)
+      super(**kwargs)
+    end
+    ##
+    # Adds blocks on top of the stack.
+    #
+    def add(*blocks)
+      blocks.each { |block| register_child(block) }
+    end
+    ##
+    # Returns the number of blocks in the sequential stack.
+    #
+    def length
+      children.length
+    end
+    ##
+    # Returns the block at the specified index.
+    #
+    def at(index)
+      children[index]
+    end
+    ##
+    # Runs a forward pass on all child blocks.
+    #
+    def hybrid_forward(clazz, data)
+      children.inject(data) { |data, child| child.forward(data) }
+    end
+  end
+  def self.HybridSequential(*args)
+    HybridSequential.new(*args)
   end
   ##
   # Just your regular densely-connected neural network layer.
