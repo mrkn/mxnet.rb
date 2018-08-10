@@ -32,6 +32,39 @@ RSpec.describe MXNet::Gluon::NN::Sequential do
   end
 end
 
+RSpec.describe MXNet::Gluon::NN::HybridSequential do
+  describe '#add' do
+    let(:layer) do
+      described_class.new
+    end
+
+    let(:block) do
+      MXNet::Gluon::HybridBlock.new
+    end
+
+    it 'should register block as a child' do
+      layer.add(block)
+      expect(layer.children).to eq([block])
+    end
+  end
+
+  describe '#forward' do
+    let(:layer) do
+      described_class.new
+    end
+
+    let(:block) do
+      MXNet::Gluon::HybridBlock.new
+    end
+
+    it 'should run a forward pass on its children' do
+      layer.add(block)
+      expect(block).to receive(:forward)
+      layer.forward(MXNet::Symbol.var('input'))
+    end
+  end
+end
+
 RSpec.describe MXNet::Gluon::NN::Dense do
   describe '.new' do
     let(:layer) do
