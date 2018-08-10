@@ -333,15 +333,83 @@ module MXNet::Gluon
     end
   end
   ##
+  # CachedGraph encapsulates caching symbolized operations.
+  #
+  module CachedGraph
+    def initialize(**kwargs)
+      super(**kwargs)
+      clear_cache
+    end
+    def clear_cache
+      @cached_graph = nil
+      @cached_op = nil
+      @flags = {}
+    end
+    def infer_type(*args)
+      infer_attrs('infer_type', 'dtype', *args)
+    end
+    def infer_shape(*args)
+      infer_attrs('infer_shape', 'shape', *args)
+    end
+    protected
+    def call_cached(*args)
+      inputs, _, cached_op = get_cached_op(*args)
+      begin
+        data = inputs.map(&:data)
+        cached_op.call(*(args + data))
+      rescue MXNet::Gluon::DeferredInitializationError
+        infer_shape(*args)
+        inputs.each do |input|
+          # NOTE: invoking private method on Parameter
+          input.send(:finish_deferred_init)
+        end
+        retry
+      end
+    end
+    private
+    ##
+    # Infer attributes (type and shape).
+    #
+    def infer_attrs(fn, attr, *args)
+      inputs, output = get_graph(*args)
+      arg_attrs, _, aux_attrs =
+        output.send(fn, inputs.zip(args).inject({}) { |a, (i, j)| a[i.name] = j.send(attr) ; a })
+      sdict = output.list_arguments.zip(arg_attrs).to_h
+                .merge(output.list_auxiliary_states.zip(aux_attrs).to_h)
+      collect_params.values.each do |value|
+        value.send("#{attr}=", sdict[value.name.to_sym])
+      end
+    end
+    def get_graph(*args)
+      @cached_graph ||=
+        begin
+          inputs = (0...args.length).map do |i|
+            MXNet::Symbol.var("data#{i}")
+          end
+          params = @reg_parameters.inject({}) do |acc, (i, j)|
+            acc[i.to_sym] = j.var
+            acc
+          end
+          [inputs, hybrid_forward(MXNet::Symbol, *inputs, **params)]
+        end
+    end
+    def get_cached_op(*args)
+      @cached_op ||=
+        begin
+          _, output = get_graph(*args)
+          inputs = collect_params.values
+          [inputs, output, MXNet::CachedOp.new(output, @flags)]
+        end
+    end
+  end
+  ##
   # HybridBlock supports forwarding with both Symbol and NDArray.
   #
   class HybridBlock < Block
+    include CachedGraph
     def initialize(**kwargs)
       super(**kwargs)
-      @cached_graph = nil
-      @cached_op = nil
       @active = false
-      @flags = {}
     end
     def register_child(block, name = nil)
       unless block.is_a?(MXNet::Gluon::HybridBlock)
@@ -358,9 +426,9 @@ module MXNet::Gluon
       super
     end
     def hybridize(active: true, **kwargs)
+      clear_cache
       @active = active
       @flags = kwargs
-      clear_cache
       super
     end
     ##
@@ -416,7 +484,7 @@ module MXNet::Gluon
         hybrid_forward(MXNet::Symbol, *args, **kwargs)
       when MXNet::NDArray
         if @active
-          return call_cached_graph(*args)
+          return call_cached(*args)
         end
         MXNet::Context.with(ctx = args.first.context) do
           begin
@@ -425,7 +493,7 @@ module MXNet::Gluon
               acc
             end
           rescue MXNet::Gluon::DeferredInitializationError
-            deferred_infer_shape(*args)
+            infer_shape(*args)
             @params.each do |_, param|
               # NOTE: invoking private method on Parameter
               param.send(:finish_deferred_init)
@@ -451,74 +519,12 @@ module MXNet::Gluon
     def hybrid_forward(clazz, *args)
       raise NotImplementedError
     end
-    def infer_type(*args)
-      infer_attrs('infer_type', 'dtype', *args)
-    end
-    def infer_shape(*args)
-      infer_attrs('infer_shape', 'shape', *args)
-    end
-    def deferred_infer_shape(*args)
-      infer_shape(*args)
-    end
-    protected
-    def call_cached_graph(*args)
-      inputs, _, cached_op = get_cached_op(*args)
-      begin
-        data = inputs.map(&:data)
-        cached_op.call(*(args + data))
-      rescue MXNet::Gluon::DeferredInitializationError
-        deferred_infer_shape(*args)
-        inputs.each do |input|
-          # NOTE: invoking private method on Parameter
-          input.send(:finish_deferred_init)
-        end
-        retry
-      end
-    end
-    def clear_cache
-      @cached_graph = nil
-      @cached_op = nil
-    end
-    private
-    def get_graph(*args)
-      @cached_graph ||=
-        begin
-          inputs = (0...args.length).map do |i|
-            MXNet::Symbol.var("data#{i}")
-          end
-          params = @reg_parameters.inject({}) do |acc, (i, j)|
-            acc[i.to_sym] = j.var
-            acc
-          end
-          [inputs, hybrid_forward(MXNet::Symbol, *inputs, **params)]
-        end
-    end
-    def get_cached_op(*args)
-      @cached_op ||=
-        begin
-          _, output = get_graph(*args)
-          inputs = collect_params.values
-          [inputs, output, MXNet::CachedOp.new(output, @flags)]
-        end
-    end
-    ##
-    # Infer attributes.
-    #
-    def infer_attrs(fn, attr, *args)
-      inputs, output = get_graph(*args)
-      arg_attrs, _, aux_attrs =
-        output.send(fn, inputs.zip(args).inject({}) { |a, (i, j)| a[i.name] = j.send(attr) ; a })
-      sdict = output.list_arguments.zip(arg_attrs).to_h
-                .merge(output.list_auxiliary_states.zip(aux_attrs).to_h)
-      collect_params.values.each do |value|
-        value.send("#{attr}=", sdict[value.name.to_sym])
-      end
-    end
   end
   ##
   # A block constructed from a Symbol.
   #
-  class SymbolBlock < MXNet::Gluon::HybridBlock
+  class SymbolBlock < MXNet::Gluon::Block
+    include CachedGraph
     ##
     # Imports model previously saved to JSON format by
     # HybridBlock#export as a SymbolBlock for use in Gluon.
@@ -623,16 +629,13 @@ module MXNet::Gluon
         end
       when MXNet::NDArray
         MXNet::Context.with(ctx = args.first.context) do
-          self.call_cached_graph(*args)
+          self.call_cached(*args)
         end
       else
         raise ArgumentError,
               "only Symbol or NDArray are supported, " \
               "not #{args.first.class}"
       end
-    end
-    def hybrid_forward(clazz, *args)
-      raise NotImplementedError
     end
     private
     ##
