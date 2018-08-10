@@ -304,11 +304,11 @@ module MXNet::Gluon
       name = sym.to_s
       if name[-1] == '='
         args.length == 1 or
-          raise ArgumentError, "wrong number of arguments (#{args.length} for 1)"
+          raise ArgumentError, "wrong number of arguments (#{args.length} for 1) to `#{sym}'"
         set_attr(name[0...-1], *args)
       else
         args.length == 0 or
-          raise ArgumentError, "wrong number of arguments (#{args.length} for 0)"
+          raise ArgumentError, "wrong number of arguments (#{args.length} for 0) to `#{sym}'"
         get_attr(name)
       end
     end
