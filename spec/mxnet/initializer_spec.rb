@@ -20,14 +20,14 @@ RSpec.describe MXNet::Initializer do
     end
   end
 
-  describe '#[]' do
+  describe '#call' do
     let(:initializer) do
       described_class.new
     end
     it 'calls init_array' do
       array = MXNet::NDArray.array(1)
       expect(initializer).to receive(:init_array).with(array)
-      initializer[array]
+      initializer.call(array)
     end
   end
 end

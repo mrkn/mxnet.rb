@@ -42,7 +42,7 @@ module MXNet
     ##
     # Calls #init_array.
     #
-    def [](array)
+    def call(array)
       init_array(array)
     end
 

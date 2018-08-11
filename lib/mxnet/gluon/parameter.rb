@@ -58,13 +58,9 @@ module MXNet
         @trainer = nil
       end
 
-      def name
-        @name
-      end
+      attr_reader :name
 
-      def shape
-        @shape
-      end
+      attr_reader :shape
 
       def shape=(shape)
         if @shape.nil?
@@ -80,9 +76,7 @@ module MXNet
         end
       end
 
-      def dtype
-        @dtype
-      end
+      attr_reader :dtype
 
       def dtype=(dtype)
         @dtype = dtype.is_a?(::String) || dtype.is_a?(::Symbol) ?
@@ -90,13 +84,7 @@ module MXNet
                    dtype
       end
 
-      def trainer
-        @trainer
-      end
-
-      def trainer=(trainer)
-        @trainer = trainer
-      end
+      attr_accessor :trainer
 
       ##
       # Initializes parameter and gradient arrays. Only used for NDArray
@@ -343,7 +331,7 @@ module MXNet
         MXNet::Autograd.pause do
           unless data
             data = MXNet::NDArray.zeros(@shape, dtype: @dtype, ctx: MXNet.cpu)
-            MXNet::Initializer.create(default_init)[data]
+            MXNet::Initializer.create(default_init).init_array(data)
           end
           init_impl(ctx, data)
         end
@@ -403,8 +391,16 @@ module MXNet
         @params.keys
       end
 
+      def key?(key)
+        @params.key?(key)
+      end
+
       def values
         @params.values
+      end
+
+      def value?(value)
+        @params.value?(value)
       end
 
       ##
@@ -435,9 +431,8 @@ module MXNet
         name = @prefix + name
         unless param = _get(name.to_sym)
           param = @params[name.to_sym] = Parameter.new(name, **kwargs)
-        else
-          param
         end
+        param
       end
 
       ##

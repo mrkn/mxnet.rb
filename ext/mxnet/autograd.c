@@ -172,7 +172,7 @@ autograd_s_backward(int argc, VALUE *argv, VALUE mod)
 
     head_grads = rb_convert_type(head_grads, T_ARRAY, "Array", "to_ary");
     if (RARRAY_LEN(heads) != RARRAY_LEN(head_grads)) {
-      rb_raise(rb_eArgError, "haeds and head_grads must be arrays of the same length");
+      rb_raise(rb_eArgError, "heads and head_grads must be arrays of the same length");
     }
 
     head_grad_handles_str = rb_str_tmp_new(sizeof(NDArrayHandle) * heads_len);

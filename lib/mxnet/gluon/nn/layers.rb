@@ -38,7 +38,7 @@ module MXNet
         ##
         # Returns the block at the specified index.
         #
-        def at(index)
+        def [](index)
           children[index]
         end
 
@@ -89,7 +89,7 @@ module MXNet
         ##
         # Returns the block at the specified index.
         #
-        def at(index)
+        def [](index)
           children[index]
         end
 
@@ -181,7 +181,7 @@ module MXNet
             num_hidden: @units
           )
           if self.act
-            out = self.act[out]
+            out = self.act.forward(out)
           end
           out
         end
@@ -304,7 +304,7 @@ module MXNet
             kwargs = @kwargs.merge(no_bias: bias.nil?)
             out = clazz.send(@op_name, data, weight, bias, **kwargs)
             if self.act
-              out = self.act[out]
+              out = self.act.forward(out)
             end
             out
           end

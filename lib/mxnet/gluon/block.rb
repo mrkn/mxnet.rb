@@ -239,7 +239,7 @@ module MXNet
         loaded = MXNet::NDArray.load(filename)
         unless allow_missing
           params.each do |key, value|
-            unless loaded.has_key?(key)
+            unless loaded.key?(key)
               raise RuntimeError,
                     "Parameter '#{key}' is missing in file '#{filename}'. " \
                     "Set allow_missing: true to ignore missing parameters."
@@ -248,7 +248,7 @@ module MXNet
         end
         unless ignore_extra
           loaded.each do |key, value|
-            unless params.has_key?(key)
+            unless params.key?(key)
               raise RuntimeError,
                     "Parameter '#{key}' loaded from file '#{filename}' is " \
                     "not present in this block. Set ignore_extra: true to " \
@@ -289,8 +289,7 @@ module MXNet
       ##
       # Calls #forward. Only accepts positional arguments.
       #
-      #
-      def [](*args)
+      def call(*args)
         forward(*args)
       end
 
@@ -348,7 +347,7 @@ module MXNet
 
       def get_attr(name)
         [@reg_children, @reg_parameters, @reg_other].each do |h|
-          return h[name] if h.has_key?(name)
+          return h[name] if h.key?(name)
         end
         raise NoMethodError, "undefined method `#{name}' for #{self}"
       end
@@ -601,7 +600,7 @@ module MXNet
             arg_dict = arg_dict.transform_keys { |k| k.gsub(/^(arg:|aux:)/, '') }
             unless allow_missing
               block.params.keys.each do |key|
-                unless arg_dict.has_key?(key.to_s)
+                unless arg_dict.key?(key.to_s)
                   raise RuntimeError,
                         "Parameter '#{key}' is missing in file '#{filename}'. " \
                         "Set allow_missing: true to ignore missing parameters."
@@ -610,7 +609,7 @@ module MXNet
             end
             unless ignore_extra
               arg_dict.keys.each do |key|
-                unless block.params.keys.include?(key.to_sym)
+                unless block.params.key?(key.to_sym)
                   raise RuntimeError,
                         "Parameter '#{key}' loaded from file '#{filename}' is " \
                         "not present in this block. Set ignore_extra: true to " \
@@ -675,7 +674,7 @@ module MXNet
             output.send(:compose, **kwargs)
           end
         when MXNet::NDArray
-          MXNet::Context.with(ctx = args.first.context) do
+          MXNet::Context.with(args.first.context) do
             self.call_cached(*args)
           end
         else
