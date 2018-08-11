@@ -22,10 +22,12 @@ module MXNet
       default = child.name.split('::').last.downcase
       child.register(default)
     end
+
     def self.register(name)
       $mxnet_optimizer_registry ||= {}
       $mxnet_optimizer_registry[name.to_sym] = self
     end
+
     def self.create(optimizer, **kwargs)
       case optimizer
       when ::Class
@@ -36,6 +38,7 @@ module MXNet
         optimizer
       end
     end
+
     ##
     # Creates a new instance.
     #
@@ -57,7 +60,9 @@ module MXNet
       @lr = learning_rate
       @wd = wd
     end
+
     attr_accessor :rescale_grad
+
     ##
     # Updates the given parameter using the corresponding gradient and
     # state.
@@ -80,37 +85,7 @@ module MXNet
     def update(index, weight, gradient, state)
       raise NotImplementedError
     end
-    protected
-    ##
-    # Gets the learning rate given the index of the weight.
-    #
-    # ====Parameters
-    #
-    # +index+:: (integer)
-    #           The index corresponding to the weight.
-    #
-    # ====Returns
-    #
-    # Learning rate for this index.
-    #
-    def get_lr(index)
-      @lr
-    end
-    ##
-    # Gets weight decay for index.
-    #
-    # ====Parameters
-    #
-    # +index+:: (integer)
-    #           The index corresponding to the weight.
-    #
-    # ====Returns
-    #
-    # Weight decay for this index.
-    #
-    def get_wd(index)
-      @wd
-    end
+
     ##
     # The SGD optimizer with momentum and weight decay.
     #
@@ -130,6 +105,7 @@ module MXNet
         super(**kwargs)
         @momentum = momentum
       end
+
       def update(index, weight, gradient, state)
         lr = get_lr(index)
         wd = get_wd(index)
@@ -140,8 +116,43 @@ module MXNet
         MXNet::NDArray.sgd_update(weight, gradient, out: weight, lr: lr, wd: wd, **kwargs)
       end
     end
+
     def self.SGD(*args)
       SGD.new(*args)
+    end
+
+    protected
+
+    ##
+    # Gets the learning rate given the index of the weight.
+    #
+    # ====Parameters
+    #
+    # +index+:: (integer)
+    #           The index corresponding to the weight.
+    #
+    # ====Returns
+    #
+    # Learning rate for this index.
+    #
+    def get_lr(index)
+      @lr
+    end
+
+    ##
+    # Gets weight decay for index.
+    #
+    # ====Parameters
+    #
+    # +index+:: (integer)
+    #           The index corresponding to the weight.
+    #
+    # ====Returns
+    #
+    # Weight decay for this index.
+    #
+    def get_wd(index)
+      @wd
     end
   end
 end

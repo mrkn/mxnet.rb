@@ -8,6 +8,7 @@ RSpec.describe MXNet::Gluon::Parameter do
       expect(described_class.new('test', shape: [1]).shape).to eq([1])
     end
   end
+
   describe '#init' do
     context 'without deferred initialization' do
       let(:parameter) do
@@ -27,6 +28,7 @@ RSpec.describe MXNet::Gluon::Parameter do
         end
       end
     end
+
     context 'with deferred initialization' do
       let(:parameter) do
         described_class.new('foo', allow_deferred_init: true).tap do |parameter|
@@ -47,6 +49,7 @@ RSpec.describe MXNet::Gluon::Parameter do
         end
       end
     end
+
     context 'with `grad_req: :null`' do
       let(:parameter) do
         described_class.new('foo', shape: [1], grad_req: :null).tap do |parameter|
@@ -60,6 +63,7 @@ RSpec.describe MXNet::Gluon::Parameter do
           .to raise_error(RuntimeError, /Cannot get gradient buffer/)
       end
     end
+
     context 'for "init"' do
       let(:parameter) do
         described_class.new('foo', shape: 1)
@@ -81,6 +85,7 @@ RSpec.describe MXNet::Gluon::Parameter do
         expect(parameter.data.to_a).to eq([0])
       end
     end
+
     context 'for "default_init"' do
       let(:parameter) do
         described_class.new('foo', shape: 1)
@@ -103,6 +108,7 @@ RSpec.describe MXNet::Gluon::Parameter do
       end
     end
   end
+
   describe '#list_ctx' do
     context 'without deferred initialization' do
       let(:parameter) do
@@ -125,6 +131,7 @@ RSpec.describe MXNet::Gluon::Parameter do
       end
     end
   end
+
   describe '#var' do
     let(:parameter) do
       described_class.new('foo')
@@ -136,6 +143,7 @@ RSpec.describe MXNet::Gluon::Parameter do
       expect(parameter.var.name).to eq(:foo)
     end
   end
+
   describe '#data' do
     let(:parameter) do
       described_class.new('foo', shape: [1])
@@ -156,6 +164,7 @@ RSpec.describe MXNet::Gluon::Parameter do
       expect(parameter.data).to be_a(MXNet::NDArray)
     end
   end
+
   describe '#set_data' do
     let(:parameter) do
       described_class.new('foo', shape: [1])
@@ -172,6 +181,7 @@ RSpec.describe MXNet::Gluon::Parameter do
       expect(parameter.data.to_a).to eq([1])
     end
   end
+
   describe '#grad' do
     let(:parameter) do
       described_class.new('foo', shape: [1])
@@ -192,6 +202,7 @@ RSpec.describe MXNet::Gluon::Parameter do
       expect(parameter.grad).to be_a(MXNet::NDArray)
     end
   end
+
   describe '#zero_grad' do
     let(:parameter) do
       described_class.new('foo', shape: [1])
@@ -205,6 +216,7 @@ RSpec.describe MXNet::Gluon::Parameter do
       expect(parameter.grad.to_a).to eq([0])
     end
   end
+
   describe '#shape=' do
     context 'with no shape' do
       let(:parameter) do
@@ -233,6 +245,7 @@ RSpec.describe MXNet::Gluon::Parameter do
       end
     end
   end
+
   describe '#==' do
     let(:parameter) do
       described_class.new('foo', shape: [1])
@@ -281,6 +294,7 @@ RSpec.describe MXNet::Gluon::ParameterDict do
       end
     end
   end
+
   describe '#update' do
     let(:parameter_dict) do
       described_class.new
@@ -299,6 +313,7 @@ RSpec.describe MXNet::Gluon::ParameterDict do
       expect{parameter_dict.update(other_dict)}.to raise_error(ArgumentError)
     end
   end
+
   describe '#init' do
     let(:parameter_dict) do
       described_class.new(prefix: 'name').tap do |parameter_dict|
@@ -310,6 +325,7 @@ RSpec.describe MXNet::Gluon::ParameterDict do
       expect(parameter_dict.get('foo').data).to be_a(MXNet::NDArray)
     end
   end
+
   describe '#==' do
     let(:parameter_dict) do
       described_class.new(prefix: 'name').tap do |parameter_dict|

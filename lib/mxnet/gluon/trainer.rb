@@ -38,6 +38,7 @@ module MXNet::Gluon
       init_optimizer(optimizer, optimizer_params)
       @scale = optimizer_params[:rescale_grad] || 1.0
     end
+
     ##
     # Makes one step of parameter update.
     #
@@ -53,6 +54,7 @@ module MXNet::Gluon
       @optimizer.rescale_grad = @scale / batch_size
       _update
     end
+
     ##
     # Makes one step of parameter update.
     #
@@ -68,7 +70,9 @@ module MXNet::Gluon
       @optimizer.rescale_grad = @scale / batch_size
       _update
     end
+
     private
+
     def check_contexts
       contexts = nil
       @params.each do |param|
@@ -82,9 +86,11 @@ module MXNet::Gluon
       end
       @contexts = contexts
     end
+
     def init_optimizer(optimizer, optimizer_params)
       @optimizer = MXNet::Optimizer.create(optimizer, **optimizer_params)
     end
+
     def _update
       @params.each.with_index do |param, i|
         param.list_data.zip(param.list_grad) do |data, grad|

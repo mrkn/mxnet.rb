@@ -19,6 +19,7 @@ RSpec.describe MXNet::Initializer do
       expect(init).to be_a(MXNet::Initializer::Zero)
     end
   end
+
   describe '#[]' do
     let(:initializer) do
       described_class.new

@@ -18,24 +18,28 @@ module MXNet::Gluon::NN
     def initialize(**kwargs)
       super(**kwargs)
     end
+
     ##
     # Adds blocks on top of the stack.
     #
     def add(*blocks)
       blocks.each { |block| register_child(block) }
     end
+
     ##
     # Returns the number of blocks in the sequential stack.
     #
     def length
       children.length
     end
+
     ##
     # Returns the block at the specified index.
     #
     def at(index)
       children[index]
     end
+
     ##
     # Runs a forward pass on all child blocks.
     #
@@ -43,9 +47,11 @@ module MXNet::Gluon::NN
       children.inject(data) { |data, child| child.forward(data) }
     end
   end
+
   def self.Sequential(*args)
     Sequential.new(*args)
   end
+
   ##
   # Stacks HybridBlocks sequentially.
   #
@@ -63,24 +69,28 @@ module MXNet::Gluon::NN
     def initialize(**kwargs)
       super(**kwargs)
     end
+
     ##
     # Adds blocks on top of the stack.
     #
     def add(*blocks)
       blocks.each { |block| register_child(block) }
     end
+
     ##
     # Returns the number of blocks in the sequential stack.
     #
     def length
       children.length
     end
+
     ##
     # Returns the block at the specified index.
     #
     def at(index)
       children[index]
     end
+
     ##
     # Runs a forward pass on all child blocks.
     #
@@ -88,9 +98,11 @@ module MXNet::Gluon::NN
       children.inject(data) { |data, child| child.forward(data) }
     end
   end
+
   def self.HybridSequential(*args)
     HybridSequential.new(*args)
   end
+
   ##
   # Just your regular densely-connected neural network layer.
   #
@@ -157,6 +169,7 @@ module MXNet::Gluon::NN
         end
       end
     end
+
     def hybrid_forward(clazz, data, weight:, bias: nil)
       out = clazz.FullyConnected(
         data,
@@ -171,9 +184,11 @@ module MXNet::Gluon::NN
       out
     end
   end
+
   def self.Dense(*args)
     Dense.new(*args)
   end
+
   module Internal
     ##
     # Base class for convolution layers.
@@ -282,6 +297,7 @@ module MXNet::Gluon::NN
           end
         end
       end
+
       def hybrid_forward(clazz, data, weight:, bias: nil)
         kwargs = @kwargs.merge(no_bias: bias.nil?)
         out = clazz.send(@op_name, data, weight, bias, **kwargs)
@@ -290,16 +306,20 @@ module MXNet::Gluon::NN
         end
         out
       end
+
       private
+
       def infer_weight_shape(op_name, shape, **kwargs)
         sym = MXNet::Symbol.var('data', shape: shape)
         sym = MXNet::Symbol.send(op_name, sym, **kwargs)
         sym.infer_shape_partial[0]
       end
+
       def hint
         'conv'
       end
     end
+
     ##
     # Base class for pooling layers.
     #
@@ -342,15 +362,19 @@ module MXNet::Gluon::NN
           pad: padding
         }
       end
+
       def hybrid_forward(clazz, data)
         clazz.Pooling(data, **@kwargs)
       end
+
       private
+
       def hint
         'pool'
       end
     end
   end
+
   ##
   # 2D convolution layer (e.g. spatial convolution over images).
   #
@@ -430,9 +454,11 @@ module MXNet::Gluon::NN
       )
     end
   end
+
   def self.Conv2D(*args)
     Conv2D.new(*args)
   end
+
   ##
   # Max pooling operation for 2D data (e.g. images).
   #
@@ -472,9 +498,11 @@ module MXNet::Gluon::NN
       )
     end
   end
+
   def self.MaxPool2D(*args)
     MaxPool2D.new(*args)
   end
+
   ##
   # Flattens the input to two dimensions.
   #
@@ -493,10 +521,12 @@ module MXNet::Gluon::NN
     def initialize(**kwargs)
       super(**kwargs)
     end
+
     def hybrid_forward(clazz, data)
       clazz.flatten(data)
     end
   end
+
   def self.Flatten(*args)
     Flatten.new(*args)
   end

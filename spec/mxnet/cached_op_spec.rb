@@ -10,6 +10,7 @@ RSpec.describe MXNet::CachedOp do
       expect{MXNet::CachedOp.new(sym, data_indices: [0])}.not_to raise_error
     end
   end
+
   describe '#call' do
     let(:sym) do
       MXNet::Symbol.var('sym')

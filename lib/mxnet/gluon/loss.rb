@@ -21,6 +21,7 @@ module MXNet::Gluon
       @batch_axis = batch_axis
       super(**kwargs)
     end
+
     ##
     # Override to construct symbolic graph for this Block.
     #
@@ -32,37 +33,7 @@ module MXNet::Gluon
     def hybrid_forward(clazz, *args)
       raise NotImplementedError
     end
-    protected
-    ##
-    # Apply weighting to loss.
-    #
-    # ====Parameters
-    #
-    # +loss+::          (Symbol or NDArray)
-    #                   The loss to be weighted.
-    # +weight+::        (float or +nil+)
-    #                   Global scalar weight for loss.
-    # +sample_weight+:: (Symbol, NDArray or +nil+)
-    #                   Per sample weighting. Must be broadcastable to
-    #                   the same shape as loss. For example, if loss
-    #                   has shape (64, 10) and you want to weight each
-    #                   sample in the batch separately, +sample_weight+
-    #                   should have shape (64, 1).
-    #
-    # ====Returns
-    #
-    # Weighted loss
-    #
-    def apply_weighting(clazz, loss, weight = nil, sample_weight = nil)
-      unless sample_weight.nil?
-        loss = clazz.broadcast_mul(loss, sample_weight)
-      end
-      unless weight.nil?
-        raise ArgumentError, 'weight must be numeric' unless weight.is_a?(Numeric)
-        loss = loss * weight
-      end
-      loss
-    end
+
     ##
     # Calculates the mean absolute error between prediction and label.
     #
@@ -83,6 +54,7 @@ module MXNet::Gluon
       def initialize(weight: nil, batch_axis: 0, **kwargs)
         super(weight: weight, batch_axis: batch_axis, **kwargs)
       end
+
       def hybrid_forward(clazz, prediction, label, sample_weight: nil)
         label = clazz.reshape_like(label, prediction)
         loss = clazz.abs(prediction - label)
@@ -90,9 +62,11 @@ module MXNet::Gluon
         clazz.mean(loss, axis: @batch_axis, exclude: true)
       end
     end
+
     def self.L1Loss(*args)
       L1Loss.new(*args)
     end
+
     ##
     # Calculates the mean squared error between prediction and label.
     #
@@ -113,6 +87,7 @@ module MXNet::Gluon
       def initialize(weight: 1.0, batch_axis: 0, **kwargs)
         super(weight: weight, batch_axis: batch_axis, **kwargs)
       end
+
       def hybrid_forward(clazz, prediction, label, sample_weight: nil)
         label = clazz.reshape_like(label, prediction)
         loss = clazz.square(prediction - label)
@@ -120,9 +95,11 @@ module MXNet::Gluon
         clazz.mean(loss, axis: @batch_axis, exclude: true)
       end
     end
+
     def self.L2Loss(*args)
       L2Loss.new(*args)
     end
+
     ##
     # Computes the softmax cross-entropy loss.
     #
@@ -164,6 +141,7 @@ module MXNet::Gluon
         @from_logits = from_logits
         super(weight: weight, batch_axis: batch_axis, **kwargs)
       end
+
       def hybrid_forward(clazz, prediction, label, sample_weight: nil)
         unless @from_logits
           prediction = clazz.log_softmax(prediction, axis: @axis)
@@ -178,8 +156,42 @@ module MXNet::Gluon
         clazz.mean(loss, axis: @batch_axis, exclude: true)
       end
     end
+
     def self.SoftmaxCrossEntropyLoss(*args)
       SoftmaxCrossEntropyLoss.new(*args)
+    end
+
+    protected
+
+    ##
+    # Apply weighting to loss.
+    #
+    # ====Parameters
+    #
+    # +loss+::          (Symbol or NDArray)
+    #                   The loss to be weighted.
+    # +weight+::        (float or +nil+)
+    #                   Global scalar weight for loss.
+    # +sample_weight+:: (Symbol, NDArray or +nil+)
+    #                   Per sample weighting. Must be broadcastable to
+    #                   the same shape as loss. For example, if loss
+    #                   has shape (64, 10) and you want to weight each
+    #                   sample in the batch separately, +sample_weight+
+    #                   should have shape (64, 1).
+    #
+    # ====Returns
+    #
+    # Weighted loss
+    #
+    def apply_weighting(clazz, loss, weight = nil, sample_weight = nil)
+      unless sample_weight.nil?
+        loss = clazz.broadcast_mul(loss, sample_weight)
+      end
+      unless weight.nil?
+        raise ArgumentError, 'weight must be numeric' unless weight.is_a?(Numeric)
+        loss = loss * weight
+      end
+      loss
     end
   end
 end

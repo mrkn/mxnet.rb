@@ -18,14 +18,18 @@ module MXNet::Gluon::NN
       super(**kwargs)
       @activation = activation
     end
+
     def hybrid_forward(clazz, data)
       clazz.Activation(data, act_type: @activation)
     end
+
     private
+
     def hint
       @activation
     end
   end
+
   def self.Activation(*args)
     Activation.new(*args)
   end

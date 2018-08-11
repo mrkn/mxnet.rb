@@ -25,6 +25,7 @@ RSpec.describe MXNet::Gluon::Block do
       expect(block.b).to equal(b)
     end
   end
+
   describe '#new' do
     let(:block) do
       described_class.new
@@ -55,6 +56,7 @@ RSpec.describe MXNet::Gluon::Block do
       end
     end
   end
+
   describe '#with_name_scope' do
     let(:block) do
       described_class.new
@@ -70,6 +72,7 @@ RSpec.describe MXNet::Gluon::Block do
       expect(block.foo.bar.prefix).to match(/^block[0-9]+_block0_block0_$/)
     end
   end
+
   describe '#init' do
     let(:block) do
       described_class.new.tap do |block|
@@ -81,6 +84,7 @@ RSpec.describe MXNet::Gluon::Block do
       expect(block.params.get('foo').data).to be_a(MXNet::NDArray)
     end
   end
+
   describe '#collect_params' do
     let(:block) do
       described_class.new(prefix: 'block_').tap do |block|
@@ -117,6 +121,7 @@ RSpec.describe MXNet::Gluon::Block do
       expect(block.collect_params(/_q/)).to eq(params)
     end
   end
+
   describe '#save_parameters' do
     let(:file) do
       Tempfile.new('foo').path
@@ -138,6 +143,7 @@ RSpec.describe MXNet::Gluon::Block do
       expect(File.open(file).read).to eq(data)
     end
   end
+
   describe '#load_parameters' do
     let(:file) do
       Tempfile.new('foo').path
@@ -182,6 +188,7 @@ RSpec.describe MXNet::Gluon::Block do
       end
     end
   end
+
   describe '#forward' do
     let(:block) do
       described_class.new
@@ -214,6 +221,7 @@ RSpec.describe MXNet::Gluon::HybridBlock do
       end
     end
   end
+
   context 'given a simple model' do
     before do
       stub_const 'Foo', Class.new(described_class)
@@ -233,6 +241,7 @@ RSpec.describe MXNet::Gluon::HybridBlock do
     let(:foo) do
       Foo.new
     end
+
     describe '#infer_shape' do
       let(:data) do
         MXNet::NDArray.array([1, 2, 3, 4]).reshape([2, 2])
@@ -242,6 +251,7 @@ RSpec.describe MXNet::Gluon::HybridBlock do
         expect(foo.c.shape).to eq(data.shape)
       end
     end
+
     describe '#infer_type' do
       let(:data) do
         MXNet::NDArray.array([1], dtype: :float16)
@@ -251,6 +261,7 @@ RSpec.describe MXNet::Gluon::HybridBlock do
         expect(foo.c.dtype).to eq(data.dtype)
       end
     end
+
     describe '#export' do
       let(:file) do
         Tempfile.new('foo').path
@@ -297,6 +308,7 @@ RSpec.describe MXNet::Gluon::SymbolBlock do
   let(:o) do
     i * w + b
   end
+
   describe '.import' do
     let(:file) do
       Tempfile.new('foo').path
@@ -354,6 +366,7 @@ RSpec.describe MXNet::Gluon::SymbolBlock do
       end
     end
   end
+
   describe '.new' do
     let(:layer) do
       described_class.new(o, [i])
@@ -366,6 +379,7 @@ RSpec.describe MXNet::Gluon::SymbolBlock do
       expect(layer.b).to be_a(MXNet::Gluon::Parameter)
     end
   end
+
   describe '#forward' do
     let(:layer) do
       described_class.new(o, [i]).tap do |layer|

@@ -11,8 +11,10 @@ module MXNet::Gluon
       @block = block
       @counters = Hash.new(-1)
     end
+
     attr_accessor :block
     attr_accessor :counters
+
     def self.create(prefix, params, hint)
       current =
         Thread.current['mxnet_gluon_blockscope_current'] ||=
@@ -39,6 +41,7 @@ module MXNet::Gluon
         [prefix, params]
       end
     end
+
     def call(block)
       previous = Thread.current['mxnet_gluon_blockscope_current']
       Thread.current['mxnet_gluon_blockscope_current'] = block.scope
@@ -47,6 +50,7 @@ module MXNet::Gluon
       Thread.current['mxnet_gluon_blockscope_current'] = previous
     end
   end
+
   ##
   # Base class for all neural network layers and models. Your models
   # should subclass this class.
@@ -98,19 +102,23 @@ module MXNet::Gluon
       @reg_children = {}
       @reg_other = {}
     end
+
     ##
     # Scope of this block.
     #
     attr_reader :scope
+
     ##
     # Prefix of this Block.
     #
     attr_reader :prefix
+
     ##
     # Returns this Block's ParameterDict (does not include its
     # children's parameters).
     #
     attr_reader :params
+
     ##
     # Enters a name space managing Block names.
     #
@@ -121,12 +129,14 @@ module MXNet::Gluon
     def with_name_scope(&proc)
       @scope.call(self, &proc)
     end
+
     ##
     # Returns this block's registered children.
     #
     def children
       @reg_children.values
     end
+
     ##
     # Initializes parameters of this block and its children.
     # Equivalent to `self.collect_params.init(...)`.
@@ -144,6 +154,7 @@ module MXNet::Gluon
     def init(init: nil, ctx: nil, force_reinit: false)
       collect_params.init(init: init, ctx: ctx, force_reinit: force_reinit)
     end
+
     ##
     # Returns a ParameterDict containing this Block's and all of its
     # children's Parameters. Also can return the Parameters that match
@@ -179,6 +190,7 @@ module MXNet::Gluon
       end
       ret
     end
+
     ##
     # Saves parameters to file.
     #
@@ -199,6 +211,7 @@ module MXNet::Gluon
       params = collect_params_for_storage.transform_values { |p| p.send(:reduce) }
       MXNet::NDArray.save(filename, params)
     end
+
     ##
     # Loads parameters from file.
     #
@@ -247,6 +260,7 @@ module MXNet::Gluon
         params[key].send(:load_and_init, ctx, loaded[key])
       end
     end
+
     ##
     # Registers block as a child of self. Blocks assigned as
     # attributes will be registered automatically.
@@ -255,6 +269,7 @@ module MXNet::Gluon
       name = @reg_children.length.to_s if name.nil?
       @reg_children[name] = block
     end
+
     ##
     # Activates or deactivates HybridBlock children recursively. Has
     # no effect on non-hybrid children.
@@ -269,6 +284,7 @@ module MXNet::Gluon
         child.hybridize(active: active, **kwargs)
       end
     end
+
     ##
     # Calls #forward. Only accepts positional arguments.
     #
@@ -276,6 +292,7 @@ module MXNet::Gluon
     def [](*args)
       forward(*args)
     end
+
     ##
     # Override to implement forward computation using NDArray. Only
     # accepts positional arguments.
@@ -287,7 +304,9 @@ module MXNet::Gluon
     def forward(*args)
       raise NotImplementedError
     end
+
     protected
+
     def collect_params_for_storage(prefix = '')
       prefix += '.' unless prefix.empty?
       {}.tap do |hash|
@@ -299,7 +318,9 @@ module MXNet::Gluon
         end
       end
     end
+
     private
+
     def method_missing(sym, *args)
       name = sym.to_s
       if name[-1] == '='
@@ -312,6 +333,7 @@ module MXNet::Gluon
         get_attr(name)
       end
     end
+
     def set_attr(name, value)
       case value
       when MXNet::Gluon::Block
@@ -322,16 +344,19 @@ module MXNet::Gluon
         @reg_other[name] = value
       end
     end
+
     def get_attr(name)
       [@reg_children, @reg_parameters, @reg_other].each do |h|
         return h[name] if h.has_key?(name)
       end
       raise NoMethodError, "undefined method `#{name}' for #{self}"
     end
+
     def hint
       self.class.name.split('::').last.downcase
     end
   end
+
   ##
   # CachedGraph encapsulates caching symbolized operations.
   #
@@ -340,18 +365,23 @@ module MXNet::Gluon
       super(**kwargs)
       clear_cache
     end
+
     def clear_cache
       @cached_graph = nil
       @cached_op = nil
       @flags = {}
     end
+
     def infer_type(*args)
       infer_attrs('infer_type', 'dtype', *args)
     end
+
     def infer_shape(*args)
       infer_attrs('infer_shape', 'shape', *args)
     end
+
     protected
+
     def call_cached(*args)
       inputs, _, cached_op = get_cached_op(*args)
       begin
@@ -366,7 +396,9 @@ module MXNet::Gluon
         retry
       end
     end
+
     private
+
     ##
     # Infer attributes (type and shape).
     #
@@ -380,6 +412,7 @@ module MXNet::Gluon
         value.send("#{attr}=", sdict[value.name.to_sym])
       end
     end
+
     def get_graph(*args)
       @cached_graph ||=
         begin
@@ -393,6 +426,7 @@ module MXNet::Gluon
           [inputs, hybrid_forward(MXNet::Symbol, *inputs, **params)]
         end
     end
+
     def get_cached_op(*args)
       @cached_op ||=
         begin
@@ -402,15 +436,18 @@ module MXNet::Gluon
         end
     end
   end
+
   ##
   # HybridBlock supports forwarding with both Symbol and NDArray.
   #
   class HybridBlock < Block
     include CachedGraph
+
     def initialize(**kwargs)
       super(**kwargs)
       @active = false
     end
+
     def register_child(block, name = nil)
       unless block.is_a?(MXNet::Gluon::HybridBlock)
         raise RuntimeError,
@@ -421,16 +458,19 @@ module MXNet::Gluon
       clear_cache
       super
     end
+
     def set_attr(name, value)
       clear_cache if value.is_a?(HybridBlock)
       super
     end
+
     def hybridize(active: true, **kwargs)
       clear_cache
       @active = active
       @flags = kwargs
       super
     end
+
     ##
     # Exports HybridBlock to JSON format that can be loaded by
     # SymbolBlock.import.
@@ -466,6 +506,7 @@ module MXNet::Gluon
       end
       MXNet::NDArray.save('%s-%04d.params' % [filename, epoch], args)
     end
+
     ##
     # Defines the forward computation. Arguments can be either Symbol
     # or NDArray.
@@ -508,6 +549,7 @@ module MXNet::Gluon
               "not #{args.first.class}"
       end
     end
+
     ##
     # Override to construct symbolic graph for this Block.
     #
@@ -520,11 +562,13 @@ module MXNet::Gluon
       raise NotImplementedError
     end
   end
+
   ##
   # A block constructed from a Symbol.
   #
   class SymbolBlock < MXNet::Gluon::Block
     include CachedGraph
+
     ##
     # Imports model previously saved to JSON format by
     # HybridBlock#export as a SymbolBlock for use in Gluon.
@@ -582,6 +626,7 @@ module MXNet::Gluon
         end
       end
     end
+
     ##
     # Creates a new instance.
     #
@@ -619,6 +664,7 @@ module MXNet::Gluon
           acc
         end
     end
+
     def forward(*args)
       case args.first
       when MXNet::Symbol
@@ -637,7 +683,9 @@ module MXNet::Gluon
               "not #{args.first.class}"
       end
     end
+
     private
+
     ##
     # Gets the longest common prefix of names.
     #
@@ -652,6 +700,7 @@ module MXNet::Gluon
       end
     end
   end
+
   def self.SymbolBlock(*args)
     SymbolBlock.new(*args)
   end

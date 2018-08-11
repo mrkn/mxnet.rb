@@ -5,6 +5,7 @@ module MXNet::Gluon
   # Error for unfinished deferred initializations.
   #
   DeferredInitializationError = Class.new(RuntimeError)
+
   ##
   # A Container holding parameters (weights) of Blocks.
   #
@@ -55,12 +56,15 @@ module MXNet::Gluon
       @grad_req = grad_req
       @trainer = nil
     end
+
     def name
       @name
     end
+
     def shape
       @shape
     end
+
     def shape=(shape)
       if @shape.nil?
         @shape = shape
@@ -74,20 +78,25 @@ module MXNet::Gluon
         @shape = shape
       end
     end
+
     def dtype
       @dtype
     end
+
     def dtype=(dtype)
       @dtype = dtype.is_a?(::String) || dtype.is_a?(::Symbol) ?
                  MXNet::DType.name2id(dtype) :
                  dtype
     end
+
     def trainer
       @trainer
     end
+
     def trainer=(trainer)
       @trainer = trainer
     end
+
     ##
     # Initializes parameter and gradient arrays. Only used for NDArray
     # API.
@@ -139,6 +148,7 @@ module MXNet::Gluon
       @deferred_init = [ctx, init, nil]
       finish_deferred_init
     end
+
     ##
     # Returns a list of contexts this parameter is initialized on.
     #
@@ -153,12 +163,14 @@ module MXNet::Gluon
         @ctx
       end
     end
+
     ##
     # Returns a symbol representing this parameter.
     #
     def var
       @var ||= MXNet::Symbol.var(@name, shape: @shape, dtype: @dtype)
     end
+
     ##
     # Returns a copy of this parameter on one context. Must have been
     # initialized on this context before.
@@ -175,6 +187,7 @@ module MXNet::Gluon
     def data(ctx: nil)
       check_and_get(@data, ctx)
     end
+
     ##
     # Returns copies of this parameter on all contexts, in the same
     # order as creation.
@@ -186,6 +199,7 @@ module MXNet::Gluon
     def list_data
       check_and_get(@data, :all)
     end
+
     ##
     # Sets this parameter's value on all contexts.
     #
@@ -203,6 +217,7 @@ module MXNet::Gluon
         end
       end
     end
+
     ##
     # Returns a gradient buffer for this parameter on one context.
     # Must have been initialized on this context before.
@@ -223,6 +238,7 @@ module MXNet::Gluon
       end
       check_and_get(@grad, ctx)
     end
+
     ##
     # Returns gradient buffers on all contexts, in the same order as
     # creation.
@@ -239,6 +255,7 @@ module MXNet::Gluon
       end
       check_and_get(@grad, :all)
     end
+
     ##
     # Sets gradient buffer to zero on all contexts.
     #
@@ -253,15 +270,19 @@ module MXNet::Gluon
         end
       end
     end
+
     def to_s
       "Parameter #{@name} (shape=#{@shape.inspect}, dtype=#{MXNet::DType.id2name(@dtype)})"
     end
+
     def ==(other)
       self.name == other.name && self.shape == other.shape
     rescue NoMethodError
       false
     end
+
     private
+
     ##
     # Reduce data from multiple contexts to cpu.
     #
@@ -269,6 +290,7 @@ module MXNet::Gluon
       data = list_data.map { |d| d.copy_to(MXNet.cpu) }
       MXNet::NDArray.add_n(*data) / data.length
     end
+
     def check_and_get(arr_list, ctx)
       unless arr_list.nil?
         if ctx == :all
@@ -298,6 +320,7 @@ module MXNet::Gluon
             "instead of #params because the later does not include Parameters " \
             "of nested child Blocks."
     end
+
     def load_and_init(ctx, data)
       ctx = ctx.is_a?(MXNet::Context) ? [ctx] : ctx
       if @data
@@ -306,6 +329,7 @@ module MXNet::Gluon
         init_impl(ctx, data)
       end
     end
+
     def finish_deferred_init
       return if @deferred_init.empty?
       ctx, default_init, data = @deferred_init
@@ -323,11 +347,13 @@ module MXNet::Gluon
         init_impl(ctx, data)
       end
     end
+
     def init_impl(ctx, data)
       @data = ctx.map { |c| data.copy_to(c) }
       grad = MXNet::NDArray.zeros(@shape, dtype: @dtype, ctx: MXNet.cpu)
       init_grad(ctx, grad)
     end
+
     def init_grad(ctx, grad)
       if @grad_req == :null
         @grad = nil
@@ -341,11 +367,13 @@ module MXNet::Gluon
       )
     end
   end
+
   ##
   # A dictionary managing a set of Parameters.
   #
   class ParameterDict
     include Enumerable
+
     ##
     # Creates a new instance.
     #
@@ -365,15 +393,19 @@ module MXNet::Gluon
       @prefix = prefix
       @shared = shared
     end
+
     def each(&block)
       @params.each(&block)
     end
+
     def keys
       @params.keys
     end
+
     def values
       @params.values
     end
+
     ##
     # Prefix of this dict. It will be prepended to a Parameter's name
     # created with #get.
@@ -381,6 +413,7 @@ module MXNet::Gluon
     def prefix
       @prefix
     end
+
     ##
     # Retrieves a Parameter with name "<prefix><name>". If not found,
     # #get will first try to retrieve it from "shared" dict. If still
@@ -405,6 +438,7 @@ module MXNet::Gluon
         param
       end
     end
+
     ##
     # Copies all Parameters in +other+ to this dict.
     #
@@ -418,6 +452,7 @@ module MXNet::Gluon
         @params[k] = v
       end
     end
+
     ##
     # Initializes all Parameters managed by this dict to be used for
     # NDArray API. It has no effect when using Symbol API.
@@ -436,17 +471,21 @@ module MXNet::Gluon
     def init(init: nil, ctx: nil, force_reinit: false)
       values.each { |v| v.init(init: init, ctx: ctx, force_reinit: force_reinit) }
     end
+
     def to_s
       "ParameterDict (\n" +
         self.inject('') { |a, (n, p)| a + "  #{p}\n" } +
         ')'
     end
+
     def ==(other)
       self.prefix == other.prefix && self.each.to_a == other.each.to_a
     rescue NoMethodError
       false
     end
+
     protected
+
     def _get(name)
       if value = @params[name]
         value

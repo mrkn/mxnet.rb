@@ -22,10 +22,12 @@ module MXNet
       default = child.name.split('::').last.downcase
       child.register(default)
     end
+
     def self.register(name)
       $mxnet_initializer_registry ||= {}
       $mxnet_initializer_registry[name.to_sym] = self
     end
+
     def self.create(initializer)
       case initializer
       when ::Class
@@ -36,12 +38,14 @@ module MXNet
         initializer
       end
     end
+
     ##
     # Calls #init_array.
     #
     def [](array)
       init_array(array)
     end
+
     ##
     # Override to initialize array.
     #
@@ -52,6 +56,7 @@ module MXNet
     def init_array(array)
       raise NotImplementedError
     end
+
     ##
     # Initializes array to zero.
     #
@@ -61,9 +66,11 @@ module MXNet
         array[0..-1] = 0.0
       end
     end
+
     def self.Zero(*args)
       Zero.new(*args)
     end
+
     ##
     # Initializes array with random values uniformly sampled from a
     # given range.
@@ -82,13 +89,16 @@ module MXNet
       def initialize(scale = 0.07)
         @scale = scale
       end
+
       def init_array(array)
         MXNet::NDArray::Random.uniform(-@scale, @scale, out: array)
       end
     end
+
     def self.Uniform(*args)
       Uniform.new(*args)
     end
+
     ##
     # Initializes array with random values sampled from a normal
     # distribution with a mean of zero and standard deviation of
@@ -107,10 +117,12 @@ module MXNet
       def initialize(sigma = 0.01)
         @sigma = sigma
       end
+
       def init_array(array)
         MXNet::NDArray::Random.normal(0, @sigma, out: array)
       end
     end
+
     def self.Normal(*args)
       Normal.new(*args)
     end

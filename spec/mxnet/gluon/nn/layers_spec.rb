@@ -11,6 +11,7 @@ RSpec.describe MXNet::Gluon::NN do
       expect(layer).to be_a(MXNet::Gluon::NN::Sequential)
     end
   end
+
   describe '.Dense' do
     let(:layer) do
       MXNet::Gluon::NN.Dense(1)
@@ -34,6 +35,7 @@ RSpec.describe MXNet::Gluon::NN::Sequential do
       expect(layer.children).to eq([block])
     end
   end
+
   describe '#forward' do
     let(:layer) do
       described_class.new
@@ -62,6 +64,7 @@ RSpec.describe MXNet::Gluon::NN::HybridSequential do
       expect(layer.children).to eq([block])
     end
   end
+
   describe '#forward' do
     let(:layer) do
       described_class.new
@@ -112,6 +115,7 @@ RSpec.describe MXNet::Gluon::NN::Dense do
       end
     end
   end
+
   describe '#collect_params' do
     let(:layer) do
       described_class.new(1, in_units: 2, prefix: 'dense_')
@@ -124,6 +128,7 @@ RSpec.describe MXNet::Gluon::NN::Dense do
       expect(layer.collect_params).to eq(params)
     end
   end
+
   describe '#forward' do
     context 'with input units specified' do
       let(:layer) do
@@ -148,6 +153,7 @@ RSpec.describe MXNet::Gluon::NN::Dense do
       end
     end
   end
+
   describe '#hybrid_forward' do
     let(:layer) do
       described_class.new(1)
@@ -192,6 +198,7 @@ RSpec.describe MXNet::Gluon::NN::Internal::Conv do
   let(:newargs) do
     {channels: 1, kernel_size: [2, 2], strides: 1, padding: 0, dilation: 1, layout: 'NCHW'}
   end
+
   describe '.new' do
     let(:layer) do
       described_class.new(**newargs)
@@ -226,6 +233,7 @@ RSpec.describe MXNet::Gluon::NN::Internal::Conv do
       end
     end
   end
+
   describe '#hybrid_forward' do
     let(:layer) do
       described_class.new(**newargs)
@@ -239,6 +247,7 @@ RSpec.describe MXNet::Gluon::NN::Internal::Conv do
     let(:bias) do
       MXNet::NDArray.array([-1])
     end
+
     context 'without bias' do
       let(:kwargs) do
         {weight: weight}
@@ -254,6 +263,7 @@ RSpec.describe MXNet::Gluon::NN::Internal::Conv do
           .to eq(output)
       end
     end
+
     context 'with bias' do
       let(:kwargs) do
         {weight: weight, bias: bias}
@@ -269,6 +279,7 @@ RSpec.describe MXNet::Gluon::NN::Internal::Conv do
           .to eq(output)
       end
     end
+
     context 'with `strides: 2`' do
       let(:layer) do
         described_class.new(**newargs.merge(strides: 2))
@@ -286,6 +297,7 @@ RSpec.describe MXNet::Gluon::NN::Internal::Conv do
           .to eq(output)
       end
     end
+
     context 'with `padding: 1`' do
       let(:layer) do
         described_class.new(**newargs.merge(padding: 1))
@@ -306,6 +318,7 @@ RSpec.describe MXNet::Gluon::NN::Internal::Conv do
           .to eq(output)
       end
     end
+
     context 'with `dilation: 2`' do
       let(:layer) do
         described_class.new(**newargs.merge(dilation: 2))
@@ -330,6 +343,7 @@ RSpec.describe MXNet::Gluon::NN::Internal::Pooling do
   let(:newargs) do
     {pool_size: [2, 2], strides: 2, padding: 0}
   end
+
   describe '#hybrid_forward' do
     let(:layer) do
       described_class.new(**newargs)
@@ -346,6 +360,7 @@ RSpec.describe MXNet::Gluon::NN::Internal::Pooling do
       expect(layer.hybrid_forward(MXNet::NDArray, data).to_narray.to_a)
         .to eq(output)
     end
+
     context 'with `strides: 1`' do
       let(:layer) do
         described_class.new(**newargs.merge(strides: 1))
@@ -361,6 +376,7 @@ RSpec.describe MXNet::Gluon::NN::Internal::Pooling do
           .to eq(output)
       end
     end
+
     context 'with `padding: 1`' do
       let(:layer) do
         described_class.new(**newargs.merge(padding: 1))
