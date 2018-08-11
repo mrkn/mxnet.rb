@@ -64,7 +64,7 @@ module MXNet
           end
           unless weight.nil?
             raise ArgumentError, 'weight must be numeric' unless weight.is_a?(Numeric)
-            loss = loss * weight
+            loss *= weight
           end
           loss
         end

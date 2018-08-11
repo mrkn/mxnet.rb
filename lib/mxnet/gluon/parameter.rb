@@ -240,7 +240,7 @@ module MXNet
         MXNet::Autograd.pause do
           unless data
             data = MXNet::NDArray.zeros(self.shape, dtype: self.dtype, ctx: MXNet.cpu)
-            MXNet::Init.create(default_init).call(
+            MXNet::Init.create(default_init).(
               MXNet::Init::InitDesc.new(@name, {__init__: initializer}),
               data
             )
