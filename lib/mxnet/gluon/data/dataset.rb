@@ -25,7 +25,7 @@ module MXNet::Gluon::Data
     def transform(lazy: true)
       trans = LazyTransformDataset.new(self, &proc)
       return trans if lazy
-      SimpleDataset.new(p trans.map.to_a)
+      SimpleDataset.new(trans.map.to_a)
     end
 
     def transform_first(lazy: true)
