@@ -416,9 +416,14 @@ module MXNet
       def get_graph(*args)
         @cached_graph ||=
           begin
-            inputs = (0...args.length).map do |i|
-              MXNet::Symbol.var("data#{i}")
-            end
+            inputs =
+              if args.length > 1
+                (0...args.length).map do |i|
+                  MXNet::Symbol.var("data#{i}")
+                end
+              else
+                [MXNet::Symbol.var('data')]
+              end
             params = @reg_parameters.inject({}) do |acc, (i, j)|
               acc[i.to_sym] = j.var
               acc
