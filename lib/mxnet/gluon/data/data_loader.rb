@@ -1,3 +1,5 @@
+require_relative 'sampler'
+
 module MXNet
   module Gluon
     module Data
@@ -5,7 +7,28 @@ module MXNet
       class DataLoader
         include Enumerable
 
-        def initialize(dataset, batch_size: nil, shuffle: nil, sampler: nil,
+        # Creates a new instance.
+        #
+        # ====Parameters
+        #
+        # +dataset+::    (Dataset, NDArray or array)
+        #                Source. Note that instances of NDArray and
+        #                Array can be used directly.
+        # +shuffle+::    (boolean)
+        #                Whether or not to shuffle the samples.
+        # +batch_size+:: (integer)
+        #                Size of mini-batch.
+        # +last_batch+:: (+:keep+, +:discard+, +:rollover+)
+        #                Specifies how the last batch is handled if
+        #                +batch_size+ does not evenly divide sequence
+        #                length. If +:keep+, the last batch will be
+        #                returned directly, but will contain fewer
+        #                elements than +batch_size+ requires. If
+        #                +:discard+, the last batch will be discarded.
+        #                If +:rollover+, the remaining elements will
+        #                be rolled over to the next iteration.
+        #
+        def initialize(dataset, batch_size: nil, shuffle: false, sampler: nil,
                        last_batch: nil, batch_sampler: nil, batchify_fn: nil,
                        num_workers: 0)
           @dataset = dataset
@@ -17,16 +40,16 @@ module MXNet
             end
             if sampler.nil?
               if shuffle
-                sampler = _sampler.RandomSampler.new(dataset.length)
+                sampler = MXNet::Gluon::Data::RandomSampler.new(dataset.length)
               else
-                sampler = _sampler.SequentialSampler.new(dataset.length)
+                sampler = MXNet::Gluon::Data::SequentialSampler.new(dataset.length)
               end
             elsif shuffle
               raise ArgumentError, "shuffle must not be specified if " +
                     "sampler is specified"
             end
 
-            batch_sampler = _sampler.BatchSampler(
+            batch_sampler = MXNet::Gluon::Data::BatchSampler.new(
               sampler, batch_size, last_batch || :keep)
           elsif batch_size || shuffle || sampler || last_batch
             raise ArgumentError,
