@@ -100,5 +100,9 @@ module MXNet
         end
       end
     end
+
+    def self.Trainer(*args)
+      Trainer.new(*args)
+    end
   end
 end
