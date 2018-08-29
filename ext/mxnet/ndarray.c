@@ -396,12 +396,6 @@ ndarray_get_dtype_id(VALUE obj)
 static VALUE
 ndarray_get_dtype(VALUE obj)
 {
-  return INT2NUM(ndarray_get_dtype_id(obj));
-}
-
-static VALUE
-ndarray_get_dtype_name(VALUE obj)
-{
   int dtype_id = ndarray_get_dtype_id(obj);
   return mxnet_dtype_id2name(dtype_id);
 }
@@ -734,7 +728,6 @@ mxnet_init_ndarray(void)
   /* TODO: rb_define_singleton_method(cNDArray, "load_from_buffer", ndarray_s_load_from_buffer, 1); */
 
   rb_define_method(cNDArray, "dtype", ndarray_get_dtype, 0);
-  rb_define_method(cNDArray, "dtype_name", ndarray_get_dtype_name, 0);
   rb_define_method(cNDArray, "shape", mxnet_ndarray_get_shape, 0);
   rb_define_method(cNDArray, "reshape", ndarray_reshape, 1);
   rb_define_method(cNDArray, "grad", ndarray_grad, 0);

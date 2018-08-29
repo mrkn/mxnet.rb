@@ -162,14 +162,14 @@ module MXNet
 
     describe '#dtype' do
       specify do
-        expect(MXNet::NDArray.empty([1, 2]).dtype).to eq(DType.name2id(:float32))
-        expect(MXNet::NDArray.empty([1, 2], dtype: :float32).dtype).to eq(DType.name2id(:float32))
-        expect(MXNet::NDArray.empty([1, 2], dtype: :float64).dtype).to eq(DType.name2id(:float64))
-        expect(MXNet::NDArray.empty([1, 2], dtype: :float16).dtype).to eq(DType.name2id(:float16))
-        expect(MXNet::NDArray.empty([1, 2], dtype: :uint8).dtype).to eq(DType.name2id(:uint8))
-        expect(MXNet::NDArray.empty([1, 2], dtype: :int8).dtype).to eq(DType.name2id(:int8))
-        expect(MXNet::NDArray.empty([1, 2], dtype: :int32).dtype).to eq(DType.name2id(:int32))
-        expect(MXNet::NDArray.empty([1, 2], dtype: :int64).dtype).to eq(DType.name2id(:int64))
+        expect(MXNet::NDArray.empty([1, 2]).dtype).to eq(:float32)
+        expect(MXNet::NDArray.empty([1, 2], dtype: :float32).dtype).to eq(:float32)
+        expect(MXNet::NDArray.empty([1, 2], dtype: :float64).dtype).to eq(:float64)
+        expect(MXNet::NDArray.empty([1, 2], dtype: :float16).dtype).to eq(:float16)
+        expect(MXNet::NDArray.empty([1, 2], dtype: :uint8).dtype).to eq(:uint8)
+        expect(MXNet::NDArray.empty([1, 2], dtype: :int8).dtype).to eq(:int8)
+        expect(MXNet::NDArray.empty([1, 2], dtype: :int32).dtype).to eq(:int32)
+        expect(MXNet::NDArray.empty([1, 2], dtype: :int64).dtype).to eq(:int64)
       end
     end
 
@@ -244,7 +244,7 @@ module MXNet
       specify do
         x = MXNet::NDArray.zeros([2, 3], dtype: :float32)
         y = x.as_type(:int32)
-        expect(y.dtype_name).to eq(:int32)
+        expect(y.dtype).to eq(:int32)
       end
     end
 
