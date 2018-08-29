@@ -47,11 +47,11 @@ module MXNet
       specify do
         x = Numo::Int8.ones(2, 3)
         y = MXNet::NDArray(x)
-        expect(y.dtype).to eq(MXNet::DType.name2id(:float32))
+        expect(y.dtype).to eq(:float32)
         expect(y.to_narray).to eq(Numo::SFloat.cast(x))
 
         y = MXNet::NDArray(x, dtype: :int8)
-        expect(y.dtype).to eq(MXNet::DType.name2id(:int8))
+        expect(y.dtype).to eq(:int8)
         expect(y.to_narray).to eq(x)
       end
     end
@@ -60,7 +60,7 @@ module MXNet
       specify do
         x = Numo::Int32.ones(2, 3)
         y = MXNet::NDArray(x)
-        expect(y.dtype).to eq(MXNet::DType.name2id(:float32))
+        expect(y.dtype).to eq(:float32)
         expect(y.to_narray).to eq(Numo::SFloat.cast(x))
       end
     end
@@ -69,11 +69,11 @@ module MXNet
       specify do
         x = Numo::Int32.ones(2, 3)
         y = MXNet::NDArray(x)
-        expect(y.dtype).to eq(MXNet::DType.name2id(:float32))
+        expect(y.dtype).to eq(:float32)
         expect(y.to_narray).to eq(Numo::SFloat.cast(x))
 
         y = MXNet::NDArray(x, dtype: :int32)
-        expect(y.dtype).to eq(MXNet::DType.name2id(:int32))
+        expect(y.dtype).to eq(:int32)
         expect(y.to_narray).to eq(x)
       end
     end
@@ -82,11 +82,11 @@ module MXNet
       specify do
         x = Numo::Int64.ones(2, 3)
         y = MXNet::NDArray(x)
-        expect(y.dtype).to eq(MXNet::DType.name2id(:float32))
+        expect(y.dtype).to eq(:float32)
         expect(y.to_narray).to eq(Numo::SFloat.cast(x))
 
         y = MXNet::NDArray(x, dtype: :int64)
-        expect(y.dtype).to eq(MXNet::DType.name2id(:int64))
+        expect(y.dtype).to eq(:int64)
         expect(y.to_narray).to eq(x)
       end
     end
@@ -95,11 +95,11 @@ module MXNet
       specify do
         x = Numo::UInt8.ones(2, 3)
         y = MXNet::NDArray(x)
-        expect(y.dtype).to eq(MXNet::DType.name2id(:float32))
+        expect(y.dtype).to eq(:float32)
         expect(y.to_narray).to eq(Numo::SFloat.cast(x))
 
         y = MXNet::NDArray(x, dtype: :uint8)
-        expect(y.dtype).to eq(MXNet::DType.name2id(:uint8))
+        expect(y.dtype).to eq(:uint8)
         expect(y.to_narray).to eq(x)
       end
     end
@@ -108,7 +108,7 @@ module MXNet
       specify do
         x = Numo::UInt16.ones(2, 3)
         y = MXNet::NDArray(x)
-        expect(y.dtype).to eq(MXNet::DType.name2id(:float32))
+        expect(y.dtype).to eq(:float32)
         expect(y.to_narray).to eq(Numo::SFloat.cast(x))
       end
     end
@@ -117,7 +117,7 @@ module MXNet
       specify do
         x = Numo::UInt32.ones(2, 3)
         y = MXNet::NDArray(x)
-        expect(y.dtype).to eq(MXNet::DType.name2id(:float32))
+        expect(y.dtype).to eq(:float32)
         expect(y.to_narray).to eq(Numo::SFloat.cast(x))
       end
     end
@@ -126,7 +126,7 @@ module MXNet
       specify do
         x = Numo::UInt64.ones(2, 3)
         y = MXNet::NDArray(x)
-        expect(y.dtype).to eq(MXNet::DType.name2id(:float32))
+        expect(y.dtype).to eq(:float32)
         expect(y.to_narray).to eq(Numo::SFloat.cast(x))
       end
     end
@@ -135,7 +135,7 @@ module MXNet
       specify do
         x = Numo::SFloat.ones(2, 3)
         y = MXNet::NDArray(x)
-        expect(y.dtype).to eq(MXNet::DType.name2id(:float32))
+        expect(y.dtype).to eq(:float32)
         expect(y.to_narray).to eq(x)
       end
     end
@@ -144,11 +144,11 @@ module MXNet
       specify do
         x = Numo::DFloat.ones(2, 3)
         y = MXNet::NDArray(x)
-        expect(y.dtype).to eq(MXNet::DType.name2id(:float32))
+        expect(y.dtype).to eq(:float32)
         expect(y.to_narray).to eq(Numo::SFloat.cast(x))
 
         y = MXNet::NDArray(x, dtype: :float64)
-        expect(y.dtype).to eq(MXNet::DType.name2id(:float64))
+        expect(y.dtype).to eq(:float64)
         expect(y.to_narray).to eq(x)
       end
     end
