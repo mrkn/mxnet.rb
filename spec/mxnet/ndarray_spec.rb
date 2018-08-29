@@ -776,7 +776,6 @@ module MXNet
       let(:y) { MXNet::NDArray.zeros([2, 3]) }
 
       specify "slice along all axes" do
-        pending "slice_like unknown from Ops (operation delegator)"
         expect(x.slice_like(y).to_narray).to eq(
           [[1, 2, 3],
            [5, 6, 7]]
@@ -784,24 +783,21 @@ module MXNet
       end
 
       specify "slice along axis 0 and 1 (same as above)" do
-        pending "slice_like unknown from Ops (operation delegator)"
-        expect(x.slice_like(shape_like: y, axes: [0, 1]).to_narray).to eq(
+        expect(x.slice_like(y, axes: [0, 1]).to_narray).to eq(
           [[1, 2, 3],
            [5, 6, 7]]
         )
       end
 
       specify "slice along axis 0" do
-        pending "slice_like unknown from Ops (operation delegator)"
-        expect(x.slice_like(shape_like: y, axes: [0]).to_narray).to eq(
+        expect(x.slice_like(y, axes: [0]).to_narray).to eq(
           [[1, 2, 3, 4],
            [5, 6, 7, 8]]
         )
       end
 
       specify "slice along axis -1" do
-        pending "slice_like unknown from Ops (operation delegator)"
-        expect(x.slice_like(shape_like: y, axes: [-1]).to_narray).to eq(
+        expect(x.slice_like(y, axes: [-1]).to_narray).to eq(
           [[1, 2, 3],
            [5, 6, 7],
            [9, 10, 11]]
