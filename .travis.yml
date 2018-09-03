@@ -27,7 +27,7 @@ matrix:
         - MXNET_VERSION=1.2.1.post1
 
 before_install:
-  - docker pull mrkn/mxnet-rb-ci:${RUBY_VERSION}-${PYTHON_VERSION}-${MXNET_VERSION}
+  - docker pull ${DOCKER_IMAGE_BASE_NAME}:${RUBY_VERSION}-${PYTHON_VERSION}-${MXNET_VERSION}
 
 script:
-  - docker run --rm -t -v $(pwd):/tmp mrkn/mxnet-rb-ci:${RUBY_VERSION}-${PYTHON_VERSION}-${MXNET_VERSION} /bin/sh -c "cd /tmp; bin/ci-script"
+  - docker run --rm -t -v $(pwd):/tmp ${DOCKER_IMAGE_BASE_NAME}:${RUBY_VERSION}-${PYTHON_VERSION}-${MXNET_VERSION} /bin/sh -c "cd /tmp; bin/ci-script"
