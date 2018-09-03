@@ -1,0 +1,42 @@
+
+namespace :docker do
+  def make_tag(ruby_version, python_version, mxnet_version)
+    name = 'mrkn/mxnet-rb-ci'
+    return [name, [ruby_version, python_version, mxnet_version].join('-')].join(':')
+  end
+
+  def make_build_args(ruby_version, python_version, mxnet_version)
+    ba = '--build-arg'
+    return [
+      ba, "RUBY_VERSION=#{ruby_version}",
+      ba, "PYTHON_VERSION=#{python_version}",
+      ba, "MXNET_VERSION=#{mxnet_version}"
+    ]
+  end
+
+  def docker_build(ruby_version, python_version, mxnet_version)
+    tag = make_tag(ruby_version, python_version, mxnet_version)
+    build_args = make_build_args(ruby_version, python_version, mxnet_version)
+    sh 'docker', 'build', '-t', tag, *build_args, '.'
+  end
+
+  def docker_push(ruby_version, python_version, mxnet_version)
+    tag = make_tag(ruby_version, python_version, mxnet_version)
+    build_args = make_build_args(ruby_version, python_version, mxnet_version)
+    sh 'docker', 'push', tag
+  end
+
+  task :build do
+    ruby_version = ENV['ruby_version'] || '2.5.1'
+    python_version = ENV['python_version'] || '3.7.0'
+    mxnet_version = ENV['mxnet_version'] || '1.2.1.post1'
+    docker_build(ruby_version, python_version, mxnet_version) 
+  end
+
+  task :push do
+    ruby_version = ENV['ruby_version'] || '2.5.1'
+    python_version = ENV['python_version'] || '3.7.0'
+    mxnet_version = ENV['mxnet_version'] || '1.2.1.post1'
+    docker_push(ruby_version, python_version, mxnet_version) 
+  end
+end
