@@ -1,7 +1,6 @@
 autoconf
 bison
 dpkg-dev
-gcc
 libbz2-dev
 libgdbm-dev
 libglib2.0-dev
@@ -9,7 +8,6 @@ libncurses-dev
 libreadline-dev
 libxml2-dev
 libxslt-dev
-make
 ruby
 wget
 xz-utils

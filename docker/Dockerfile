@@ -12,14 +12,14 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
             bzip2 \
             ca-certificates \
+            gcc \
             libffi-dev \
             libgmp-dev \
-            libgdbm-dev \
             libssl-dev \
             libyaml-dev \
+            make \
             procps \
             zlib1g-dev \
-            libgmp-dev \
             && \
     rm -rf /var/lib/apt/lists/*
 
