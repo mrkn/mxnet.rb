@@ -75,5 +75,9 @@ ENV PYTHON_PIP_VERSION 18.0
 ADD install_pip.sh /tmp
 RUN /tmp/install_pip.sh
 
+# MXNet
+ENV MXNET_VERSION=$MXNET_VERSION
+RUN pip3 install "mxnet==$MXNET_VERSION"
+
 RUN apt-get purge -y --auto-remove $(cat /tmp/ruby_build_dep.txt)
 RUN rm /tmp/*
