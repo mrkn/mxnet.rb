@@ -30,9 +30,9 @@ RUN mkdir -p /usr/local/etc && \
       echo 'update: --no-document'; \
     } >> /usr/local/etc/gemrc
 
-ENV RUBY_VERSION $RUBY_VERSION
-ENV RUBYGEMS_VERSION 2.7.7
-ENV BUNDLER_VERSION 1.16.4
+ENV RUBY_VERSION=$RUBY_VERSION
+ENV RUBYGEMS_VERSION=2.7.7
+ENV BUNDLER_VERSION=1.16.4
 
 ADD ruby_build_dep.txt /tmp
 ADD install_ruby.sh /tmp
