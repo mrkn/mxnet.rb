@@ -15,18 +15,18 @@ matrix:
   include:
     - name: "Ruby 2.5.1 with MXNet 1.2.1.post1 on Python 3.7.0"
       env:
-        - RUBY_VERSION=2.5.1
-        - PYTHON_VERSION=3.7.0
-        - MXNET_VERSION=1.2.1.post1
+        - ruby_version=2.5.1
+        - python_version=3.7.0
+        - mxnet_version=1.2.1.post1
 
     - name: "Ruby 2.4.4 with MXNet 1.2.1.post1 on Python 3.7.0"
       env:
-        - RUBY_VERSION=2.4.4
-        - PYTHON_VERSION=3.7.0
-        - MXNET_VERSION=1.2.1.post1
+        - ruby_version=2.4.4
+        - python_version=3.7.0
+        - mxnet_version=1.2.1.post1
 
     - name: "Ruby 2.3.7 with MXNet 1.2.1.post1 on Python 3.7.0"
       env:
-        - RUBY_VERSION=2.3.7
-        - PYTHON_VERSION=3.7.0
-        - MXNET_VERSION=1.2.1.post1
+        - ruby_version=2.3.7
+        - python_version=3.7.0
+        - mxnet_version=1.2.1.post1
