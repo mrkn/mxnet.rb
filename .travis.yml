@@ -5,7 +5,9 @@ language: ruby
 services:
   - docker
 
-before_install: rake ci:pull
+install:
+  - bundle install
+  - rake ci:pull
 
 script: rake ci:run
 
