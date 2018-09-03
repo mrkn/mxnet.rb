@@ -1,0 +1,6 @@
+#! /bin/bash
+
+set -ex
+bundle install
+bundle exec rake compile
+bundle exec rake spec

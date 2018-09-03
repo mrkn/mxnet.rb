@@ -1,5 +1,33 @@
-sudo: false
-language: ruby
-rvm:
-  - 2.4.1
-before_install: gem install bundler -v 1.15.4
+sudo: required
+
+services:
+  - docker
+
+env:
+  - DOCKER_IMAGE_BASE_NAME=mrkn/mxnet-rb-ci
+
+matrix:
+  include:
+    - name: "Ruby 2.5.1 with MXNet 1.2.1.post1 on Python 3.7.0"
+      env:
+        - RUBY_VERSION=2.5.1
+        - PYTHON_VERSION=3.7.0
+        - MXNET_VERSION=1.2.1.post1
+
+    - name: "Ruby 2.4.4 with MXNet 1.2.1.post1 on Python 3.7.0"
+      env:
+        - RUBY_VERSION=2.4.4
+        - PYTHON_VERSION=3.7.0
+        - MXNET_VERSION=1.2.1.post1
+
+    - name: "Ruby 2.3.7 with MXNet 1.2.1.post1 on Python 3.7.0"
+      env:
+        - RUBY_VERSION=2.3.7
+        - PYTHON_VERSION=3.7.0
+        - MXNET_VERSION=1.2.1.post1
+
+before_install:
+  - docker pull mrkn/mxnet-rb-ci:${RUBY_VERSION}-${PYTHON_VERSION}-${MXNET_VERSION}
+
+script:
+  - docker run --rm -t -v $(pwd):/tmp mrkn/mxnet-rb-ci:${RUBY_VERSION}-${PYTHON_VERSION}-${MXNET_VERSION} /bin/sh -c "cd /tmp; bin/ci-script"
