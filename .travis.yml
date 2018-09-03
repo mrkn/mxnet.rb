@@ -1,10 +1,13 @@
 sudo: required
 
+language: ruby
+
 services:
   - docker
 
-env:
-  - DOCKER_IMAGE_BASE_NAME=mrkn/mxnet-rb-ci
+before_install: rake ci:pull
+
+script: rake ci:run
 
 matrix:
   include:
@@ -25,9 +28,3 @@ matrix:
         - RUBY_VERSION=2.3.7
         - PYTHON_VERSION=3.7.0
         - MXNET_VERSION=1.2.1.post1
-
-before_install:
-  - docker pull ${DOCKER_IMAGE_BASE_NAME}:${RUBY_VERSION}-${PYTHON_VERSION}-${MXNET_VERSION}
-
-script:
-  - docker run --rm -t -v $(pwd):/tmp ${DOCKER_IMAGE_BASE_NAME}:${RUBY_VERSION}-${PYTHON_VERSION}-${MXNET_VERSION} /bin/sh -c "cd /tmp; bin/ci-script"
