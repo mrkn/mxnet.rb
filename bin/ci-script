@@ -1,6 +1,10 @@
 #! /bin/bash
 
 set -ex
+
+ln -sf /data/mnist spec/fixture/mnist
+ln -sf /data/cifar10 spec/fixture/cifar10
+
 bundle install
 bundle exec rake compile
 bundle exec rake spec

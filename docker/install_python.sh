@@ -6,7 +6,7 @@ wget -O python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]
 wget -O python.tar.xz.asc "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz.asc"
 
 export GNUPGHOME="$(mktemp -d)"
-gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$PYTHON_GPG_KEY"
+gpg --keyserver pool.sks-keyservers.net --recv-keys "$PYTHON_GPG_KEY"
 gpg --batch --verify python.tar.xz.asc python.tar.xz
 { command -v gpgconf > /dev/null && gpgconf --kill all || :; }
 rm -rf "$GNUPGHOME" python.tar.xz.asc

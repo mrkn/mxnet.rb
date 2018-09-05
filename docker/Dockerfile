@@ -20,6 +20,7 @@ RUN apt-get update && \
             make \
             procps \
             zlib1g-dev \
+            unzip \
             && \
     rm -rf /var/lib/apt/lists/*
 
@@ -81,3 +82,19 @@ RUN pip3 install "mxnet==$MXNET_VERSION"
 
 RUN apt-get purge -y --auto-remove $(cat /tmp/ruby_build_dep.txt)
 RUN rm /tmp/*
+
+RUN mkdir /work
+WORKDIR /work
+
+RUN mkdir -p /data/mnist && \
+    cd /data/mnist && \
+    curl -fsSL -O http://data.mxnet.io/mxnet/data/mnist.zip && \
+    unzip -x mnist.zip && \
+    rm /data/mnist/mnist.zip
+
+RUN mkdir -p /data/cifar10 && \
+    cd /data/cifar10 && \
+    curl -fsSL -O http://data.mxnet.io/mxnet/data/cifar10.zip && \
+    unzip -x cifar10.zip && \
+    mv cifar/* . && \
+    rm /data/cifar10/cifar10.zip

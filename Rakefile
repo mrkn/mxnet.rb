@@ -27,6 +27,6 @@ namespace :ci do
   end
 
   task :run do
-    sh 'docker', 'run', '--rm', '-t', '-v', "#{Dir.pwd}:/tmp", get_image_name, '/bin/sh', '-c', 'cd /tmp; bin/ci-script'
+    sh 'docker', 'run', '--rm', '-t', '-v', "#{Dir.pwd}:/work", get_image_name, '/bin/sh', '-c', 'bin/ci-script'
   end
 end
