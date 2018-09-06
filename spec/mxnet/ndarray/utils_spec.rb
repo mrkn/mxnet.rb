@@ -40,7 +40,21 @@ RSpec.describe MXNet::NDArray do
         loaded = MXNet::NDArray.load('dict')
         expect(loaded).to be_an(Hash)
         expect(loaded.length).to eq(2)
-        expect(loaded).to eq(data.transform_keys(&:to_s))
+        expect(loaded).to eq(stringify_hash_keys(data))
+      end
+    end
+  end
+
+  if Hash.instance_methods.include? :transform_keys
+    def stringify_hash_keys(hash)
+      hash.transform_keys(&:to_s)
+    end
+  else
+    def stringify_hash_keys(hash)
+      {}.tap do |result|
+        hash.each do |key, value|
+          result[key.to_s] = value
+        end
       end
     end
   end

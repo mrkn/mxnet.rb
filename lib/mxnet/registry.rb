@@ -72,10 +72,10 @@ module MXNet
           end
           kwargs = JSON.load(name)
           if kwargs.is_a?(Hash)
-            return create(**kwargs.transform_keys(&:to_sym))
+            return create(**symbolize_hash_keys(kwargs))
           else
             name, kwargs = *kwargs
-            kwargs = (kwargs || {}).transform_keys(&:to_sym)
+            kwargs = symbolize_hash_keys(kwargs || {})
             return create(name, **kwargs)
           end
         end
@@ -87,6 +87,22 @@ module MXNet
                 "Please register it for #{@nickname} first"
         end
         return @registry[name].new(*args, **kwargs)
+      end
+
+      private
+
+      if Hash.instance_methods.include? :transform_keys
+        def symbolize_hash_keys(hash)
+          hash.transform_keys(&:to_sym)
+        end
+      else
+        def symbolize_hash_keys(hash)
+          {}.tap do |result|
+            hash.each do |key, value|
+              result[key.to_sym] = value
+            end
+          end
+        end
       end
     end
   end
