@@ -26,6 +26,18 @@ namespace :docker do
     sh 'docker', 'push', tag
   end
 
+  def run_all(task)
+    %w[
+      2.5.1
+      2.4.4
+      2.3.7
+    ].each do |ruby_version|
+      ENV['ruby_version'] = ruby_version
+      Rake::Task[task].invoke
+      Rake::Task[task].reenable
+    end
+  end
+
   task :build do
     ruby_version = ENV['ruby_version'] || '2.5.1'
     python_version = ENV['python_version'] || '3.7.0'
@@ -33,10 +45,22 @@ namespace :docker do
     docker_build(ruby_version, python_version, mxnet_version) 
   end
 
+  namespace :build do
+    task :all do
+      run_all('docker:build')
+    end
+  end
+
   task :push do
     ruby_version = ENV['ruby_version'] || '2.5.1'
     python_version = ENV['python_version'] || '3.7.0'
     mxnet_version = ENV['mxnet_version'] || '1.2.1.post1'
     docker_push(ruby_version, python_version, mxnet_version) 
+  end
+
+  namespace :push do
+    task :all do
+      run_all('docker:push')
+    end
   end
 end
