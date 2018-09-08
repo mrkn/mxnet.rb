@@ -7,9 +7,9 @@ services:
 
 install:
   - bundle install
-  - rake ci:pull
+  - rake -f ci/Rakefile ci:pull
 
-script: rake ci:run
+script: rake -f ci/Rakefile ci:run
 
 matrix:
   include:
