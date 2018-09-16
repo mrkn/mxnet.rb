@@ -380,6 +380,42 @@ module MXNet
         infer_attrs('infer_shape', 'shape', *args)
       end
 
+      ##
+      # Exports cached graph and parameters in a format that can be
+      # loaded by SymbolBlock.import.
+      #
+      # ====Parameters
+      #
+      # +filename+:: (string)
+      #              Path and base filename to which to save
+      #              model. Two files, "[filename]-symbol.json" and
+      #              "[filename]-NNNN.params" will be created, where
+      #              +NNNN+ is the 4 digit epoch number.
+      # +epoch+::    (integer, default +0+)
+      #              Epoch number of saved model.
+      #
+      def export(filename, epoch: 0)
+        unless @cached_graph
+          raise RuntimeError,
+                "Please call hybridize and then run forward " \
+                "at least once before calling export."
+        end
+        output = @cached_graph[1]
+        output.save('%s-symbol.json' % filename)
+        arg_names = output.list_arguments
+        aux_names = output.list_auxiliary_states
+        args = {}
+        collect_params.each do |name, param|
+          # NOTE: invoking private method on Parameter
+          if arg_names.include?(name.to_sym)
+            args["arg:#{name}"] = param.send(:reduce)
+          elsif aux_names.include?(name.to_sym)
+            args["aux:#{name}"] = param.send(:reduce)
+          end
+        end
+        MXNet::NDArray.save('%s-%04d.params' % [filename, epoch], args)
+      end
+
       protected
 
       def call_cached(*args)
@@ -474,42 +510,6 @@ module MXNet
         @active = active
         @flags = kwargs
         super
-      end
-
-      ##
-      # Exports HybridBlock to JSON format that can be loaded by
-      # SymbolBlock.import.
-      #
-      # ====Parameters
-      #
-      # +filename+:: (string)
-      #              Path and base filename to which to save
-      #              model. Two files, "[filename]-symbol.json" and
-      #              "[filename]-NNNN.params" will be created, where
-      #              +NNNN+ is the 4 digit epoch number.
-      # +epoch+::    (integer, default +0+)
-      #              Epoch number of saved model.
-      #
-      def export(filename, epoch: 0)
-        unless @cached_graph
-          raise RuntimeError,
-                "Please call hybridize and then run forward " \
-                "at least once before calling export."
-        end
-        output = @cached_graph[1]
-        output.save('%s-symbol.json' % filename)
-        arg_names = output.list_arguments
-        aux_names = output.list_auxiliary_states
-        args = {}
-        collect_params.each do |name, param|
-          # NOTE: invoking private method on Parameter
-          if arg_names.include?(name.to_sym)
-            args["arg:#{name}"] = param.send(:reduce)
-          elsif aux_names.include?(name.to_sym)
-            args["aux:#{name}"] = param.send(:reduce)
-          end
-        end
-        MXNet::NDArray.save('%s-%04d.params' % [filename, epoch], args)
       end
 
       ##
