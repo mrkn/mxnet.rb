@@ -132,7 +132,7 @@ RSpec.describe MXNet::Gluon::ParameterDict do
         x.init
         expect(x).to be_a(MXNet::Gluon::Constant)
         expect(x.shape).to eq([2, 2])
-        expect(x.dtype).to eq(MXNet::DType.name2id(:float32))
+        expect(x.dtype).to eq(:float32)
         expect(x.data).to eq(MXNet::NDArray.array([[1, 2], [3, 4]]))
 
         expect(params.get_constant(:x)).to equal(x)
