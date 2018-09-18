@@ -57,6 +57,14 @@ RSpec.describe MXNet::Autograd do
       end
     end
 
+    it 'raises ArgumentError for invalid kwargs' do
+      vars = [MXNet::NDArray.random_uniform(shape: 1)]
+      grads = [MXNet::NDArray.random_uniform(shape: 1)]
+      expect {
+        MXNet::Autograd.mark_variables(vars, grads, grad_reqs: :write, invalid: 999)
+      }.to raise_error(ArgumentError)
+    end
+
     it 'attaches grads to vars' do
       vars = [MXNet::NDArray.random_uniform(shape: 1)]
       grads = [MXNet::NDArray.random_uniform(shape: 1)]

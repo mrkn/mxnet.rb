@@ -71,12 +71,17 @@ autograd_s_mark_variables(int argc, VALUE *argv, VALUE mod)
     rb_raise(rb_eArgError, "Arrays must be of the same length");
   }
   if (NIL_P(args.opts)) {
-    args.opts = rb_hash_new();
+    args.opts = ID2SYM(rb_intern("write"));
   }
-  args.opts =
-    rb_hash_lookup2(args.opts,
-                    ID2SYM(rb_intern("grad_reqs")),
-                    ID2SYM(rb_intern("write")));
+  else {
+    static ID keywords[1];
+    VALUE kwargs[1];
+    if (!keywords[0]) {
+      keywords[0] = rb_intern("grad_reqs");
+    }
+    rb_get_kwargs(args.opts, keywords, 0, 1, kwargs);
+    args.opts = kwargs[0];
+  }
   if (!SYMBOL_P(args.opts) && !ARRAY_P(args.opts)) {
     rb_raise(rb_eArgError, "grad_reqs must be Symbol or Array");
   }
