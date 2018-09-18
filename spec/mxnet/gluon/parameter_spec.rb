@@ -27,7 +27,7 @@ RSpec.describe MXNet::Gluon::Parameter do
       param.init
       expect(param.data).to be_a(MXNet::NDArray)
       expect(param.data.shape).to eq([2, 3])
-      expect(param.data.dtype).to eq(MXNet::DType.name2id(:float32))
+      expect(param.data.dtype).to eq(:float32)
 
       old_data = param.data
 
@@ -37,20 +37,20 @@ RSpec.describe MXNet::Gluon::Parameter do
       param.init
       param.init
       expect(param.data).not_to equal(old_data)
-      expect(param.data.dtype).to eq(MXNet::DType.name2id(:float64))
+      expect(param.data.dtype).to eq(:float64)
     end
 
     specify 'force_reinit: true' do
       param = MXNet::Gluon::Parameter.new(:param)
       param.shape = [2, 3]
       param.init
-      expect(param.data.dtype).to eq(MXNet::DType.name2id(:float32))
+      expect(param.data.dtype).to eq(:float32)
 
       old_data = param.data
       param.dtype = :float64
       param.init(force_reinit: true)
       expect(param.data).not_to equal(old_data)
-      expect(param.data.dtype).to eq(MXNet::DType.name2id(:float64))
+      expect(param.data.dtype).to eq(:float64)
     end
 
     specify do

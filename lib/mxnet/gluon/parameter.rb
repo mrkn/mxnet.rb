@@ -156,7 +156,7 @@ module MXNet
           end
         end
         if self.dtype
-          data_dtype = MXNet::DType.id2name(data.dtype)
+          data_dtype = data.dtype
           if self.dtype != data_dtype
             raise "Failed loading Parameter '#{name}' from saved params: " +
                   "dtype incompatible expected #{self.dtype} vs saved #{data_dtype}"
