@@ -1,7 +1,5 @@
 #include "mxnet_internal.h"
 
-#define ARRAY_P(x) rb_obj_is_kind_of((x), rb_cArray)
-
 struct mark_variables_args {
   VALUE vars, grads, opts;
   NDArrayHandle *vars_handles, *grads_handles;
@@ -25,7 +23,7 @@ call_mark_variables(VALUE value)
                  args->opts);
       }
       args->reqs[i] = FIX2UINT(val);
-    } else if (ARRAY_P(args->opts)) {
+    } else if (RB_TYPE_P(args->opts, T_ARRAY)) {
       VALUE val = rb_hash_lookup2(mxnet_grad_req_map(),
                                   rb_ary_entry(args->opts, i),
                                   Qnil);
@@ -61,10 +59,10 @@ autograd_s_mark_variables(int argc, VALUE *argv, VALUE mod)
 
   rb_scan_args(argc, argv, "2:", &args.vars, &args.grads, &args.opts);
 
-  if (!ARRAY_P(args.vars)) {
+  if (!RB_TYPE_P(args.vars, T_ARRAY)) {
     rb_raise(rb_eArgError, "first argument must be Array");
   }
-  if (!ARRAY_P(args.grads)) {
+  if (!RB_TYPE_P(args.grads, T_ARRAY)) {
     rb_raise(rb_eArgError, "second argument must be Array");
   }
   if (RARRAY_LEN(args.vars) != RARRAY_LEN(args.grads)) {
@@ -82,10 +80,10 @@ autograd_s_mark_variables(int argc, VALUE *argv, VALUE mod)
     rb_get_kwargs(args.opts, keywords, 0, 1, kwargs);
     args.opts = kwargs[0];
   }
-  if (!SYMBOL_P(args.opts) && !ARRAY_P(args.opts)) {
+  if (!SYMBOL_P(args.opts) && !RB_TYPE_P(args.opts, T_ARRAY)) {
     rb_raise(rb_eArgError, "grad_reqs must be Symbol or Array");
   }
-  if (ARRAY_P(args.opts) && RARRAY_LEN(args.vars) != RARRAY_LEN(args.opts)) {
+  if (RB_TYPE_P(args.opts, T_ARRAY) && RARRAY_LEN(args.vars) != RARRAY_LEN(args.opts)) {
     rb_raise(rb_eArgError, "Arrays must be of the same length");
   }
 #if SIZEOF_LONG > SIZEOF_INT
