@@ -229,7 +229,7 @@ module MXNet
           return
         end
         @_grad = @_data.map {|d| MXNet::NDArray.zeros_like(d) }
-        MXNet::Autograd.mark_variables(list_data, list_grad, grad_req)
+        MXNet::Autograd.mark_variables(list_data, list_grad, grad_reqs: grad_req)
       end
 
       # Reduce data from multiple contexts.
@@ -325,7 +325,7 @@ module MXNet
           @_data = @_data.map {|i| i.as_type(dtype) }
           return if @_grad.nil?
           @_grad = @_grad.map {|i| i.as_type(dtype) }
-          MXNet::Autograd.mark_variables(@_data, @_grad, grad_req)
+          MXNet::Autograd.mark_variables(@_data, @_grad, grad_reqs: grad_req)
         end
       end
     end
