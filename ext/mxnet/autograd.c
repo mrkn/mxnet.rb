@@ -92,7 +92,7 @@ autograd_s_mark_variables(int argc, VALUE *argv, VALUE mod)
   }
 #endif
 
-  args.len = RARRAY_LEN(args.vars);
+  args.len = (mx_uint)RARRAY_LEN(args.vars);
   args.reqs = ALLOC_N(mx_uint, args.len);
   args.vars_handles = ALLOC_N(NDArrayHandle, args.len);
   args.grads_handles = ALLOC_N(NDArrayHandle, args.len);
