@@ -5,4 +5,8 @@ module MXNet
   end
 end
 
+require 'mxnet/gluon/block'
 require 'mxnet/gluon/data'
+require 'mxnet/gluon/nn'
+require 'mxnet/gluon/parameter'
+require 'mxnet/gluon/trainer'
