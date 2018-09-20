@@ -1,7 +1,6 @@
 require 'spec_helper'
 require 'mxnet/gluon'
 
-__END__
 ::RSpec.describe MXNet::Gluon::NN::Sequential do
   specify do
     nn = MXNet::Gluon::NN
