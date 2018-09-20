@@ -9,6 +9,13 @@ RSpec.describe MXNet::Init::Xavier do
     expect(initializer.magnitude).to eq(3)
   end
 
+  specify 'registered' do
+    expect {
+      init = MXNet::Init.registry_manager.create(:xavier)
+      expect(init).to be_instance_of(MXNet::Init::Xavier)
+    }.not_to raise_error
+  end
+
   specify 'weight' do
     initializer = MXNet::Init::Xavier.new(rnd_type: :gaussian, factor_type: :in, magnitude: 2)
     weight = MXNet::NDArray.zeros([4, 3])

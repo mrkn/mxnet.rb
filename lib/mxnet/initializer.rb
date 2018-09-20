@@ -1,3 +1,4 @@
+require 'mxnet/registry'
 require 'json'
 
 module MXNet
@@ -266,6 +267,8 @@ module MXNet
         end
       end
     end
+
+    registry_manager.register Xavier
 
     # TODO: MSRAPrelu < Xavier
     # TODO: Bilinear
