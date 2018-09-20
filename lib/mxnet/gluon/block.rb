@@ -145,7 +145,10 @@ module MXNet
       attr_reader :name
 
       # Return a name scope object managing a child `Block` and parameter names.
-      def name_scope
+      attr_reader :scope
+
+      def with_name_scope(&block)
+        scope.enter &block
       end
 
       attr_reader :params

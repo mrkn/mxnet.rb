@@ -239,7 +239,7 @@ module MXNet
       end
 
       # Initializes parameter and gradient arrays.  Only used for `NDArray` API.
-      def init(initializer=nil, ctx: nil,
+      def init(initializer: nil, ctx: nil,
                default_initializer: MXNet::Init::Uniform.new,
                force_reinit: false)
         if @_data && !force_reinit
@@ -274,7 +274,7 @@ module MXNet
         # TODO:
       end
 
-      def data(ctx: nil)
+      def data(ctx=nil)
         _check_and_get(@_data, ctx)
       end
 
@@ -458,11 +458,11 @@ module MXNet
 
       # Initializes all Parameters managed by this dictionary to be used for `NDArray` API.
       # It has no effect when using `Symbol` API.
-      def init(initializer=nil, ctx: nil, verbose: false, force_reinit: false)
+      def init(initializer: nil, ctx: nil, verbose: false, force_reinit: false)
         initializer ||= MXNet::Init::Uniform.new
         initializer.set_verbosity(verbose) if verbose
         each do |_, v|
-          v.init(nil, ctx: ctx, default_initializer: initializer, force_reinit: force_reinit)
+          v.init(initializer: nil, ctx: ctx, default_initializer: initializer, force_reinit: force_reinit)
         end
       end
 

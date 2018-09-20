@@ -2,35 +2,10 @@ require 'spec_helper'
 
 require 'mxnet/gluon'
 
-RSpec.describe MXNet::Gluon::NN::HybridSequential do
-  describe 'parameter' do
-    specify do
-      param = MXNet::Gluon::Parameter.new(:weight, shape: [10, 10])
-      param.init(init: :xavier, ctx: [MXNet.cpu(0), MXNet.cpu(1)])
-      expect(param.list_data.length).to eq(2)
-      expect(param.list_grad.length).to eq(2)
-      expect(param.data(MXNet.cpu(1)).context).to eq(MXNet.cpu(1))
-      expect(param.data(MXNet.cpu(0)).shape).to eq([10, 10])
-      expect(param.var.name).to eq(:weight)
-
-      param.reset_ctx(ctx: [MXNet.cpu(1), MXNet.cpu(2)])
-      expect(param.list_ctx).to eq([MXNet.cpu(1), MXNet.cpu(2)])
-    end
-  end
-
-  describe 'paramdict' do
-    specify do
-      params = MXNet::Gluon::ParameterDict.new('net_')
-      params.get('weight', shape: [10, 10])
-      expect(params.keys).to eq([:net_weight])
-      params.init(ctx: MXNet.cpu)
-      params.save('test.params')
-      params.load('test.params', MXNet.cpu)
-    end
-  end
-
+RSpec.describe MXNet::Gluon do
   describe 'parameter_sharing' do
     let(:namespace) { Module.new }
+
     before do
       class namespace::Net < MXNet::Gluon::Block
         def initialize(**kwargs)
@@ -150,7 +125,7 @@ RSpec.describe MXNet::Gluon::NN::HybridSequential do
   describe 'symbol_block' do
     let(:namespace) { Module.new }
     before do
-      class namespace::Net < MXNet::Gluon::NN::HybridBlock
+      class namespace::Net < MXNet::Gluon::HybridBlock
         def initialize(model)
           super()
           @model = model
@@ -164,7 +139,7 @@ RSpec.describe MXNet::Gluon::NN::HybridSequential do
     end
 
     specify do
-      model = MXnet::Gluon::NN::HybridSequential.new
+      model = MXNet::Gluon::NN::HybridSequential.new
       model << MXNet::Gluon::NN::Dense.new(128, activation: :tanh)
       model << MXNet::Gluon::NN::Dropout.new(0.5)
       model << MXNet::Gluon::NN::Dense.new(64, activation: :tanh)
@@ -408,8 +383,8 @@ RSpec.describe MXNet::Gluon::NN::HybridSequential do
   describe 'block_attr_hidden' do
     specify 'regular attributes can change types' do
       b = MXNet::Gluon::Block.new
-      b.a = nil
-      b.a = 1
+      b[:a] = nil
+      b[:a] = 1
     end
   end
 
