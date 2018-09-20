@@ -30,8 +30,9 @@ RSpec.describe MXNet::Gluon::NN::HybridSequential do
   end
 
   describe 'parameter_sharing' do
+    let(:namespace) { Module.new }
     before do
-      class Net < MXNet::Gluon::Block
+      class namespace::Net < MXNet::Gluon::Block
         def initialize(**kwargs)
           super
           with_name_scope do
@@ -46,26 +47,24 @@ RSpec.describe MXNet::Gluon::NN::HybridSequential do
       end
     end
 
-    after do
-      remove_const :Net
-    end
-
     specify do
-      net1 = Net.new(prefix: 'net1_')
-      net2 = Net.new(prefix: 'net2_', params: net1.collect_params)
+      net1 = namespace::Net.new(prefix: 'net1_')
+      net2 = namespace::Net.new(prefix: 'net2_', params: net1.collect_params)
       net1.collect_params.init
       net2.call(MXNet::NDArray.zeros([3, 5]))
 
       net1.save_params('net1.params')
 
-      net3 = Net.new(prefix: 'net3_')
+      net3 = namespace::Net.new(prefix: 'net3_')
       net3.load_params('net1.params', MXNet.cpu)
     end
   end
 
   describe 'parameter_str' do
+    let(:namespace) { Module.new }
+
     before do
-      class Net < MXNet::Gluon::Block
+      class namespace::Net < MXNet::Gluon::Block
         def initialize(**kwargs)
           super
           with_name_scope do
@@ -75,12 +74,8 @@ RSpec.describe MXNet::Gluon::NN::HybridSequential do
       end
     end
 
-    after do
-      remove_const :Net
-    end
-
     specify do
-      net = Net.new(prefix: 'net1_')
+      net = namespace::Net.new(prefix: 'net1_')
       lines = net.collect_params.to_s.lines
       expect(lines[0]).to eq('net1_ (')
       expect(lines[1]).to include('net1_dense0_weight')
@@ -153,8 +148,9 @@ RSpec.describe MXNet::Gluon::NN::HybridSequential do
   end
 
   describe 'symbol_block' do
+    let(:namespace) { Module.new }
     before do
-      class Net < MXNet::Gluon::NN::HybridBlock
+      class namespace::Net < MXNet::Gluon::NN::HybridBlock
         def initialize(model)
           super()
           @model = model
@@ -165,10 +161,6 @@ RSpec.describe MXNet::Gluon::NN::HybridSequential do
           mod.add_n(*out.map(&:sum))
         end
       end
-    end
-
-    after do
-      remove_const :Net
     end
 
     specify do
@@ -188,10 +180,10 @@ RSpec.describe MXNet::Gluon::NN::HybridSequential do
 
       expect(smodel.call(MXNet::NDArray.zeros([16, 10])).length).to eq(14)
 
-      out = smodel.call(MXNetg::Symbol.var(:in))
+      out = smodel.call(MXNet::Symbol.var(:in))
       expect(out.length).to eq(outputs.list_outputs.length)
 
-      net = Net.new(smodel)
+      net = namespace::Net.new(smodel)
       net.hybridize
       expect(net.call(MXNet::NDArray.zeros([16, 10]))).to be_a(MXNet::NDArray)
 
@@ -199,7 +191,7 @@ RSpec.describe MXNet::Gluon::NN::HybridSequential do
       inputs = MXNet::Symbol.var(:data)
       outputs = model.call(inputs)
       smodel = MXNet::Gluon::SymbolBlock.new(outputs, inputs, params: model.collect_params)
-      net = Net.new(smodel)
+      net = namespace::Net.new(smodel)
       net.hybridize
       expect(net.call(MXNet::NDArray.zeros([16, 10]))).to be_a(MXNet::NDArray)
     end
