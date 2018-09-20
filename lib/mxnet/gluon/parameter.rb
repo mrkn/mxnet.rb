@@ -2,7 +2,7 @@ require 'set'
 
 module MXNet
   module Gluon
-    class DefferedInitializationError < MXNet::Error
+    class DeferredInitializationError < MXNet::Error
     end
 
     # A container holding parameters (weights) of blocks.
@@ -133,7 +133,7 @@ module MXNet
                 "It was only initialized on #{@_ctx_list}."
         end
         unless @_deferred_init.empty?
-          raise DefferedInitializationError,
+          raise DeferredInitializationError,
                 "Parameter '#{@name}' has not been initialized yet because " +
                 "initialization was deferred.  Actual initialization happens " +
                 "during the first forward pass.  " +
