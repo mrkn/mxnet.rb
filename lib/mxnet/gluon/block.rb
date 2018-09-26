@@ -215,20 +215,22 @@ module MXNet
       # +args+:: (array of Symbol or NDArray) Input tensors.
       #
       def forward(*args)
-        case args.first
-        when MXNet::Symbol
-          kwargs = {}
-          hybrid_forward(MXNet::Symbol, *args, **kwargs)
-        when MXNet::NDArray
-          ctx = args.first.context
-          kwargs = @reg_parameters.inject({}) do |acc, (i, j)|
-            acc[i.to_sym] = j.data(ctx: ctx)
-            acc
-          end
-          hybrid_forward(MXNet::NDArray, *args, **kwargs)
-        else
-          raise ArgumentError, 'only Symbol or NDArray are supported'
-        end
+        raise NotImplementedError
+        # TODO:
+        # case args.first
+        # when MXNet::Symbol
+        #   kwargs = {}
+        #   hybrid_forward(MXNet::Symbol, *args, **kwargs)
+        # when MXNet::NDArray
+        #   ctx = args.first.context
+        #   kwargs = @reg_parameters.inject({}) do |acc, (i, j)|
+        #     acc[i.to_sym] = j.data(ctx: ctx)
+        #     acc
+        #   end
+        #   hybrid_forward(MXNet::NDArray, *args, **kwargs)
+        # else
+        #   raise ArgumentError, 'only Symbol or NDArray are supported'
+        # end
       end
 
       # Override to construct symbolic graph for this Block.

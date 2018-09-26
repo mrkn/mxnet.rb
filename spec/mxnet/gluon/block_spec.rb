@@ -12,20 +12,20 @@ RSpec.describe MXNet::Gluon::Block do
     end
 
     it 'returns all its parameters' do
-      params = MXNet::Gluon::ParameterDict.new(prefix: 'block_').tap do |params|
-        params.get('foo')
-        params.get('bar')
-        params.get('baz')
-      end
-      expect(block.collect_params).to eq(params)
+      count = MXNet::Name::NameManager.current.next_count_for('block')
+      params = MXNet::Gluon::ParameterDict.new("block#{count}_")
+      params.get('foo')
+      params.get('bar')
+      params.get('baz')
+      expect(block.collect_params.keys).to eq(params.keys)
     end
 
     it 'returns the matching parameters' do
-      params = MXNet::Gluon::ParameterDict.new(prefix: 'block_').tap do |params|
-        params.get('bar')
-        params.get('baz')
-      end
-      expect(block.collect_params(/_ba/)).to eq(params)
+      count = MXNet::Name::NameManager.current.next_count_for('block')
+      params = MXNet::Gluon::ParameterDict.new("block#{count}_")
+      params.get('bar')
+      params.get('baz')
+      expect(block.collect_params(/_ba/).keys).to eq(params.keys)
     end
   end
 
