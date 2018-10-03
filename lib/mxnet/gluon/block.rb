@@ -84,6 +84,7 @@ module MXNet
         @name = @prefix.end_with?('_') ? @prefix[0...-1] : @prefix
         @scope = BlockScope.new(self)
         @children = []
+        @reg_params = {}
         @attributes = {}
       end
 
@@ -117,16 +118,22 @@ module MXNet
               "Changing attribute type for %{name} from %{type1} to %{type2} is not allowed." % {
                 name: name, type1: existing.class, type2: value.class }
           end
-          if existing.is_a?(Block)
-            @children.each_with_index do |c, i|
-              @children[i] = value if c.equal?(existing)
-            end
-          elsif value.is_a?(Block)
-            register_child(value)
-          end
-        elsif value.is_a?(Block)
-          register_child(value)
         end
+
+        case value
+        when Block
+          register_child(value, name)
+        when Parameter
+          if @reg_params.include?(name)
+            raise ArgumentError,
+              "Overriding Parameter attribute #{name} is not allowd. " +
+              "If you want to share parameters between blocks, please set " +
+              "'params' at Block construction instead."
+          end
+          @reg_params[name] = value
+        end
+
+        @attributes[name] = value
       end
 
       alias_method :[]=, :__setattr__
