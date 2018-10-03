@@ -1,35 +1,34 @@
 require 'spec_helper'
-require 'mxnet/gluon/parameter'
-require 'mxnet/gluon/nn/layers'
+require 'mxnet/gluon'
 
 RSpec.describe MXNet::Gluon::NN::Dense do
-  describe 'Dense()' do
+  describe '.new' do
     let(:layer) do
-      MXNet::Gluon::NN::Dense(1, in_units: 2)
+      MXNet::Gluon::NN::Dense.new(1, in_units: 2)
     end
     specify do
       expect(layer.class).to eq(MXNet::Gluon::NN::Dense)
     end
     it 'should set the weight and bias' do
-      expect(layer.weight.shape).to eq([1, 2])
-      expect(layer.bias.shape).to eq([1])
+      expect(layer[:weight].shape).to eq([1, 2])
+      expect(layer[:bias].shape).to eq([1])
     end
   end
   describe '#collect_params' do
     let(:layer) do
-      MXNet::Gluon::NN::Dense(1, in_units: 2)
+      MXNet::Gluon::NN::Dense.new(1, in_units: 2)
     end
     it 'should return params for weight and bias' do
-      params = MXNet::Gluon::ParameterDict.new(prefix: 'dense_').tap do |params|
-        params.get('weight', shape: [1, 2])
-        params.get('bias', shape: [1])
-      end
-      expect(layer.collect_params).to eq(params)
+      count = MXNet::Name::NameManager.current.next_count_for('dense')
+      params = MXNet::Gluon::ParameterDict.new(prefix: "dense#{count}_")
+      params.get('weight', shape: [1, 2])
+      params.get('bias', shape: [1])
+      expect(layer.collect_params.keys).to eq(params.keys)
     end
   end
   describe '#forward' do
     let(:layer) do
-      MXNet::Gluon::NN::Dense(1, in_units: 2).tap do |layer|
+      MXNet::Gluon::NN::Dense.new(1, in_units: 2).tap do |layer|
         layer.collect_params.init
       end
     end
@@ -40,7 +39,7 @@ RSpec.describe MXNet::Gluon::NN::Dense do
   end
   describe '#hybrid_forward' do
     let(:layer) do
-      MXNet::Gluon::NN::Dense(1)
+      MXNet::Gluon::NN::Dense.new(1)
     end
     it 'accepts keyword arguments' do
       data = MXNet::NDArray.array([[2, 1]])
