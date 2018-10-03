@@ -2,9 +2,6 @@ require 'mxnet/gluon/block'
 require 'mxnet/gluon/nn'
 
 module MXNet::Gluon::NN
-  def self.Dense(*args)
-    Dense.new(*args)
-  end
   class Dense < MXNet::Gluon::HybridBlock
     def initialize(units, use_bias: true, in_units: 0, **kwargs)
       super(**kwargs)
