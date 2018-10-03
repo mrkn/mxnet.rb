@@ -89,7 +89,8 @@ RSpec.describe MXNet::Optimizer::Base do
       it 'updates the weight' do
         weight = MXNet::NDArray.array([1])
         gradient = MXNet::NDArray.array([0.5])
-        expect(optimizer.update(0, weight, gradient, nil).as_scalar).to be_within(0.01).of(0.95)
+        optimizer.update(0, weight, gradient, nil)
+        expect(weight.as_scalar).to be_within(0.01).of(0.95)
       end
     end
   end

@@ -217,8 +217,8 @@ module MXNet
           lr = @lr
         end
 
-        if @param_hash.has_key? index
-          lr *= @param_hash[index].lr_mult
+        if @param_dict.has_key? index
+          lr *= @param_dict[index].lr_mult
         elsif @lr_mult.has_key? index
           lr *= @lr_mult[index]
         elsif @idx2name.has_key? index
@@ -240,8 +240,8 @@ module MXNet
       # Weight decay for this index.
       def get_wd(index)
         wd = @wd
-        if @param_hash.has_key? index
-          wd *= @param_hash[index].wd_mult
+        if @param_dict.has_key? index
+          wd *= @param_dict[index].wd_mult
         elsif @wd_mult.has_key? index
           wd *= @wd_mult[index]
         elsif @idx2name.has_key? index
