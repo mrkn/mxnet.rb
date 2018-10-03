@@ -292,6 +292,16 @@ module MXNet
     end
     private :_fill_by
 
+    def _fresh_grad
+      # TODO: MXNDArrayGetGradState
+      true
+    end
+
+    def _fresh_grad=(state)
+      # TODO: MXNDArraySetGradState
+      state
+    end
+
     private def _prepare_value_nd(value, value_shape)
       case value
       when Numeric

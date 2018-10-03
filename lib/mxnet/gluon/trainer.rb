@@ -60,24 +60,26 @@ module MXNet
       end
 
       private def init_optimizer(optimizer, optimizer_params)
-        param_hash = @params.map.with_index {|x, i| [i, x] }.to_h
-        if optimizer.is_a? Optimizer
+        param_dict = @params.map.with_index {|x, i| [i, x] }.to_h
+        if optimizer.is_a? Optimizer::Base
           raise ArgumentError,
-            "optimizer_params must be nil if optimizer is an instance of " +
-            "Optimizer instead of str" if optimizer_params
+            "optimizer_params must be empty if optimizer is an instance of " +
+            "Optimizer instead of str" unless optimizer_params.empty?
           @optimizer = optimizer
-          @optimizer.param_hash = param_hash
+          @optimizer.param_dict = param_dict
         else
           # TODO: use registry
-          @optimizer = Optimizer[optimizer].new(param_hash: param_hash, **optimizer_params)
+          @optimizer = Optimizer[optimizer].new(param_dict: param_dict, **optimizer_params)
         end
 
-        @updaters = @contexts.map { Optimizer.get_updater(@optimizer) }
+        @updaters = @contexts.map { Optimizer::Updater.new(@optimizer) }
       end
 
       private def init_kvstore
         arg_arrays = @params.map {|param| [param.name, param.data(@contexts[0])]}.to_h
-        kvstore, update_on_kvstore = create_kvstore(@kvstore, @contexts.length, arg_arrays)
+        # TODO:
+        # kvstore, update_on_kvstore = create_kvstore(@kvstore, @contexts.length, arg_arrays)
+        kvstore, update_on_kvstore = nil, nil
         if kvstore
           kvstore.set_gradient_compression(@compression_params) if @compression_params
           # TODO: what is kvstore.type?
@@ -159,10 +161,11 @@ module MXNet
         # if self._params_to_init:
         #     self._init_params()
 
-        assert not (self._kvstore and self._update_on_kvstore), \
-                'update() when parameters are updated on kvstore ' \
-                'is not supported. Try setting `update_on_kvstore` ' \
+        if @kvstore && @update_on_kvstore
+          raise 'update() when parameters are updated on kvstore ' +
+                'is not supported. Try setting `update_on_kvstore` ' +
                 'to False when creating trainer.'
+        end
 
         @optimizer.rescale_grad = @scale / batch_size
         _update(ignore_stale_grad)
@@ -174,7 +177,7 @@ module MXNet
 
           unless ignore_stale_grad
             param.list_data.each do |data|
-              unless data.fresh_grad
+              unless data._fresh_grad
                 raise "Gradient of Parameter `#{param.name}` on context #{data.context} " +
                       "has not been updated by backward since last `step`. This could " +
                       "mean a bug in your model that maked it only use a subset of the " +
@@ -195,9 +198,9 @@ module MXNet
           end
 
           @updaters.zip(param.list_data, param.list_grad).each do |upd, arr, grad|
-            if !ignore_stale_grad || arr.fresh_grad
+            if !ignore_stale_grad || arr._fresh_grad
               upd.(i, grad, arr)
-              arr.fresh_grad = false
+              arr._fresh_grad = false
             end
           end
         end

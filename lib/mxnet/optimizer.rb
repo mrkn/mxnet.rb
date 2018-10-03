@@ -80,7 +80,7 @@ module MXNet
         self.wd_mult = {}
       end
 
-      attr_accessor :rescale_grad
+      attr_accessor :rescale_grad, :param_dict
 
       attr_reader :lr_scheduler
 
@@ -381,7 +381,7 @@ module MXNet
 
       # Updates weight given gradient and index.
       def call(index, grad, weight)
-        if @state.has_key? index
+        if @states.has_key? index
           @states[index] = @optimizer.create_state_multi_precision(index, weight)
           @states_synced[index] = true
         elsif !@states_synced[index]
