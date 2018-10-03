@@ -394,10 +394,10 @@ module MXNet
     #            sharing parameters with another Block.
     #
     class ParameterDict < Hash
-      def initialize(prefix='', shared=nil)
+      def initialize(prefix_=nil, shared_=nil, prefix: '', shared: nil)
         super()
-        @prefix = prefix
-        @shared = shared
+        @prefix = prefix_ || prefix
+        @shared = shared_ || shared
       end
 
       # Prefix of this dict. It will be prepended to a Parameter's name
