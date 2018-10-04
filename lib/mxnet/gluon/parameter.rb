@@ -317,7 +317,7 @@ module MXNet
       #
       # NDArray on context.
       #
-      def data(ctx=nil)
+      def data(ctx: nil)
         _check_and_get(@_data, ctx)
       end
 

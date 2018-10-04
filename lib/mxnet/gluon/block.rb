@@ -237,7 +237,7 @@ module MXNet
             deferred_infer_shape(*args)
             @params.each do |_, param|
               # NOTE: invoking private method on Parameter
-              param.send(:finish_deferred_init)
+              param.send(:_finish_deferred_init)
             end
             retry
           end

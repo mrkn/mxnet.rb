@@ -76,8 +76,8 @@ RSpec.describe MXNet::Gluon::Parameter do
       expect(param.list_data.length).to eq(2)
       expect(param.list_grad.length).to eq(2)
       expect(param.list_ctx).to eq([MXNet.cpu(0), MXNet.cpu(1)])
-      expect(param.data(MXNet.cpu(1)).context).to eq(MXNet.cpu(1))
-      expect(param.data(MXNet.cpu(0)).shape).to eq([10, 10])
+      expect(param.data(ctx: MXNet.cpu(1)).context).to eq(MXNet.cpu(1))
+      expect(param.data(ctx: MXNet.cpu(0)).shape).to eq([10, 10])
       expect(param.var.name).to eq(:weight)
     end
 
@@ -104,7 +104,7 @@ RSpec.describe MXNet::Gluon::Parameter do
         MXNet::Gluon::Parameter.new('foo', allow_deferred_init: true).tap do |parameter|
           parameter.init
           parameter.shape = [1]
-          parameter.send(:finish_deferred_init)
+          parameter.send(:_finish_deferred_init)
         end
       end
       it 'initializes the data array' do
@@ -219,7 +219,7 @@ RSpec.describe MXNet::Gluon::Parameter do
         MXNet::Gluon::Parameter.new('foo', shape: [1, 2])
       end
       it 'raises an error' do
-        expect{parameter.shape = [1, 3]}.to raise_error(RuntimeError)
+        expect{parameter.shape = [1, 3]}.to raise_error(ArgumentError, /incompatible/)
       end
     end
   end

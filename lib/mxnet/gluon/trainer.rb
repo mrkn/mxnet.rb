@@ -76,7 +76,7 @@ module MXNet
       end
 
       private def init_kvstore
-        arg_arrays = @params.map {|param| [param.name, param.data(@contexts[0])]}.to_h
+        arg_arrays = @params.map {|param| [param.name, param.data(ctx: @contexts[0])]}.to_h
         # TODO:
         # kvstore, update_on_kvstore = create_kvstore(@kvstore, @contexts.length, arg_arrays)
         kvstore, update_on_kvstore = nil, nil

@@ -38,7 +38,7 @@ module MXNet::Gluon::NN
           shape: [units, in_units],
           allow_deferred_init: true
         )
-        if use_bias?
+        if self[:use_bias]
           self[:bias] = params.get(
             'bias',
             shape: [units],
@@ -62,7 +62,7 @@ module MXNet::Gluon::NN
 
     def deferred_infer_shape(*args)
       # FIXME: for now, punted to the subclass
-      self.weight.shape = [@units, args.first.shape[1]]
+      self[:weight].shape = [@units, args.first.shape[1]]
     end
   end
 end
