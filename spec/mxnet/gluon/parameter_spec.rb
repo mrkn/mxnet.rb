@@ -241,7 +241,7 @@ RSpec.describe MXNet::Gluon::Parameter do
       param = MXNet::Gluon::Parameter.new(:weight, shape: [10, 10])
       param.init(initializer: :xavier, ctx: [MXNet.cpu(0), MXNet.cpu(1)])
       expect(param.list_ctx).to eq([MXNet.cpu(0), MXNet.cpu(1)])
-      param.reset_ctx(ctx: [MXNet.cpu(1), MXNet.cpu(2)])
+      param.reset_ctx([MXNet.cpu(1), MXNet.cpu(2)])
       expect(param.list_ctx).to eq([MXNet.cpu(1), MXNet.cpu(2)])
     end
   end
@@ -268,7 +268,7 @@ RSpec.describe MXNet::Gluon::ParameterDict do
   specify do
     params = MXNet::Gluon::ParameterDict.new('net_')
     params.get('weight', shape: [10, 10])
-    expect(params.keys).to eq([:net_weight])
+    expect(params.keys).to eq(['net_weight'])
     params.init(ctx: MXNet.cpu)
     params.save('test.params')
     params.load('test.params', MXNet.cpu)
@@ -381,14 +381,16 @@ RSpec.describe MXNet::Gluon::ParameterDict do
 
     it 'copies parameters into dict' do
       other_params = MXNet::Gluon::ParameterDict.new('bar_')
-      params.update(other_dict)
+      other_params.get('foo')
+      params.update(other_params)
       expect(params.get('foo')).to equal(other_params.get('foo'))
     end
 
     it 'fails if parameters already exist' do
       other_params = MXNet::Gluon::ParameterDict.new('bar_')
       params.get('foo')
-      expect { parameter_dict.update(other_dict) }.to raise_error(ArgumentError)
+      other_params.get('foo')
+      expect { params.update(other_params) }.to raise_error(ArgumentError)
     end
   end
 

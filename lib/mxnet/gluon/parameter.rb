@@ -32,7 +32,7 @@ module MXNet
         @_differentiable = differentiable
         @_allow_deferred_init = allow_deferred_init
         @_grad_req = nil
-        @_shape = shape
+        @_shape = shape && Array(shape)
         @name = name
         @dtype = dtype
         @lr_mult = lr_mult
@@ -281,8 +281,7 @@ module MXNet
         end
         @_data = @_grad = nil
 
-        ctx ||= [MXNet::Context.current]
-        ctx = [ctx] if ctx.is_a?(MXNet::Context)
+        ctx = Array(ctx || MXNet::Context.current)
         initializer ||= @initializer || default_initializer
         if self.shape.nil? || self.shape.inject(:*) <= 0
           if @_allow_deferred_init
@@ -297,8 +296,21 @@ module MXNet
         _finish_deferred_init
       end
 
+      # Re-assign Parameter to other contexts.
       def reset_ctx(ctx)
-        # TODO:
+        ctx = Array(ctx || MXNet::Context.current)
+        if @_data
+          data = _reduce()
+          Autograd.pause do
+            _init_impl(data, ctx)
+          end
+        elsif @_deferred_init
+          @_deferred_init[1] = ctx
+        else
+          raise ArgumentError,
+                "Cannot reset context for Parameter '#{@name}' because it " +
+                "has not been initialized."
+        end
       end
 
       # Sets this parameter's value on all contexts.
