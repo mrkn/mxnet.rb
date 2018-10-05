@@ -15,7 +15,7 @@ module MXNet
         unless @current
           prefix ||= MXNet::Name::NameManager.current.get(nil, hint) + '_'
           if params
-            params = ParameterDict.new(params.prefix, params)
+            params = ParameterDict.new(params.prefix, shared: params)
           else
             params = ParameterDict.new(prefix)
           end
@@ -28,10 +28,10 @@ module MXNet
           @current.counter[hint] = count + 1
         end
         if params
-          params = ParameterDict.new(params.prefix, params)
+          params = ParameterDict.new(params.prefix, shared: params)
         else
           parent = @current.block.params
-          params = ParameterDict.new(parent.prefix + prefix, parent.shared)
+          params = ParameterDict.new(parent.prefix + prefix, shared: parent.shared)
         end
         [@current.block.prefix + prefix, params]
       end

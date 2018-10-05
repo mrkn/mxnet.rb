@@ -262,7 +262,7 @@ RSpec.describe MXNet::Gluon::ParameterDict do
   end
 
   subject(:params) do
-    MXNet::Gluon::ParameterDict.new('bar_', parent_params)
+    MXNet::Gluon::ParameterDict.new('bar_', shared: parent_params)
   end
 
   specify do
