@@ -351,7 +351,7 @@ RSpec.describe MXNet::Gluon do
 
   def check_split_data(x, num_slice, batch_axis, **kwargs)
     res = MXNet::Gluon::Utils.split_data(x, num_slice, batch_axis, **kwargs)
-    expect(res.len).to eq(num_slice)
+    expect(res.length).to eq(num_slice)
     # TODO: almost_equal(MXNet::NDArray.concat(*res, dim: batch_axis).to_narray, x.to_narray)
   end
 
@@ -362,7 +362,7 @@ RSpec.describe MXNet::Gluon do
       check_split_data(x, 3, 1)
       check_split_data(x, 4, 1, even_split: false)
       check_split_data(x, 15, 1, even_split: false)
-      expect { check_split_data(x, 4, 1) }.to raise_error(RuntimError)
+      expect { check_split_data(x, 4, 1) }.to raise_error(ArgumentError, /cannot be evenly split/)
     end
   end
 
