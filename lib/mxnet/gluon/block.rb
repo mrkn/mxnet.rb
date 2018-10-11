@@ -299,15 +299,73 @@ module MXNet
       def get_graph(*args)
         @cached_graph ||=
           begin
-            inputs = (0...args.length).map do |i|
-              MXNet::Symbol.var("data#{i}")
+            args, @_in_format = _flatten(args)
+            if args.length > 1
+              inputs = (0 ... args.length).map {|i| MXNet::Symbol.var("data#{i}") }
+            else
+              inputs = [Symbol.var('data')]
             end
-            params = @reg_parameters.inject({}) do |acc, (i, j)|
+            # TODO: implement MXNet::Symbol::Group
+            # grouped_inputs = _regroup(inputs, @_in_format)[0]
+
+            params = @reg_params.inject({}) do |acc, (i, j)|
               acc[i.to_sym] = j.var
               acc
             end
-            [inputs, hybrid_forward(MXNet::Symbol, *inputs, **params)]
+
+            out = with_name_scope do
+              # TODO: implement MXNet::Symbol::Group
+              # hybrid_forward(MXNet::Symbol, *grouped_inputs, **params)
+              hybrid_forward(MXNet::Symbol, *inputs, **params)
+            end
+            out, @_out_format = _flatten(out)
+
+            # TODO: implement MXNet::Symbol::Group
+            # [inputs, MXNet::Symbol::Group.new(out)]
+            [inputs, out]
           end
+      end
+
+      private def _flatten(args)
+        case args
+        when MXNet::NDArray
+          return [args], 0
+        when MXNet::Symbol
+          length = args.list_outputs.length
+          length = 0 if length <= 1
+          return [args], length
+        when Array
+          flat, fmts = [], []
+          args.each do |i|
+            arg, fmt = _flatten(args)
+            flat.concat(arg)
+            fmts << fmt
+          end
+          return flat, fmts
+        end
+
+        raise ArgumentError,
+              "HybridBlock input must be (nested) array of Symbol or " +
+              "NDArray, but got #{args} of type #{args.class}"
+      end
+
+      private def _regroup(args, fmt)
+        case fmt
+        when Integer
+          return args[0], args[1..-1] if fmt == 0
+          return args[0...fmt], args[fmt..-1]
+        when Array
+          ret = []
+          fmt.each do |i|
+            res, args = _regroup(args, i)
+            ret << res
+          end
+          return ret, args
+        end
+
+        raise ArgumentError,
+              "HybridBlock output must be (nested) array of Symbol or " +
+              "NDArray, but got #{args} of type #{args.class}"
       end
 
       def clear_cacheed_op
