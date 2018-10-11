@@ -86,6 +86,8 @@ module MXNet
         s = "Parameter #{name} (shape=#{shape}, dtype=#{dtype})"
       end
 
+      alias to_s inspect
+
       VALID_GRAD_REQ = Set[:write, :add, :null]
       VALID_GRAD_REQ.merge(VALID_GRAD_REQ.map(&:to_s))
       VALID_GRAD_REQ.freeze
@@ -461,7 +463,7 @@ module MXNet
       def inspect
         s = "%{name}(\n%{content}\n)"
         name = "#{@prefix}#{@prefix && ' '}"
-        content = each_value.map {|v| MXNet::Utils.indent("  #{v}", 2) }.join("\n")
+        content = each_value.map {|v| MXNet::Gluon::Utils.indent("  #{v}", 2) }.join("\n")
         s % {name: name, content: content}
       end
 

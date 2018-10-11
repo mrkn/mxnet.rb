@@ -57,6 +57,15 @@ module MXNet
         end
         return slices
       end
+
+      # Indent string
+      module_function def indent(str, spaces)
+        s = str.split("\n")
+        return str if s.length == 1
+        first = s.shift
+        s = [first] + s.map {|l| "#{' ' * spaces}#{l}" }
+        return s.join("\n")
+      end
     end
   end
 end

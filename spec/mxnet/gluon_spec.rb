@@ -43,7 +43,7 @@ RSpec.describe MXNet::Gluon do
         def initialize(**kwargs)
           super
           with_name_scope do
-            @dense0 = MXNet::Gluon::NN::Dense.new(10, in_units: 5, use_bias: false)
+            self[:dense0] = MXNet::Gluon::NN::Dense.new(10, in_units: 5, use_bias: false)
           end
         end
       end
@@ -54,8 +54,8 @@ RSpec.describe MXNet::Gluon do
       lines = net.collect_params.to_s.lines
       expect(lines[0]).to be_start_with('net1_ (')
       expect(lines[1]).to include('net1_dense0_weight')
-      expect(lines[1]).to include('(10, 5)')
-      expect(lines[1]).to include('numpy.float32')
+      expect(lines[1]).to include('[10, 5]')
+      expect(lines[1]).to include('float32')
       expect(lines[2]).to eq(')')
     end
   end
