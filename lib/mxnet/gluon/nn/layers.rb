@@ -32,13 +32,14 @@ module MXNet::Gluon::NN
       super(**kwargs)
       with_name_scope do
         @units = units
+        @use_bias = use_bias
         @in_units = in_units
         self[:weight] = params.get(
           'weight',
           shape: [units, in_units],
           allow_deferred_init: true
         )
-        if self[:use_bias]
+        if @use_bias
           self[:bias] = params.get(
             'bias',
             shape: [units],
