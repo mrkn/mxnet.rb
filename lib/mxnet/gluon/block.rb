@@ -310,7 +310,7 @@ module MXNet
           end
       end
 
-      def clear_cache
+      def clear_cacheed_op
         @cached_graph = nil
       end
     end
