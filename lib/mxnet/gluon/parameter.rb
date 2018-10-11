@@ -465,6 +465,8 @@ module MXNet
         s % {name: name, content: content}
       end
 
+      alias to_s inspect
+
       # Retrieves a `Parameter` with name `@prefix + name`.  If not found, `get`
       # will first try to retrieve it from `shared` hash.  If still not found,
       # `get` will create a new `Parameter` with keyword arguments and insert

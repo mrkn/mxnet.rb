@@ -52,7 +52,7 @@ RSpec.describe MXNet::Gluon do
     specify do
       net = namespace::Net.new(prefix: 'net1_')
       lines = net.collect_params.to_s.lines
-      expect(lines[0]).to eq('net1_ (')
+      expect(lines[0]).to be_start_with('net1_ (')
       expect(lines[1]).to include('net1_dense0_weight')
       expect(lines[1]).to include('(10, 5)')
       expect(lines[1]).to include('numpy.float32')
