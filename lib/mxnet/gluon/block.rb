@@ -357,7 +357,7 @@ module MXNet
         when Array
           flat, fmts = [], []
           args.each do |i|
-            arg, fmt = _flatten(args)
+            arg, fmt = _flatten(i)
             flat.concat(arg)
             fmts << fmt
           end
