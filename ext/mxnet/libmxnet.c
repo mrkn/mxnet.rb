@@ -98,6 +98,7 @@ init_api_table(VALUE handle)
   INIT_API_TABLE_ENTRY(MXSymbolCreateFromFile);
   INIT_API_TABLE_ENTRY(MXSymbolCreateFromJSON);
   INIT_API_TABLE_ENTRY(MXSymbolCreateAtomicSymbol);
+  INIT_API_TABLE_ENTRY(MXSymbolCreateGroup);
   INIT_API_TABLE_ENTRY(NNSymbolCompose);
   INIT_API_TABLE_ENTRY(MXSymbolCopy);
   INIT_API_TABLE_ENTRY(MXSymbolCreateVariable);

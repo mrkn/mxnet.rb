@@ -325,8 +325,7 @@ module MXNet
             else
               inputs = [Symbol.var('data')]
             end
-            # TODO: implement MXNet::Symbol::Group
-            # grouped_inputs = _regroup(inputs, @_in_format)[0]
+            grouped_inputs = _regroup(inputs, @_in_format)[0]
 
             params = @reg_params.inject({}) do |acc, (i, j)|
               acc[i.to_sym] = j.var
@@ -334,15 +333,11 @@ module MXNet
             end
 
             out = with_name_scope do
-              # TODO: implement MXNet::Symbol::Group
-              # hybrid_forward(MXNet::Symbol, *grouped_inputs, **params)
-              hybrid_forward(MXNet::Symbol, *inputs, **params)
+              hybrid_forward(MXNet::Symbol, *grouped_inputs, **params)
             end
             out, @_out_format = _flatten(out)
 
-            # TODO: implement MXNet::Symbol::Group
-            # [inputs, MXNet::Symbol::Group.new(out)]
-            [inputs, out]
+            [inputs, MXNet::Symbol.group(out)]
           end
       end
 

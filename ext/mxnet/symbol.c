@@ -44,6 +44,46 @@ symbol_s_load_json(VALUE klass, VALUE json_str)
   return symbol_new_with_klass(klass, handle);
 }
 
+/* Creates a symbol that contains a collection of other symbols, grouped together.
+ *
+ * Example:
+ *
+ *     > a = MXNet.var(:a)
+ *     > b = MXNet.var(:b)
+ *     > MXNet::Symbol.group([a, b])
+ *     <Symbol Grouped>
+ *
+ * @params symbols [Array<Symbol>] An array of symbols to be grouped.
+ * @return [Symbol] A group symbol.
+ */
+static VALUE
+symbol_s_group(VALUE klass, VALUE symbols)
+{
+  mx_uint i, len;
+  VALUE in_handles_str;
+  SymbolHandle *in_handles;
+  SymbolHandle out_handle;
+
+  symbols = rb_check_convert_type(symbols, T_ARRAY, "Array", "to_ary");
+#if LONG_MAX > UINT_MAX
+  if (RARRAY_LEN(symbols) > UINT_MAX) {
+    rb_raise(rb_eArgError, "the size of the give array is too long.");
+  }
+#endif
+
+  len = (mx_uint)RARRAY_LEN(symbols);
+  in_handles_str = rb_str_tmp_new(sizeof(SymbolHandle) * len);
+  in_handles = (SymbolHandle *)RSTRING_PTR(in_handles_str);
+  for (i = 0; i < len; ++i) {
+    VALUE sym = RARRAY_AREF(symbols, i);
+    mxnet_check_symbol(sym);
+    in_handles[i] = mxnet_get_handle(sym);
+  }
+
+  CHECK_CALL(MXNET_API(MXSymbolCreateGroup)(len, in_handles, &out_handle));
+  return mxnet_symbol_new(out_handle);
+}
+
 static VALUE
 symbol_initialize(VALUE obj, VALUE handle_v)
 {
@@ -996,6 +1036,7 @@ mxnet_init_symbol(void)
 
   rb_define_singleton_method(cSymbol, "load", symbol_s_load, 1);
   rb_define_singleton_method(cSymbol, "load_json", symbol_s_load_json, 1);
+  rb_define_singleton_method(cSymbol, "group", symbol_s_group, 1);
 
   rb_define_method(cSymbol, "initialize", symbol_initialize, 1);
   rb_define_method(cSymbol, "name", symbol_get_name, 0);

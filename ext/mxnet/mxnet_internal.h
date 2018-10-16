@@ -217,6 +217,9 @@ struct mxnet_api_table {
                                      void *out);
   int (* MXSymbolCreateFromFile)(const char *fname, SymbolHandle *out);
   int (* MXSymbolCreateFromJSON)(const char *json, SymbolHandle *out);
+  int (* MXSymbolCreateGroup)(mx_uint num_symbols,
+                              SymbolHandle *symbols,
+                              SymbolHandle *out);
   int (* NNSymbolCompose)(SymbolHandle sym,
                           const char *name,
                           mx_uint num_args,
@@ -357,6 +360,18 @@ static inline void
 mxnet_check_ndarray(VALUE obj)
 {
   mxnet_check_type(obj, mxnet_cNDArray);
+}
+
+static inline int
+mxnet_is_symbol(VALUE obj)
+{
+  return RTEST(rb_obj_is_kind_of(obj, mxnet_cSymbol));
+}
+
+static inline void
+mxnet_check_symbol(VALUE obj)
+{
+  mxnet_check_type(obj, mxnet_cSymbol);
 }
 
 #ifdef __cplusplus
