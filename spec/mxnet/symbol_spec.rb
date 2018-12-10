@@ -20,6 +20,14 @@ module MXNet
       end
 
       specify do
+        x = MXNet::Symbol.var(:x, shape: [2, 3], dtype: 1)
+        expect(x).to be_a(MXNet::Symbol)
+        expect(x.name).to eq(:x)
+        expect(x.attr(:__shape__)).to eq([2, 3].to_s)
+        expect(x.attr(:__dtype__)).to eq(:float64)
+      end
+
+      specify do
         expect {
           MXNet::Symbol.var(:x, shape: [2, 3], dtype: :invalid_dtype)
         }.to raise_error(ArgumentError, /:invalid_dtype/)
