@@ -99,9 +99,5 @@ module MXNet::Gluon
         clazz.mean(loss, axis: @batch_axis, exclude: true)
       end
     end
-
-    def self.L2Loss(*args)
-      L2Loss.new(*args)
-    end
   end
 end
