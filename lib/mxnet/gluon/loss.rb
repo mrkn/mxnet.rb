@@ -8,6 +8,7 @@ module MXNet::Gluon
     def initialize(**kwargs)
       super(**kwargs)
     end
+
     ##
     # Override to construct symbolic graph for this Block.
     #
@@ -19,7 +20,9 @@ module MXNet::Gluon
     def hybrid_forward(clazz, *args)
       raise NotImplementedError
     end
+
     protected
+
     ##
     # Reshapes x to be the same shape as y.
     #
@@ -31,6 +34,7 @@ module MXNet::Gluon
         clazz.reshape_like(x, y)
       end
     end
+
     ##
     # Apply weighting to loss.
     #
@@ -62,6 +66,7 @@ module MXNet::Gluon
       end
       loss
     end
+
     ##
     # Calculates the mean squared error between prediction and label.
     #
@@ -84,6 +89,7 @@ module MXNet::Gluon
         @weight = weight
         @batch_axis = batch_axis
       end
+
       def hybrid_forward(clazz, prediction = nil, label = nil, sample_weight: nil, **kwargs)
         prediction ||= kwargs[:prediction]
         label ||= kwargs[:label]
@@ -93,6 +99,7 @@ module MXNet::Gluon
         clazz.mean(loss, axis: @batch_axis, exclude: true)
       end
     end
+
     def self.L2Loss(*args)
       L2Loss.new(*args)
     end
