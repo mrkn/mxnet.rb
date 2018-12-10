@@ -232,7 +232,7 @@ RSpec.describe MXNet::Gluon::Parameter do
 
       param = MXNet::Gluon::Parameter.new(:param, shape: [2, 3], dtype: :float64)
       expect(param.var.attr(:__shape__)).to eq([2, 3].to_s)
-      expect(param.var.attr(:__dtype__)).to eq(MXNet::DType.name2id(:float64).to_s)
+      expect(param.var.attr(:__dtype__)).to eq(:float64)
     end
   end
 
