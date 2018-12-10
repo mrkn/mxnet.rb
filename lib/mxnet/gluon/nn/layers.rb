@@ -85,7 +85,4 @@ module MXNet::Gluon::NN
       out
     end
   end
-  def self.Dense(*args)
-    Dense.new(*args)
-  end
 end
