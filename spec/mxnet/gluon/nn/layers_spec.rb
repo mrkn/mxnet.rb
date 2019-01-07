@@ -164,8 +164,8 @@ RSpec.describe MXNet::Gluon::NN::Internal::Conv do
     end
 
     it 'should set the weight and bias' do
-      expect(layer.weight.shape).to eq([1, 0, 2, 2])
-      expect(layer.bias.shape).to eq([1])
+      expect(layer[:weight].shape).to eq([1, 0, 2, 2])
+      expect(layer[:bias].shape).to eq([1])
     end
 
     context 'with `in_channels: 3`' do
@@ -174,8 +174,8 @@ RSpec.describe MXNet::Gluon::NN::Internal::Conv do
       end
 
       it 'should set the weight and bias' do
-        expect(layer.weight.shape).to eq([1, 3, 2, 2])
-        expect(layer.bias.shape).to eq([1])
+        expect(layer[:weight].shape).to eq([1, 3, 2, 2])
+        expect(layer[:bias].shape).to eq([1])
       end
     end
 
@@ -185,7 +185,7 @@ RSpec.describe MXNet::Gluon::NN::Internal::Conv do
       end
 
       it 'should disable bias' do
-        expect(layer.bias).to be_nil
+        expect(layer[:bias]).to be_nil
       end
     end
 
@@ -195,7 +195,7 @@ RSpec.describe MXNet::Gluon::NN::Internal::Conv do
       end
 
       it 'add activation' do
-        expect(layer.act).to be_a(MXNet::Gluon::NN::Activation)
+        expect(layer[:act]).to be_a(MXNet::Gluon::NN::Activation)
       end
     end
   end

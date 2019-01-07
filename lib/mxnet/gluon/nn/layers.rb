@@ -118,7 +118,7 @@ module MXNet::Gluon::NN
         num_hidden: @units
       )
       if self[:act]
-        out = self[:act][out]
+        out = self[:act].(out)
       end
       out
     end
@@ -210,27 +210,27 @@ module MXNet::Gluon::NN
           shape[layout.index('C')] = in_channels
           shape[layout.index('N')] = 1
           _, wshape, bshape = infer_weight_shape(@op_name, shape, @kwargs)
-          self.weight = self.params.get(
+          self[:weight] = self.params.get(
             'weight',
             shape: wshape,
             allow_deferred_init: true
           )
           if use_bias
-            self.bias = self.params.get(
+            self[:bias] = self.params.get(
               'bias',
               shape: bshape,
               allow_deferred_init: true
             )
           else
-            self.bias = nil
+            self[:bias] = nil
           end
           if activation
-            self.act = MXNet::Gluon::NN.Activation(
+            self[:act] = MXNet::Gluon::NN.Activation(
               activation,
               prefix: "#{activation}_"
             )
           else
-            self.act = nil
+            self[:act] = nil
           end
         end
       end
@@ -243,8 +243,8 @@ module MXNet::Gluon::NN
         else
           out = clazz.send(@op_name, data, weight, bias, **@kwargs)
         end
-        if self.act
-          out = self.act[out]
+        if self[:act]
+          out = self[:act].(out)
         end
         out
       end
