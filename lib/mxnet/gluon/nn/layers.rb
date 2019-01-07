@@ -96,7 +96,7 @@ module MXNet::Gluon::NN
         end
       end
       if activation
-        self[:act] = MXNet::Gluon::NN::Activation(
+        self[:act] = MXNet::Gluon::NN::Activation.new(
           activation,
           prefix: "#{activation}_"
         )
@@ -122,10 +122,6 @@ module MXNet::Gluon::NN
       end
       out
     end
-  end
-
-  def self.Dense(*args)
-    Dense.new(*args)
   end
 
   module Internal
@@ -225,7 +221,7 @@ module MXNet::Gluon::NN
             self[:bias] = nil
           end
           if activation
-            self[:act] = MXNet::Gluon::NN.Activation(
+            self[:act] = MXNet::Gluon::NN::Activation.new(
               activation,
               prefix: "#{activation}_"
             )
@@ -397,10 +393,6 @@ module MXNet::Gluon::NN
     end
   end
 
-  def self.Conv2D(*args)
-    Conv2D.new(*args)
-  end
-
   ##
   # Max pooling operation for 2D data (e.g. images).
   #
@@ -441,10 +433,6 @@ module MXNet::Gluon::NN
     end
   end
 
-  def self.MaxPool2D(*args)
-    MaxPool2D.new(*args)
-  end
-
   ##
   # Flattens the input to two dimensions.
   #
@@ -467,9 +455,5 @@ module MXNet::Gluon::NN
     def hybrid_forward(clazz, data)
       clazz.flatten(data)
     end
-  end
-
-  def self.Flatten(*args)
-    Flatten.new(*args)
   end
 end

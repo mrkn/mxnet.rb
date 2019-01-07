@@ -23,8 +23,4 @@ module MXNet::Gluon::NN
       clazz.Activation(data, act_type: @activation)
     end
   end
-
-  def self.Activation(*args)
-    Activation.new(*args)
-  end
 end

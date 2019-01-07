@@ -11,13 +11,13 @@ RSpec.describe MXNet::Gluon do
         def initialize(**kwargs)
           super
           with_name_scope do
-            @dense0 = MXNet::Gluon::NN::Dense.new(5, in_units: 5)
-            @dense1 = MXNet::Gluon::NN::Dense.new(5, in_units: 5)
+            self[:dense0] = MXNet::Gluon::NN::Dense.new(5, in_units: 5)
+            self[:dense1] = MXNet::Gluon::NN::Dense.new(5, in_units: 5)
           end
         end
 
         def forward(x)
-          @dense1.call(@dense2.call(x))
+          self[:dense1].call(self[:dense0].call(x))
         end
       end
     end
