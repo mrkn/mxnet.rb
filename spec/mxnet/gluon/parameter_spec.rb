@@ -280,8 +280,8 @@ RSpec.describe MXNet::Gluon::Parameter do
       described_class.new('foo', shape: [1])
     end
 
-    it 'fails if the parameter has not been initialized' do
-      expect{parameter.zero_grad}.to raise_error(RuntimeError)
+    it 'returns nil if the parameter has not been initialized' do
+      expect(parameter.zero_grad).to be_nil
     end
 
     it 'sets the grad' do

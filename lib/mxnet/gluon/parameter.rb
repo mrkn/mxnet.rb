@@ -339,8 +339,8 @@ module MXNet
         self.shape = data.shape
 
         unless @_data
-          unless @deferred_init.empty?
-            @deferred_init[2] = data
+          unless @_deferred_init.empty?
+            @_deferred_init[2] = data
           else
             raise RuntimeError, "Parameter '#{@name}' has not been initialized."
           end

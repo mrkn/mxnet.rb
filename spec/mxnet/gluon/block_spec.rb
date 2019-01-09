@@ -143,7 +143,7 @@ RSpec.describe MXNet::Gluon::Block do
 
     it 'creates a file with the parameter data' do
       block.save_parameters(file)
-      expect(File.open(file).read).to eq(data)
+      expect(p File.open(file).read).to eq(data)
     end
   end
 
@@ -161,7 +161,7 @@ RSpec.describe MXNet::Gluon::Block do
 
     let(:block) do
       described_class.new.tap do |block|
-        block.foo = block.params.get('foo', shape: [2], init: :zeros)
+        block[:foo] = block.params.get('foo', shape: [2], init: :zeros)
         block.init
       end
     end
@@ -172,7 +172,7 @@ RSpec.describe MXNet::Gluon::Block do
 
     it 'loads parameter data from a file' do
       block.load_parameters(file)
-      expect(block.foo.data.to_a)
+      expect(block[:foo].data.to_a)
         .to match_array([
                           be_within(0.0001).of(0.0129982),
                           be_within(0.0001).of(0.0301265)
@@ -182,14 +182,16 @@ RSpec.describe MXNet::Gluon::Block do
     context 'with mismatched parameters' do
       let(:block) do
         described_class.new.tap do |block|
-          block.bar = block.params.get('bar', shape: [2], init: :zeros)
+          block[:bar] = block.params.get('bar', shape: [2], init: :zeros)
           block.init
         end
       end
+
       it 'to raise error about missing parameter' do
         expect{block.load_parameters(file, ignore_extra: true)}
           .to raise_error(RuntimeError, /allow_missing: true/)
       end
+
       it 'to raise error about extra parameter' do
         expect{block.load_parameters(file, allow_missing: true)}
           .to raise_error(RuntimeError, /ignore_extra: true/)

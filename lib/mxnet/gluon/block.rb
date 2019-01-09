@@ -263,6 +263,18 @@ module MXNet
         ret
       end
 
+      protected def _collect_params_with_prefix(prefix = '')
+        prefix += '.' unless prefix.empty?
+        {}.tap do |hash|
+          @reg_params.each do |key, param|
+            hash["#{prefix}#{key}"] = param
+          end
+          @children.each do |name, child|
+            hash.merge!(child._collect_params_with_prefix("#{prefix}#{name}"))
+          end
+        end
+      end
+
       ##
       # Saves parameters to file.
       #
@@ -280,7 +292,8 @@ module MXNet
       #
       def save_parameters(filename)
         # NOTE: invoking private method on Parameter
-        params = collect_params_for_storage.transform_values { |p| p.send(:_reduce) }
+        params = _collect_params_with_prefix
+        params.transform_values! { |p| p.send(:_reduce) }
         MXNet::NDArray.save(filename, params)
       end
 
@@ -306,7 +319,7 @@ module MXNet
       def load_parameters(filename, ctx = MXNet.cpu,
                           allow_missing: false,
                           ignore_extra: false)
-        params = collect_params_for_storage
+        params = _collect_params_with_prefix
         loaded = MXNet::NDArray.load(filename)
         unless allow_missing
           params.each do |key, value|
@@ -354,20 +367,6 @@ module MXNet
       # Calls #forward. Only accepts positional arguments.
       def call(*args)
         forward(*args)
-      end
-
-      protected
-
-      def collect_params_for_storage(prefix = '')
-        prefix += '.' unless prefix.empty?
-        {}.tap do |hash|
-          @reg_parameters.each do |key, param|
-            hash[prefix + key] = param
-          end
-          @reg_children.each do |key, child|
-            hash.merge!(child.collect_params_for_storage(prefix + key))
-          end
-        end
       end
     end
 
