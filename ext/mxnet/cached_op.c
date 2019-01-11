@@ -85,11 +85,7 @@ cached_op_initialize(int argc, VALUE *argv, VALUE obj)
   char const **keys = NULL, **vals = NULL;
 
   rb_scan_args(argc, argv, "1:", &sym, &opts);
-
-  if (!RTEST(rb_obj_is_kind_of(sym, mxnet_cSymbol))) {
-    rb_raise(rb_eTypeError, "wrong argument type %s (expected %"PRIsVALUE")",
-             rb_obj_classname(sym), mxnet_cSymbol);
-  }
+  mxnet_check_symbol(sym);
 
   if (!NIL_P(opts)) {
     struct collect_params_args args;
@@ -152,7 +148,7 @@ cached_op_call(int argc, VALUE *argv, VALUE obj)
 
   if (out != Qundef && !NIL_P(out)) {
     orig_out = out;
-    if (rb_obj_is_kind_of(out, mxnet_cNDArray)) {
+    if (mxnet_is_ndarray(out)) {
       out = rb_ary_new_capa(1);
       rb_ary_push(out, orig_out);
     }
