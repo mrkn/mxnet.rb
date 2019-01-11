@@ -32,53 +32,34 @@ cached_op_allocate(VALUE klass)
   return TypedData_Wrap_Struct(klass, &cached_op_data_type, NULL);
 }
 
-struct create_cached_op_args {
-  SymbolHandle symbol_handle;
-  CachedOpHandle cached_op_handle;
-  mx_uint num_params;
+struct collect_params_args {
+  VALUE gc_guard;
   char const **keys;
   char const **vals;
-  int cursor;
+  size_t cursor;
 };
 
-static VALUE
-call_create_cached_op(VALUE value) {
-  struct create_cached_op_args *cargs = (struct create_cached_op_args *)value;
-
-  CHECK_CALL(MXNET_API(MXCreateCachedOpEx)(cargs->symbol_handle,
-                                           cargs->num_params,
-                                           cargs->keys,
-                                           cargs->vals,
-                                           &cargs->cached_op_handle));
-
-  return Qnil;
-}
-
 static int
-check_opts(VALUE key, VALUE val, VALUE opts)
+cached_op_collect_params_i(VALUE key, VALUE val, VALUE arg)
 {
+  struct collect_params_args *args = (struct collect_params_args *)arg;
+  VALUE gc_guard = args->gc_guard;
+  char const **keys = args->keys;
+  char const **vals = args->vals;
+  const size_t cursor = args->cursor;
+
   if (SYMBOL_P(key)) {
     key = rb_sym_to_s(key);
   }
-  StringValue(key);
+  rb_ary_push(gc_guard, key);
+  keys[cursor] = StringValueCStr(key);
 
-  if (TYPE(val) != T_STRING) {
-    val = rb_sprintf("%" PRIsVALUE, val);
+  if (!RB_TYPE_P(val, T_STRING)) {
+    val = rb_funcall(val, rb_intern("to_s"), 0);
   }
-  StringValue(val);
+  rb_ary_push(gc_guard, val);
+  vals[cursor] = StringValueCStr(val);
 
-  rb_hash_aset(opts, key, val);
-
-  return ST_CONTINUE;
-}
-
-static int
-collect_opts(VALUE key, VALUE val, VALUE value)
-{
-  struct create_cached_op_args *args = (struct create_cached_op_args *)value;
-
-  args->keys[args->cursor] = StringValueCStr(key);
-  args->vals[args->cursor] = StringValueCStr(val);
   ++args->cursor;
 
   return ST_CONTINUE;
@@ -87,10 +68,13 @@ collect_opts(VALUE key, VALUE val, VALUE value)
 static VALUE
 cached_op_initialize(int argc, VALUE *argv, VALUE obj)
 {
-  int state = 0;
-  VALUE sym, opts, temp, result;
-  struct create_cached_op_args cargs = {0};
-  unsigned long n;
+  VALUE sym, opts;
+  SymbolHandle symbol_handle;
+  CachedOpHandle cached_op_handle;
+  int num_params = 0;
+
+  VALUE gc_guard = Qnil, keys_str = Qnil, vals_str = Qnil;
+  char const **keys = NULL, **vals = NULL;
 
   rb_scan_args(argc, argv, "1:", &sym, &opts);
 
@@ -98,35 +82,39 @@ cached_op_initialize(int argc, VALUE *argv, VALUE obj)
     rb_raise(rb_eTypeError, "wrong argument type %s (expected %"PRIsVALUE")",
              rb_obj_classname(sym), mxnet_cSymbol);
   }
-  if (NIL_P(opts)) {
-    opts = rb_hash_new();
+
+  if (!NIL_P(opts)) {
+    struct collect_params_args args;
+
+    if (RHASH_SIZE(opts) > INT_MAX) {
+      rb_raise(rb_eArgError, "too many flags");
+    }
+    num_params = (int)RHASH_SIZE(opts);
+
+    gc_guard = rb_ary_new_capa((long)num_params*2);
+    keys_str = rb_str_tmp_new(sizeof(char const *) * num_params);
+    keys = (char const**)RSTRING_PTR(keys_str);
+    vals_str = rb_str_tmp_new(sizeof(char const *) * num_params);
+    vals = (char const**)RSTRING_PTR(vals_str);
+
+    args.gc_guard = gc_guard;
+    args.keys = keys;
+    args.vals = vals;
+    args.cursor = 0;
+
+    rb_hash_foreach(opts, cached_op_collect_params_i, (VALUE)&args);
   }
 
-  n = RHASH_SIZE(opts);
+  symbol_handle = (SymbolHandle)mxnet_get_handle(sym);
 
-  temp = rb_hash_new();
-  rb_hash_foreach(opts, check_opts, temp);
-  opts = temp;
+  CHECK_CALL(MXNET_API(MXCreateCachedOpEx)(
+        symbol_handle,
+        num_params,
+        keys,
+        vals,
+        &cached_op_handle));
 
-  cargs.num_params = (mx_uint)n;
-  cargs.keys = ALLOC_N(const char *, n);
-  cargs.vals = ALLOC_N(const char *, n);
-  cargs.cursor = 0;
-
-  rb_hash_foreach(opts, collect_opts, (VALUE)&cargs);
-
-  cargs.symbol_handle = (SymbolHandle)mxnet_get_handle(sym);
-
-  result = rb_protect((VALUE (*)(VALUE))call_create_cached_op, (VALUE)&cargs, &state);
-
-  xfree(cargs.keys);
-  xfree(cargs.vals);
-
-  if (state) {
-    rb_jump_tag(state);
-  }
-
-  DATA_PTR(obj) = cargs.cached_op_handle;
+  DATA_PTR(obj) = cached_op_handle;
 
   return obj;
 }
