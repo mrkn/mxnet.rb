@@ -1,6 +1,6 @@
 #include "mxnet_internal.h"
 
-VALUE cCachedOp;
+VALUE mxnet_cCachedOp;
 
 static void
 cached_op_free(void *ptr)
@@ -25,6 +25,14 @@ static const rb_data_type_t cached_op_data_type = {
   },
   0, 0, RUBY_TYPED_FREE_IMMEDIATELY
 };
+
+CachedOpHandle
+mxnet_cached_op_get_handle(VALUE obj)
+{
+  CachedOpHandle handle;
+  TypedData_Get_Struct(obj, void, &cached_op_data_type, handle);
+  return handle;
+}
 
 static VALUE
 cached_op_allocate(VALUE klass)
@@ -119,66 +127,83 @@ cached_op_initialize(int argc, VALUE *argv, VALUE obj)
   return obj;
 }
 
-struct invoke_cached_op_args {
-  CachedOpHandle cached_op_handle;
-  int num_inputs, num_outputs, *out_stypes;
-  NDArrayHandle *inputs, *outputs;
-};
-
 static VALUE
-call_invoke_cached_op(VALUE value) {
-  struct invoke_cached_op_args *cargs = (struct invoke_cached_op_args *)value;
-
-  CHECK_CALL(MXNET_API(MXInvokeCachedOpEx)(cargs->cached_op_handle,
-                                           cargs->num_inputs,
-                                           cargs->inputs,
-                                           &cargs->num_outputs,
-                                           &cargs->outputs,
-                                           &cargs->out_stypes));
-
-  return Qnil;
-}
-
-static VALUE
-cached_op_call(VALUE obj, VALUE args)
+cached_op_call(int argc, VALUE *argv, VALUE obj)
 {
-  int state = 0;
-  VALUE result;
-  struct invoke_cached_op_args cargs = {0};
-  unsigned long i, n;
+  CachedOpHandle handle;
+  VALUE args, kwargs, out, orig_out, output_vars_str, input_vars_str, result;
+  NDArrayHandle *output_vars, *input_vars;
+  int i, num_output, num_input, *out_stypes;
 
-  n = RARRAY_LEN(args);
+  rb_scan_args(argc, argv, "0*:", &args, &kwargs);
 
-  cargs.num_inputs = (mx_uint)n;
-  cargs.inputs = ALLOC_N(NDArrayHandle, n);
+  out = Qundef;
+  if (!NIL_P(kwargs)) {
+    static ID kwarg_keys[1];
+    VALUE kwarg_vals[1];
 
-  for (i = 0; i < n; ++i) {
-    cargs.inputs[i] = mxnet_ndarray_get_handle(RARRAY_AREF(args, i));
+    if (!kwarg_keys[0]) {
+      kwarg_keys[0] = rb_intern("out");
+    }
+
+    rb_get_kwargs(kwargs, kwarg_keys, 0, 1, kwarg_vals);
+    out = kwarg_vals[0];
   }
 
-  cargs.cached_op_handle = (CachedOpHandle)DATA_PTR(obj);
-
-  result = rb_protect((VALUE (*)(VALUE))call_invoke_cached_op, (VALUE)&cargs, &state);
-
-  xfree(cargs.inputs);
-
-  if (state) {
-    rb_jump_tag(state);
+  if (out != Qundef && !NIL_P(out)) {
+    orig_out = out;
+    if (rb_obj_is_kind_of(out, mxnet_cNDArray)) {
+      out = rb_ary_new_capa(1);
+      rb_ary_push(out, orig_out);
+    }
+    if (RARRAY_LEN(out) > INT_MAX) {
+      rb_raise(rb_eArgError, "too many output NDArrays");
+    }
+    num_output = (int)RARRAY_LEN(out);
+    output_vars_str = rb_str_tmp_new(sizeof(NDArrayHandle) * num_output);
+    output_vars = (NDArrayHandle *)RSTRING_PTR(output_vars_str);
+    for (i = 0; i < num_output; ++i) {
+      output_vars[i] = mxnet_ndarray_get_handle(RARRAY_AREF(out, i));
+    }
+  }
+  else {
+    orig_out = Qnil;
+    output_vars = NULL;
+    num_output = 0;
   }
 
-  if (cargs.num_outputs == 0) {
-    return Qnil;
+  out_stypes = NULL;
+
+  if (RARRAY_LEN(args) > INT_MAX) {
+    rb_raise(rb_eArgError, "too many input NDArrays");
   }
-  else if (cargs.num_outputs == 1) {
-    return mxnet_ndarray_new(cargs.outputs[0]);
+  num_input = (int)RARRAY_LEN(args);
+  input_vars_str = rb_str_tmp_new(sizeof(NDArrayHandle) * num_input);
+  input_vars = (NDArrayHandle *)RSTRING_PTR(input_vars_str);
+  for (i = 0; i < num_input; ++i) {
+    input_vars[i] = mxnet_ndarray_get_handle(RARRAY_AREF(args, i));
   }
 
-  n = cargs.num_outputs;
+  handle = mxnet_cached_op_get_handle(obj);
+  CHECK_CALL(MXNET_API(MXInvokeCachedOpEx)(
+        handle,
+        num_input,
+        input_vars,
+        &num_output,
+        &output_vars,
+        &out_stypes));
 
-  result = rb_ary_new2(n);
+  if (!NIL_P(orig_out)) {
+    return orig_out;
+  }
 
-  for (i = 0; i < n; ++i) {
-    rb_ary_push(result, mxnet_ndarray_new(cargs.outputs[i]));
+  if (num_output == 1) {
+    return mxnet_ndarray_new(output_vars[0]);
+  }
+
+  result = rb_ary_new_capa(num_output);
+  for (i = 0; i < num_output; ++i) {
+    rb_ary_push(result, mxnet_ndarray_new(output_vars[i]));
   }
 
   return result;
@@ -187,10 +212,10 @@ cached_op_call(VALUE obj, VALUE args)
 void
 mxnet_init_cached_op(void)
 {
-  cCachedOp = rb_define_class_under(mxnet_mMXNet, "CachedOp", rb_cObject);
+  mxnet_cCachedOp = rb_define_class_under(mxnet_mMXNet, "CachedOp", rb_cObject);
 
-  rb_define_alloc_func(cCachedOp, cached_op_allocate);
+  rb_define_alloc_func(mxnet_cCachedOp, cached_op_allocate);
 
-  rb_define_private_method(cCachedOp, "initialize", cached_op_initialize, -1);
-  rb_define_method(cCachedOp, "call", cached_op_call, -2);
+  rb_define_private_method(mxnet_cCachedOp, "initialize", cached_op_initialize, -1);
+  rb_define_method(mxnet_cCachedOp, "call", cached_op_call, -1);
 }

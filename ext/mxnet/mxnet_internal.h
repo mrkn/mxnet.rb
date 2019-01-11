@@ -338,6 +338,8 @@ VALUE mxnet_ndarray_get_shape(VALUE obj);
 VALUE mxnet_symbol_new(SymbolHandle mxsymbol_handle);
 VALUE mxnet_symbol_list_outputs(VALUE obj);
 
+CachedOpHandle mxnet_cached_op_get_handle(VALUE obj);
+
 void mxnet_init_libmxnet(void);
 void mxnet_init_autograd(void);
 void mxnet_init_cached_op(void);
@@ -354,6 +356,7 @@ NORETURN(void mxnet_raise_last_error(void));
 
 extern VALUE mxnet_mMXNet;
 extern VALUE mxnet_mUtils;
+extern VALUE mxnet_cCachedOp;
 extern VALUE mxnet_cContext;
 extern VALUE mxnet_cExecutor;
 extern VALUE mxnet_cMXDataIter;
@@ -381,6 +384,18 @@ static inline int
 mxnet_is_symbol(VALUE obj)
 {
   return RTEST(rb_obj_is_kind_of(obj, mxnet_cSymbol));
+}
+
+static inline void
+mxnet_check_cached_op(VALUE obj)
+{
+  mxnet_check_type(obj, mxnet_cCachedOp);
+}
+
+static inline int
+mxnet_is_cached_op(VALUE obj)
+{
+  return RTEST(rb_obj_is_kind_of(obj, mxnet_cCachedOp));
 }
 
 static inline void
