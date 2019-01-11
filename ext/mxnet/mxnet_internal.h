@@ -387,9 +387,9 @@ mxnet_is_symbol(VALUE obj)
 }
 
 static inline void
-mxnet_check_cached_op(VALUE obj)
+mxnet_check_symbol(VALUE obj)
 {
-  mxnet_check_type(obj, mxnet_cCachedOp);
+  mxnet_check_type(obj, mxnet_cSymbol);
 }
 
 static inline int
@@ -399,9 +399,9 @@ mxnet_is_cached_op(VALUE obj)
 }
 
 static inline void
-mxnet_check_symbol(VALUE obj)
+mxnet_check_cached_op(VALUE obj)
 {
-  mxnet_check_type(obj, mxnet_cSymbol);
+  mxnet_check_type(obj, mxnet_cCachedOp);
 }
 
 #ifdef __cplusplus
