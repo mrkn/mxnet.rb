@@ -1027,53 +1027,28 @@ symbol_infer_shape_impl(int argc, VALUE *argv, VALUE obj)
   }
 }
 
-struct symbol_compose_args {
-  SymbolHandle symbol_handle;
-  mx_uint num_params;
+struct symbol_compose_process_kwargs_params {
+  VALUE gc_guard;
   char const **keys;
-  void **vals;
+  SymbolHandle *vals;
   int cursor;
 };
 
-static VALUE
-call_symbol_compose(VALUE value) {
-  struct symbol_compose_args *args = (struct symbol_compose_args *)value;
-
-  CHECK_CALL(MXNET_API(NNSymbolCompose)(args->symbol_handle,
-                                        NULL,
-                                        args->num_params,
-                                        args->keys,
-                                        args->vals));
-
-  return Qnil;
-}
-
 static int
-check_symbol_compose_kwargs(VALUE key, VALUE val, VALUE kwargs)
+symbol_compose_process_kwargs_i(VALUE key, VALUE val, VALUE arg)
 {
+  struct symbol_compose_process_kwargs_params *params = (struct symbol_compose_process_kwargs_params *)arg;
+
   if (SYMBOL_P(key)) {
     key = rb_sym_to_s(key);
   }
-  StringValue(key);
 
-  if (!RTEST(rb_obj_is_kind_of(val, mxnet_cSymbol))) {
-    rb_raise(rb_eTypeError, "wrong argument type %s (expected %"PRIsVALUE")",
-             rb_obj_classname(val), mxnet_cSymbol);
-  }
+  params->keys[params->cursor] = StringValueCStr(key);
+  rb_ary_push(params->gc_guard, key);
 
-  rb_hash_aset(kwargs, key, val);
+  params->vals[params->cursor] = (SymbolHandle)mxnet_get_handle(val);
 
-  return ST_CONTINUE;
-}
-
-static int
-collect_symbol_compose_kwargs(VALUE key, VALUE val, VALUE value)
-{
-  struct symbol_compose_args *args = (struct symbol_compose_args *)value;
-
-  args->keys[args->cursor] = StringValueCStr(key);
-  args->vals[args->cursor] = mxnet_get_handle(val);
-  ++args->cursor;
+  ++params->cursor;
 
   return ST_CONTINUE;
 }
@@ -1081,40 +1056,70 @@ collect_symbol_compose_kwargs(VALUE key, VALUE val, VALUE value)
 static VALUE
 symbol_compose(int argc, VALUE *argv, VALUE obj)
 {
-  int state = 0;
-  VALUE kwargs, result, temp;
-  struct symbol_compose_args args = {0};
-  unsigned long n;
+  SymbolHandle handle;
+  VALUE args, kwargs, name, keys_str, vals_str, gc_guard;
+  char const **keys = NULL, *name_cstr = NULL;
+  SymbolHandle *vals;
+  mx_uint n;
+  long i;
 
-  rb_scan_args(argc, argv, ":", &kwargs);
+  rb_scan_args(argc, argv, "*:", &args, &kwargs);
 
-  if (NIL_P(kwargs)) {
-    kwargs = rb_hash_new();
+  name = rb_hash_delete(kwargs, ID2SYM(rb_intern("name")));
+  if (!NIL_P(name)) {
+    name_cstr = StringValueCStr(name);
   }
 
-  n = RHASH_SIZE(kwargs);
-
-  temp = rb_hash_new();
-  rb_hash_foreach(kwargs, check_symbol_compose_kwargs, temp);
-  kwargs = temp;
-
-  args.num_params = (mx_uint)n;
-  args.keys = ALLOC_N(const char *, n);
-  args.vals = ALLOC_N(void *, n);
-  args.cursor = 0;
-
-  rb_hash_foreach(kwargs, collect_symbol_compose_kwargs, (VALUE)&args);
-
-  args.symbol_handle = (SymbolHandle)mxnet_get_handle(obj);
-
-  result = rb_protect((VALUE (*)(VALUE))call_symbol_compose, (VALUE)&args, &state);
-
-  xfree(args.keys);
-  xfree(args.vals);
-
-  if (state) {
-    rb_jump_tag(state);
+  if (RARRAY_LEN(args) != 0 && (!NIL_P(kwargs) && RHASH_SIZE(kwargs) != 0)) {
+    rb_raise(rb_eArgError, "compose only accept input Symbols either "
+                           "as positional or keyword arguments, not both");
   }
+
+  if (RARRAY_LEN(args) > 0) {
+    if (RARRAY_LEN(args) > UINT_MAX) {
+      rb_raise(rb_eArgError, "too many arguments");
+    }
+    n = (mx_uint)RARRAY_LEN(args);
+
+    keys = NULL;
+    vals_str = rb_str_tmp_new(sizeof(SymbolHandle) * n);
+    vals = (SymbolHandle *)RSTRING_PTR(vals_str);
+
+    for (i = 0; i < RARRAY_LEN(args); ++i) {
+      VALUE v = RARRAY_AREF(args, i);
+      mxnet_check_symbol(v);
+      vals[i] = (SymbolHandle)mxnet_get_handle(v);
+    }
+  }
+
+  if (!NIL_P(kwargs) && RHASH_SIZE(kwargs) > 0) {
+    struct symbol_compose_process_kwargs_params params;
+
+    if (RHASH_SIZE(kwargs) > UINT_MAX) {
+      rb_raise(rb_eArgError, "too many arguments");
+    }
+    n = (mx_uint)RHASH_SIZE(kwargs);
+
+    keys_str = rb_str_tmp_new(sizeof(char const *) * n);
+    keys = (char const **)RSTRING_PTR(keys_str);
+    vals_str = rb_str_tmp_new(sizeof(SymbolHandle) * n);
+    vals = (SymbolHandle *)RSTRING_PTR(vals_str);
+
+    gc_guard = rb_ary_new_capa(n);
+    params.gc_guard = gc_guard;
+    params.keys = keys;
+    params.vals = vals;
+    params.cursor = 0;
+
+    rb_hash_foreach(kwargs, symbol_compose_process_kwargs_i, (VALUE)&params);
+  }
+
+  handle = (SymbolHandle)mxnet_get_handle(obj);
+  CHECK_CALL(MXNET_API(NNSymbolCompose)(handle,
+                                        name_cstr,
+                                        n,
+                                        keys,
+                                        vals));
 
   return obj;
 }
