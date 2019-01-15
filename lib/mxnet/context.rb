@@ -62,7 +62,7 @@ module MXNet
       return unless block_given?
       begin
         old_context, @default = @default, ctx
-        yield
+        yield ctx
       ensure
         @default = @old_context
       end

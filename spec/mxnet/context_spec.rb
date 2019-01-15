@@ -10,7 +10,8 @@ RSpec.describe MXNet::Context do
 
   describe '.with' do
     specify do
-      expect {|b| MXNet::Context.with(MXNet::gpu(0), &b) }.to yield_control
+      ctx = MXNet::gpu(0)
+      expect {|b| MXNet::Context.with(ctx, &b) }.to yield_with_args(ctx)
     end
 
     specify do
