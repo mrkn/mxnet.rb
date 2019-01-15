@@ -396,6 +396,11 @@ module MXNet
         @flags = []
       end
 
+      def __setattr__(name, value)
+        super
+        _clear_cached_op if value.is_a?(HybridBlock)
+      end
+
       def register_child(block, name=nil)
         unless block.is_a? HybridBlock
           raise ArgumentError,
@@ -405,11 +410,6 @@ module MXNet
         end
         super
         _clear_cached_op
-      end
-
-      def __setattr__(name, value)
-        super
-        _clear_cached_op if value.is_a?(HybridBlock)
       end
 
       def hybridize(active: true, **kwargs)
@@ -433,26 +433,27 @@ module MXNet
             acc[i.to_sym] = j.var
             acc
           end
-          hybrid_forward(MXNet::Symbol, *args, **kwargs)
+          self.with_name_cope do
+            hybrid_forward(MXNet::Symbol, *args, **kwargs)
+          end
         when MXNet::NDArray
-          ctx = args.first.context
-          if @active
-            return call_cached_graph(*args)
-          end
-          begin
-            kwargs = @reg_params.inject({}) do |acc, (i, j)|
-              acc[i.to_sym] = j.data(ctx: ctx)
-              acc
+          MXNet::Context.with(args.first.context) do |ctx|
+            return _call_cached_op(*args) if @active
+            begin
+              kwargs = @reg_params.inject({}) do |acc, (i, j)|
+                acc[i.to_sym] = j.data(ctx: ctx)
+                acc
+              end
+            rescue DeferredInitializationError
+              deferred_infer_shape(*args)
+              @params.each do |_, param|
+                # NOTE: invoking private method on Parameter
+                param.send(:_finish_deferred_init)
+              end
+              retry
             end
-          rescue DeferredInitializationError
-            deferred_infer_shape(*args)
-            @params.each do |_, param|
-              # NOTE: invoking private method on Parameter
-              param.send(:_finish_deferred_init)
-            end
-            retry
+            hybrid_forward(MXNet::NDArray, *args, **kwargs)
           end
-          hybrid_forward(MXNet::NDArray, *args, **kwargs)
         else
           raise ArgumentError,
                 'only Symbol or NDArray are supported, ' \
@@ -487,7 +488,7 @@ module MXNet
 
       # Infer attributes.
       def infer_attrs(fn, attr, *args)
-        inputs, output = get_graph(*args)
+        inputs, output = _get_graph(*args)
         args, _ = _flatten(args)
         arg_attrs, _, aux_attrs =
           output.send(fn, inputs.zip(args).inject({}) { |a, (i, j)| a[i.name] = j.send(attr) ; a })
@@ -498,7 +499,7 @@ module MXNet
         end
       end
 
-      def get_graph(*args)
+      private def _get_graph(*args)
         @cached_graph ||=
           begin
             args, @_in_format = _flatten(args)
@@ -523,17 +524,17 @@ module MXNet
           end
       end
 
-      def get_cached_op(*args)
+      private def _build_cache(*args)
         @cached_op ||=
           begin
-            _, output = get_graph(*args)
+            _, output = _get_graph(*args)
             inputs = collect_params.values
             [inputs, output, MXNet::CachedOp.new(output, @flags)]
           end
       end
 
-      def call_cached_graph(*args)
-        inputs, _, cached_op = get_cached_op(*args)
+      private def _call_cached_op(*args)
+        inputs, _, cached_op = _build_cache(*args)
         begin
           data = inputs.map(&:data)
           cached_op.call(*(args + data))
