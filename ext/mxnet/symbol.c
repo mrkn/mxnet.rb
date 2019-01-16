@@ -236,10 +236,15 @@ symbol_attr(VALUE obj, VALUE key)
     return Qnil;
   }
 
+  if (strncmp("__dtype__", key_cstr, 10) == 0) {
+    long dtype_id = strtol(value_cstr, NULL, 10);
+    return mxnet_dtype_id2name((int)dtype_id);
+  }
+
   return rb_str_new2(value_cstr);
 }
 
-static VALUE
+static int
 symbol_set_attributes_i(VALUE key, VALUE value, VALUE arg)
 {
   SymbolHandle handle = (SymbolHandle)arg;
@@ -248,9 +253,29 @@ symbol_set_attributes_i(VALUE key, VALUE value, VALUE arg)
   if (RB_TYPE_P(key, T_SYMBOL)) {
     key = rb_sym_to_s(key);
   }
-  key_cstr = StringValueCStr(key);
   /* NOTE: don't convert symbol into string implicitly */
-  value_cstr = StringValueCStr(value);
+  key_cstr = StringValueCStr(key);
+
+  if (strncmp("__dtype__", key_cstr, 10) == 0) {
+    if (RB_INTEGER_TYPE_P(value)) {
+      /* do nothing */
+    }
+    else if (RB_TYPE_P(value, T_STRING) || RB_TYPE_P(value, T_SYMBOL)) {
+      int dtype_id = mxnet_dtype_name2id(value);
+      if (dtype_id < 0) {
+        rb_raise(rb_eArgError, "Invalid value for dtype (%"PRIsVALUE")", value);
+      }
+      value = INT2NUM(dtype_id);
+    }
+    else {
+      rb_raise(rb_eTypeError, "Expect a String or a Symbol for dtype (%"PRIsVALUE")", value);
+    }
+    value = rb_funcall(value, rb_intern("to_s"), 0);
+    value_cstr = StringValueCStr(value);
+  }
+  else {
+    value_cstr = StringValueCStr(value);
+  }
 
   CHECK_CALL(MXNET_API(MXSymbolSetAttr)(handle, key_cstr, value_cstr));
 

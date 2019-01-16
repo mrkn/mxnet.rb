@@ -353,7 +353,19 @@ module MXNet
       attr[:__shape__] = shape.to_s if shape
       attr[:__lr_mult__] = lr_mult.to_s if lr_mult
       attr[:__wd_mult__] = wd_mult.to_s if wd_mult
-      attr[:__dtype__] = MXNet::DType.name2id(dtype).to_s if dtype
+      case dtype
+      when String, ::Symbol
+        unless MXNet::DType.available? dtype
+          raise ArgumentError, "Invalid dtype (#{dtype.inspect})"
+        end
+        attr[:__dtype__] = dtype.to_sym
+      when Integer
+        attr[:__dtype__] = dtype
+      when nil
+        # do nothing
+      else
+        raise TypeError, "Expect a String or a Symbol for dtype (#{dtype.inspect})"
+      end
       if init
         init = init.to_json unless init.is_a?(String) || init.is_a?(::Symbol)
         attr[:__init__] = init
