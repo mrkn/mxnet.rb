@@ -30,6 +30,11 @@ module MXNet
           MXNet::Symbol.var(:x, __foo__: :bar)
         }.to raise_error(TypeError)
       end
+
+      specify 'symbol value in init: keyword is allowed' do
+        x = MXNet::Symbol.var(:x, init: :zeros)
+        expect(x.attr(:__init__)).to eq('zeros')
+      end
     end
 
     describe '.Variable' do

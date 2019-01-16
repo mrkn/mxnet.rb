@@ -274,6 +274,9 @@ symbol_set_attributes_i(VALUE key, VALUE value, VALUE arg)
     value_cstr = StringValueCStr(value);
   }
   else {
+    if (strncmp("__init__", key_cstr, 9) == 0 && RB_TYPE_P(value, T_SYMBOL)) {
+      value = rb_sym_to_s(value);
+    }
     value_cstr = StringValueCStr(value);
   }
 
