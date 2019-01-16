@@ -73,6 +73,32 @@ dtype_m_name(VALUE mod, VALUE id_or_name)
   return mxnet_dtype_name(id_or_name);
 }
 
+int
+mxnet_dtype_is_available(VALUE dtype)
+{
+  int dtype_id;
+  if (RB_INTEGER_TYPE_P(dtype)) {
+    dtype_id = NUM2INT(dtype);
+  }
+  else {
+    if (!RB_TYPE_P(dtype, T_SYMBOL)) {
+      VALUE str = rb_check_convert_type(dtype, T_STRING, "String", "to_str");
+      if (NIL_P(str)) {
+        rb_raise(rb_eTypeError, "Invalid type for dtype (%"PRIsVALUE")", dtype);
+      }
+      dtype = str;
+    }
+    dtype_id = mxnet_dtype_name2id(dtype);
+  }
+  return 0 <= dtype_id && dtype_id < NUMBER_OF_DTYPE_IDS;
+}
+
+static VALUE
+dtype_m_available_p(VALUE mod, VALUE dtype)
+{
+  return mxnet_dtype_is_available(dtype) ? Qtrue : Qfalse;
+}
+
 static void
 ndarray_free(void *ptr)
 {
@@ -748,6 +774,7 @@ mxnet_init_ndarray(void)
   rb_define_module_function(mDType, "id2name", dtype_m_id2name, 1);
   rb_define_module_function(mDType, "name2id", dtype_m_name2id, 1);
   rb_define_module_function(mDType, "name", dtype_m_name, 1);
+  rb_define_module_function(mDType, "available?", dtype_m_available_p, 1);
 
 #define INIT_DTYPE(id, ctype, name) do { \
     dtype_name_ids[id] = rb_intern(name); \

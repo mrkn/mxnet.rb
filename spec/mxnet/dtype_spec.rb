@@ -24,6 +24,23 @@ RSpec.describe MXNet::DType do
       expect(name2id('float32')).to eq(0)
     end
   end
+
+  describe '.available?' do
+    def available?(dtype)
+      MXNet::DType.available?(dtype)
+    end
+
+    specify do
+      expect(available?(0)).to eq(true)
+      expect(available?(:float32)).to eq(true)
+      expect(available?("float32")).to eq(true)
+      expect(available?(:invalid_dtype)).to eq(false)
+    end
+
+    specify do
+      expect { available?(0.0) }.to raise_error(TypeError)
+    end
+  end
 end
 
 RSpec.describe 'dtype' do
