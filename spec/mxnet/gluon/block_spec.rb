@@ -305,7 +305,7 @@ RSpec.describe MXNet::Gluon::HybridBlock do
           .to include({'nodes' => include(
                          include({'name' => match(/_plus[0-9]+/)}),
                          include({'name' => 'test_c'}),
-                         include({'name' => 'data0'})
+                         include({'name' => 'data'})
                        )})
       end
 
@@ -335,8 +335,12 @@ RSpec.describe MXNet::Gluon::SymbolBlock do
   end
 
   describe '.import' do
+    let(:tmpfile) do
+      Tempfile.new('foo')
+    end
+
     let(:file) do
-      Tempfile.new('foo').path
+      tmpfile.path
     end
 
     let(:model) do

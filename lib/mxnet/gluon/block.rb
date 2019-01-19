@@ -446,9 +446,9 @@ module MXNet
         collect_params.each do |name, param|
           # NOTE: invoking private method on Parameter
           if arg_names.include?(name.to_sym)
-            args["arg:#{name}"] = param.send(:reduce)
+            args["arg:#{name}"] = param.send(:_reduce)
           elsif aux_names.include?(name.to_sym)
-            args["aux:#{name}"] = param.send(:reduce)
+            args["aux:#{name}"] = param.send(:_reduce)
           end
         end
         MXNet::NDArray.save('%s-%04d.params' % [filename, epoch], args)
@@ -673,7 +673,7 @@ module MXNet
             end
             unless ignore_extra
               arg_dict.keys.each do |key|
-                unless block.params.keys.include?(key.to_sym)
+                unless block.params.keys.include?(key.to_s)
                   raise RuntimeError,
                         "Parameter '#{key}' loaded from file '#{filename}' is " \
                         "not present in this block. Set ignore_extra: true to " \
@@ -685,7 +685,7 @@ module MXNet
               param = block.params.get(key)
               param.shape = value.shape
               # NOTE: invoking private method on Parameter
-              param.send(:load_and_init, ctx, value)
+              param.send(:_load_init, value, ctx)
             end
           end
         end
