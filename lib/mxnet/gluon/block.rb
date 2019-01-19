@@ -468,7 +468,7 @@ module MXNet
             acc[i.to_sym] = j.var
             acc
           end
-          self.with_name_cope do
+          self.with_name_scope do
             hybrid_forward(MXNet::Symbol, *args, **kwargs)
           end
         when MXNet::NDArray

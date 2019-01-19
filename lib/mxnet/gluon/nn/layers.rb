@@ -34,7 +34,7 @@ module MXNet::Gluon::NN
 
     # Returns the block at the specified index.
     def at(index)
-      @children[index]
+      @children.values[index]
     end
 
     # Runs a forward pass on all child blocks.
@@ -70,12 +70,12 @@ module MXNet::Gluon::NN
 
     # Returns the block at the specified index.
     def at(index)
-      @children[index]
+      @children.values[index]
     end
 
     # Runs a forward pass on all child blocks.
     def hybrid_forward(clazz, data)
-      @children.inject(data) { |data, child| child.(data) }
+      @children.each_value.inject(data) { |data, child| child.(data) }
     end
   end
 

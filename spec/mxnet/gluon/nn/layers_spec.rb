@@ -44,7 +44,7 @@ RSpec.describe MXNet::Gluon::NN::HybridSequential do
 
     it 'should register block as a child' do
       layer.add(block)
-      expect(layer.children).to eq([block])
+      expect(layer.at(0)).to eq(block)
     end
   end
 
