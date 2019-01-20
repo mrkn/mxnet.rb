@@ -244,10 +244,17 @@ symbol_attr(VALUE obj, VALUE key)
   return rb_str_new2(value_cstr);
 }
 
+struct set_attributes_args {
+  VALUE gc_guard;
+  char const **keys;
+  char const **vals;
+  size_t cursor;
+};
+
 static int
 symbol_set_attributes_i(VALUE key, VALUE value, VALUE arg)
 {
-  SymbolHandle handle = (SymbolHandle)arg;
+  struct set_attributes_args *args = (struct set_attributes_args *)arg;
   char const *key_cstr, *value_cstr;
 
   if (RB_TYPE_P(key, T_SYMBOL)) {
@@ -280,29 +287,57 @@ symbol_set_attributes_i(VALUE key, VALUE value, VALUE arg)
     value_cstr = StringValueCStr(value);
   }
 
-  CHECK_CALL(MXNET_API(MXSymbolSetAttr)(handle, key_cstr, value_cstr));
+  rb_ary_push(args->gc_guard, key);
+  args->keys[args->cursor] = key_cstr;
+
+  rb_ary_push(args->gc_guard, value);
+  args->vals[args->cursor] = value_cstr;
+
+  ++args->cursor;
 
   return ST_CONTINUE;
 }
 
-/* Sets an attribute of the symbol.
+/* Sets attributes of the symbol.
  *
- * For example.  `A.send :_set_attr(foo: 'bar')` adds the mapping `"{foo: bar}"`
- * to the symbol's attribute dictionary.
+ * For example: `sym.send(:set_attributes, foo: "bar")` adds the
+ * mapping `{foo: "bar"}` to the symbol's attribute dictionary.
  *
  * @param kwargs [Hash{Symbol => #to_str}] The attributes to set
  */
 static VALUE
 symbol_set_attributes(int argc, VALUE *argv, VALUE obj)
 {
-  VALUE kwargs;
   SymbolHandle handle;
+  struct set_attributes_args args;
+  VALUE kwargs, gc_guard = Qnil, keys_str = Qnil, vals_str = Qnil;
+  char const **keys = NULL, **vals = NULL;
+  int num_attrs = 0;
 
   rb_scan_args(argc, argv, ":", &kwargs);
 
   if (!NIL_P(kwargs)) {
+    if (RHASH_SIZE(kwargs) > INT_MAX) {
+      rb_raise(rb_eArgError, "too many attributes");
+    }
+    num_attrs = (int)RHASH_SIZE(kwargs);
+
+    gc_guard = rb_ary_new_capa((long)num_attrs * 2);
+    keys_str = rb_str_tmp_new(sizeof(char const *) * num_attrs);
+    keys = (char const**)RSTRING_PTR(keys_str);
+    vals_str = rb_str_tmp_new(sizeof(char const *) * num_attrs);
+    vals = (char const**)RSTRING_PTR(vals_str);
+
+    args.gc_guard = gc_guard;
+    args.keys = keys;
+    args.vals = vals;
+    args.cursor = 0;
+
+    rb_hash_foreach(kwargs, symbol_set_attributes_i, (VALUE)&args);
+
     handle = mxnet_get_handle(obj);
-    rb_hash_foreach(kwargs, symbol_set_attributes_i, (VALUE)handle);
+
+    CHECK_CALL(MXNET_API(NNSymbolSetAttrs)(handle, num_attrs, keys, vals));
   }
 
   return Qnil;
