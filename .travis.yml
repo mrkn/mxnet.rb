@@ -13,23 +13,23 @@ script: rake -f ci/Rakefile ci:run
 
 matrix:
   include:
-    - name: "Ruby 2.5.1 with MXNet 1.2.1.post1 on Python 3.7.0"
+    - name: "Ruby 2.5.3 with MXNet 1.3.1 on Python 3.7.2"
       env:
-        - ruby_version=2.5.1
-        - python_version=3.7.0
-        - mxnet_version=1.2.1.post1
+        - ruby_version=2.5.3
+        - python_version=3.7.2
+        - mxnet_version=1.3.1
 
-    - name: "Ruby 2.4.4 with MXNet 1.2.1.post1 on Python 3.7.0"
+    - name: "Ruby 2.4.5 with MXNet 1.3.1 on Python 3.7.2"
       env:
-        - ruby_version=2.4.4
-        - python_version=3.7.0
-        - mxnet_version=1.2.1.post1
+        - ruby_version=2.4.5
+        - python_version=3.7.2
+        - mxnet_version=1.3.1
 
-    - name: "Ruby 2.3.7 with MXNet 1.2.1.post1 on Python 3.7.0"
+    - name: "Ruby 2.3.8 with MXNet 1.3.1 on Python 3.7.2"
       env:
-        - ruby_version=2.3.7
-        - python_version=3.7.0
-        - mxnet_version=1.2.1.post1
+        - ruby_version=2.3.8
+        - python_version=3.7.2
+        - mxnet_version=1.3.1
 
   allow_failures:
-    - name: "Ruby 2.3.7 with MXNet 1.2.1.post1 on Python 3.7.0"
+    - name: "Ruby 2.3.8 with MXNet 1.3.1 on Python 3.7.2"

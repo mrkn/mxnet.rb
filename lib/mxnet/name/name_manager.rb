@@ -30,10 +30,15 @@ module MXNet
       # @return [String]  A canonical name for the symbol.
       def get(name, hint)
         return name if name
+        # TODO: use next_count_for
         @counter[hint] = 0 unless @counter.include? hint
         name = "#{hint}#{@counter[hint]}"
         @counter[hint] += 1
         return name
+      end
+
+      def next_count_for(hint)
+        @counter[hint] || 0
       end
 
       def enter

@@ -44,6 +44,46 @@ symbol_s_load_json(VALUE klass, VALUE json_str)
   return symbol_new_with_klass(klass, handle);
 }
 
+/* Creates a symbol that contains a collection of other symbols, grouped together.
+ *
+ * Example:
+ *
+ *     > a = MXNet.var(:a)
+ *     > b = MXNet.var(:b)
+ *     > MXNet::Symbol.group([a, b])
+ *     <Symbol Grouped>
+ *
+ * @params symbols [Array<Symbol>] An array of symbols to be grouped.
+ * @return [Symbol] A group symbol.
+ */
+static VALUE
+symbol_s_group(VALUE klass, VALUE symbols)
+{
+  mx_uint i, len;
+  VALUE in_handles_str;
+  SymbolHandle *in_handles;
+  SymbolHandle out_handle;
+
+  symbols = rb_check_convert_type(symbols, T_ARRAY, "Array", "to_ary");
+#if LONG_MAX > UINT_MAX
+  if (RARRAY_LEN(symbols) > UINT_MAX) {
+    rb_raise(rb_eArgError, "the size of the give array is too long.");
+  }
+#endif
+
+  len = (mx_uint)RARRAY_LEN(symbols);
+  in_handles_str = rb_str_tmp_new(sizeof(SymbolHandle) * len);
+  in_handles = (SymbolHandle *)RSTRING_PTR(in_handles_str);
+  for (i = 0; i < len; ++i) {
+    VALUE sym = RARRAY_AREF(symbols, i);
+    mxnet_check_symbol(sym);
+    in_handles[i] = mxnet_get_handle(sym);
+  }
+
+  CHECK_CALL(MXNET_API(MXSymbolCreateGroup)(len, in_handles, &out_handle));
+  return mxnet_symbol_new(out_handle);
+}
+
 static VALUE
 symbol_initialize(VALUE obj, VALUE handle_v)
 {
@@ -987,6 +1027,103 @@ symbol_infer_shape_impl(int argc, VALUE *argv, VALUE obj)
   }
 }
 
+struct symbol_compose_process_kwargs_params {
+  VALUE gc_guard;
+  char const **keys;
+  SymbolHandle *vals;
+  int cursor;
+};
+
+static int
+symbol_compose_process_kwargs_i(VALUE key, VALUE val, VALUE arg)
+{
+  struct symbol_compose_process_kwargs_params *params = (struct symbol_compose_process_kwargs_params *)arg;
+
+  if (SYMBOL_P(key)) {
+    key = rb_sym_to_s(key);
+  }
+
+  params->keys[params->cursor] = StringValueCStr(key);
+  rb_ary_push(params->gc_guard, key);
+
+  params->vals[params->cursor] = (SymbolHandle)mxnet_get_handle(val);
+
+  ++params->cursor;
+
+  return ST_CONTINUE;
+}
+
+static VALUE
+symbol_compose(int argc, VALUE *argv, VALUE obj)
+{
+  SymbolHandle handle;
+  VALUE args, kwargs, name, keys_str, vals_str, gc_guard;
+  char const **keys = NULL, *name_cstr = NULL;
+  SymbolHandle *vals;
+  mx_uint n;
+  long i;
+
+  rb_scan_args(argc, argv, "*:", &args, &kwargs);
+
+  name = rb_hash_delete(kwargs, ID2SYM(rb_intern("name")));
+  if (!NIL_P(name)) {
+    name_cstr = StringValueCStr(name);
+  }
+
+  if (RARRAY_LEN(args) != 0 && (!NIL_P(kwargs) && RHASH_SIZE(kwargs) != 0)) {
+    rb_raise(rb_eArgError, "compose only accept input Symbols either "
+                           "as positional or keyword arguments, not both");
+  }
+
+  if (RARRAY_LEN(args) > 0) {
+    if (RARRAY_LEN(args) > UINT_MAX) {
+      rb_raise(rb_eArgError, "too many arguments");
+    }
+    n = (mx_uint)RARRAY_LEN(args);
+
+    keys = NULL;
+    vals_str = rb_str_tmp_new(sizeof(SymbolHandle) * n);
+    vals = (SymbolHandle *)RSTRING_PTR(vals_str);
+
+    for (i = 0; i < RARRAY_LEN(args); ++i) {
+      VALUE v = RARRAY_AREF(args, i);
+      mxnet_check_symbol(v);
+      vals[i] = (SymbolHandle)mxnet_get_handle(v);
+    }
+  }
+
+  if (!NIL_P(kwargs) && RHASH_SIZE(kwargs) > 0) {
+    struct symbol_compose_process_kwargs_params params;
+
+    if (RHASH_SIZE(kwargs) > UINT_MAX) {
+      rb_raise(rb_eArgError, "too many arguments");
+    }
+    n = (mx_uint)RHASH_SIZE(kwargs);
+
+    keys_str = rb_str_tmp_new(sizeof(char const *) * n);
+    keys = (char const **)RSTRING_PTR(keys_str);
+    vals_str = rb_str_tmp_new(sizeof(SymbolHandle) * n);
+    vals = (SymbolHandle *)RSTRING_PTR(vals_str);
+
+    gc_guard = rb_ary_new_capa(n);
+    params.gc_guard = gc_guard;
+    params.keys = keys;
+    params.vals = vals;
+    params.cursor = 0;
+
+    rb_hash_foreach(kwargs, symbol_compose_process_kwargs_i, (VALUE)&params);
+  }
+
+  handle = (SymbolHandle)mxnet_get_handle(obj);
+  CHECK_CALL(MXNET_API(NNSymbolCompose)(handle,
+                                        name_cstr,
+                                        n,
+                                        keys,
+                                        vals));
+
+  return obj;
+}
+
 void
 mxnet_init_symbol(void)
 {
@@ -996,6 +1133,7 @@ mxnet_init_symbol(void)
 
   rb_define_singleton_method(cSymbol, "load", symbol_s_load, 1);
   rb_define_singleton_method(cSymbol, "load_json", symbol_s_load_json, 1);
+  rb_define_singleton_method(cSymbol, "group", symbol_s_group, 1);
 
   rb_define_method(cSymbol, "initialize", symbol_initialize, 1);
   rb_define_method(cSymbol, "name", symbol_get_name, 0);
@@ -1012,6 +1150,7 @@ mxnet_init_symbol(void)
 
   rb_define_private_method(cSymbol, "set_attributes", symbol_set_attributes, -1);
   rb_define_private_method(cSymbol, "infer_shape_impl", symbol_infer_shape_impl, -1);
+  rb_define_private_method(cSymbol, "compose", symbol_compose, -1);
 
   mxnet_cSymbol = cSymbol;
 }

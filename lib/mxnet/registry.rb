@@ -60,7 +60,7 @@ module MXNet
           if name.respond_to?(:to_str)
             name = name.to_str
           else
-            raise ArgumentError, "#{@nickname} must be a String or a Symbol"
+            raise ArgumentError, "#{@nickname} must be a String or a Symbol (#{name.inspect})"
           end
         end
 
@@ -91,18 +91,8 @@ module MXNet
 
       private
 
-      if Hash.instance_methods.include? :transform_keys
-        def symbolize_hash_keys(hash)
-          hash.transform_keys(&:to_sym)
-        end
-      else
-        def symbolize_hash_keys(hash)
-          {}.tap do |result|
-            hash.each do |key, value|
-              result[key.to_sym] = value
-            end
-          end
-        end
+      def symbolize_hash_keys(hash)
+        MXNet::Utils.transform_hash_keys(hash, &:to_sym)
       end
     end
   end

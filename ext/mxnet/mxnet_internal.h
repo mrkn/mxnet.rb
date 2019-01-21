@@ -73,6 +73,7 @@ typedef unsigned LONG_LONG uint64_t;
 typedef unsigned int mx_uint;
 typedef unsigned int nn_uint;
 typedef float mx_float;
+typedef void *CachedOpHandle;
 typedef void *ExecutorHandle;
 typedef void *DataIterCreator;
 typedef void *DataIterHandle;
@@ -217,6 +218,9 @@ struct mxnet_api_table {
                                      void *out);
   int (* MXSymbolCreateFromFile)(const char *fname, SymbolHandle *out);
   int (* MXSymbolCreateFromJSON)(const char *json, SymbolHandle *out);
+  int (* MXSymbolCreateGroup)(mx_uint num_symbols,
+                              SymbolHandle *symbols,
+                              SymbolHandle *out);
   int (* NNSymbolCompose)(SymbolHandle sym,
                           const char *name,
                           mx_uint num_args,
@@ -290,6 +294,19 @@ struct mxnet_api_table {
                             int *complete);
   int (* MXSymbolSaveToFile)(SymbolHandle symbol, const char *fname);
   int (* MXSymbolSaveToJSON)(SymbolHandle symbol, const char **out_json);
+
+  int (* MXCreateCachedOpEx)(SymbolHandle symbol,
+                             int num_flags,
+                             const char **keys,
+                             const char **vals,
+                             CachedOpHandle *cached_op);
+  int (* MXFreeCachedOp)(CachedOpHandle cached_op);
+  int (* MXInvokeCachedOpEx)(CachedOpHandle cached_op,
+                             int num_inputs,
+                             NDArrayHandle *inputs,
+                             int *num_outputs,
+                             NDArrayHandle **outputs,
+                             int **out_stypes);
 };
 
 struct mxnet_api_table *mxnet_get_api_table(void);
@@ -321,8 +338,11 @@ VALUE mxnet_ndarray_get_shape(VALUE obj);
 VALUE mxnet_symbol_new(SymbolHandle mxsymbol_handle);
 VALUE mxnet_symbol_list_outputs(VALUE obj);
 
+CachedOpHandle mxnet_cached_op_get_handle(VALUE obj);
+
 void mxnet_init_libmxnet(void);
 void mxnet_init_autograd(void);
+void mxnet_init_cached_op(void);
 void mxnet_init_executor(void);
 void mxnet_init_io(void);
 void mxnet_init_ndarray(void);
@@ -336,6 +356,7 @@ NORETURN(void mxnet_raise_last_error(void));
 
 extern VALUE mxnet_mMXNet;
 extern VALUE mxnet_mUtils;
+extern VALUE mxnet_cCachedOp;
 extern VALUE mxnet_cContext;
 extern VALUE mxnet_cExecutor;
 extern VALUE mxnet_cMXDataIter;
@@ -357,6 +378,30 @@ static inline void
 mxnet_check_ndarray(VALUE obj)
 {
   mxnet_check_type(obj, mxnet_cNDArray);
+}
+
+static inline int
+mxnet_is_symbol(VALUE obj)
+{
+  return RTEST(rb_obj_is_kind_of(obj, mxnet_cSymbol));
+}
+
+static inline void
+mxnet_check_symbol(VALUE obj)
+{
+  mxnet_check_type(obj, mxnet_cSymbol);
+}
+
+static inline int
+mxnet_is_cached_op(VALUE obj)
+{
+  return RTEST(rb_obj_is_kind_of(obj, mxnet_cCachedOp));
+}
+
+static inline void
+mxnet_check_cached_op(VALUE obj)
+{
+  mxnet_check_type(obj, mxnet_cCachedOp);
 }
 
 #ifdef __cplusplus
