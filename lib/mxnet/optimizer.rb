@@ -259,7 +259,7 @@ module MXNet
       # ====Returns
       #
       # Weight decay for this index.
-      def get_wd(index)
+      private def get_wd(index)
         wd = @wd
         if @param_dict.has_key? index
           wd *= @param_dict[index].wd_mult
