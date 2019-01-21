@@ -469,7 +469,11 @@ module MXNet
             acc
           end
           self.with_name_scope do
-            hybrid_forward(MXNet::Symbol, *args, **kwargs)
+            if kwargs.empty?
+              hybrid_forward(MXNet::Symbol, *args)
+            else
+              hybrid_forward(MXNet::Symbol, *args, **kwargs)
+            end
           end
         when MXNet::NDArray
           MXNet::Context.with(args.first.context) do |ctx|
@@ -487,7 +491,11 @@ module MXNet
               end
               retry
             end
-            hybrid_forward(MXNet::NDArray, *args, **kwargs)
+            if kwargs.empty?
+              hybrid_forward(MXNet::NDArray, *args)
+            else
+              hybrid_forward(MXNet::NDArray, *args, **kwargs)
+            end
           end
         else
           raise ArgumentError,
