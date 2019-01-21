@@ -324,9 +324,9 @@ symbol_set_attributes(int argc, VALUE *argv, VALUE obj)
 
     gc_guard = rb_ary_new_capa((long)num_attrs * 2);
     keys_str = rb_str_tmp_new(sizeof(char const *) * num_attrs);
-    keys = (char const**)RSTRING_PTR(keys_str);
+    keys = (char const **)RSTRING_PTR(keys_str);
     vals_str = rb_str_tmp_new(sizeof(char const *) * num_attrs);
-    vals = (char const**)RSTRING_PTR(vals_str);
+    vals = (char const **)RSTRING_PTR(vals_str);
 
     args.gc_guard = gc_guard;
     args.keys = keys;
