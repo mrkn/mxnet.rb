@@ -106,11 +106,11 @@ module MXNet
         def length
           case @last_batch
           when :discard
-            @sampler.length / @batch_size
+            @sampler.length.div(@batch_size)
           when :keep
-            (@sampler.length + @batch_size - 1) / @batch_size
+            (@sampler.length + @batch_size - 1).div(@batch_size)
           when :rollover
-            (@sampler.length + @prev.length) / @batch_size
+            (@sampler.length + @prev.length).div(@batch_size)
           end
         end
 
