@@ -661,7 +661,7 @@ module MXNet
           if epoch
             filename = '%s-%04d.params' % [filename, epoch]
             arg_dict = MXNet::NDArray.load(filename)
-            arg_dict = arg_dict.transform_keys { |k| k.gsub(/^(arg:|aux:)/, '') }
+            arg_dict = MXNet::Utils.transform_hash_keys(arg_dict) { |k| k.gsub(/^(arg:|aux:)/, '') }
             unless allow_missing
               block.params.keys.each do |key|
                 unless arg_dict.has_key?(key.to_s)

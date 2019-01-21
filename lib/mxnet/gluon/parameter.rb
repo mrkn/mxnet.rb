@@ -681,7 +681,7 @@ module MXNet
           end
         end
         lprefix = restore_prefix.length
-        args = MXNet::NDArray.load(filename).transform_keys! do |key|
+        args = MXNet::Utils.transform_hash_keys(MXNet::NDArray.load(filename)) do |key|
           restore_prefix + key.sub(/^(?:arg|aux):/, '')
         end
         unless allow_missing

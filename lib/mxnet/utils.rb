@@ -76,5 +76,19 @@ module MXNet
     def get_repo_file_url(namespace, filename)
       "#{get_repo_url}#{namespace}/#{filename}"
     end
+
+    if Hash.instance_methods.include?(:transform_keys)
+      def transform_hash_keys(hash, &block)
+        hash.transform_keys(&block)
+      end
+    else
+      def transform_hash_keys(hash, &block)
+        Hash.new.tap do |new_hash|
+          hash.each do |k, v|
+            new_hash[block.(k)] = v
+          end
+        end
+      end
+    end
   end
 end

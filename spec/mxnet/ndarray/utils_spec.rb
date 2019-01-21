@@ -45,17 +45,7 @@ RSpec.describe MXNet::NDArray do
     end
   end
 
-  if Hash.instance_methods.include? :transform_keys
-    def stringify_hash_keys(hash)
-      hash.transform_keys(&:to_s)
-    end
-  else
-    def stringify_hash_keys(hash)
-      {}.tap do |result|
-        hash.each do |key, value|
-          result[key.to_s] = value
-        end
-      end
-    end
+  def stringify_hash_keys(hash)
+    MXNet::Utils.transform_hash_keys(hash, &:to_s)
   end
 end
