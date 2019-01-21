@@ -75,6 +75,7 @@ RSpec.describe MXNet::Gluon do
 
   describe 'basic' do
     specify do
+      pending "TODO: remaining task of #33 and #36"
       model = MXNet::Gluon::NN::Sequential.new
       model << MXNet::Gluon::NN::Dense.new(128, activation: :tanh, in_units: 10, flatten: false)
       model << MXNet::Gluon::NN::Dropout.new(0.5)
@@ -139,6 +140,7 @@ RSpec.describe MXNet::Gluon do
     end
 
     specify do
+      pending "TODO: remaining task of #33 and #36"
       model = MXNet::Gluon::NN::HybridSequential.new
       model << MXNet::Gluon::NN::Dense.new(128, activation: :tanh)
       model << MXNet::Gluon::NN::Dropout.new(0.5)
@@ -201,6 +203,7 @@ RSpec.describe MXNet::Gluon do
 
   describe 'conv' do
     specify do
+      pending "TODO: remaining task of #33 and #36"
       layers_1d = [
         MXNet::Gluon::NN::Conv1D.new(16, 3, in_channels: 4),
         MXNet::Gluon::NN::Conv1D.new(16, 3, groups: 2, in_channels: 4),
@@ -245,6 +248,7 @@ RSpec.describe MXNet::Gluon do
 
   describe 'pool' do
     specify do
+      pending "TODO: remaining task of #33 and #36"
       layers_1d = [
         MXNet::Gluon::NN::MaxPool1D.new,
         MXNet::Gluon::NN::MaxPool1D.new(3),
@@ -293,6 +297,7 @@ RSpec.describe MXNet::Gluon do
 
   describe 'batchnorm' do
     specify do
+      pending "TODO: remaining task of #33 and #36"
       layer = MXNet::Gluon::NN::BatchNorm.new(in_channels: 10)
       check_layer_forward(layer, [2, 10, 10, 10])
     end
@@ -420,6 +425,7 @@ RSpec.describe MXNet::Gluon do
 
   describe 'lambda' do
     specify do
+      pending "TODO: remaining task of #33 and #36"
       net1 = MXNet::Gluon::NN::HybridSequential.new
       net1 << MXNet::Gluon::NN::Activation.new('tanh')
       net1 << MXNet::Gluon::NN::LeakyReLU.new(0.1)
@@ -447,6 +453,7 @@ RSpec.describe MXNet::Gluon do
 
   describe 'fill_shape_deferred' do
     specify do
+      pending "TODO: remaining task of #33 and #36"
       net = MXNet::Gluon::NN::HybridSequential.new
       net.with_name_scope do
         net << MXNet::Gluon::NN::Conv2D.new(channels: 64, kernel_size: 2, padding: 1)
@@ -464,6 +471,7 @@ RSpec.describe MXNet::Gluon do
 
   describe 'dtype' do
     specify do
+      pending "TODO: remaining task of #33 and #36"
       net = MXNet::Gluon::ModelZoo::Vision::ResNet18_v1.new
       net.init
       net.cast(:float64)
@@ -486,6 +494,7 @@ RSpec.describe MXNet::Gluon do
 
   describe 'fill_shape_load' do
     specify do
+      pending "TODO: remaining task of #33 and #36"
       ctx = MXNet::Context.current
       net1 = MXNet::Gluon::NN::HybridSequential.new
       net1.with_name_scope do
@@ -516,6 +525,7 @@ RSpec.describe MXNet::Gluon do
 
   describe 'inline' do
     specify do
+      pending "TODO: remaining task of #33 and #36"
       net = MXNet::Gluon::NN::HybridSequential.new
       net.with_name_scope do
         net << MXNet::Gluon::NN::Dense.new(10)
