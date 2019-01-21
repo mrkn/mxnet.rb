@@ -103,7 +103,7 @@ init_api_table(VALUE handle)
   INIT_API_TABLE_ENTRY(MXSymbolCreateVariable);
   INIT_API_TABLE_ENTRY(MXSymbolGetName);
   INIT_API_TABLE_ENTRY(MXSymbolGetAttr);
-  INIT_API_TABLE_ENTRY(MXSymbolSetAttr);
+  INIT_API_TABLE_ENTRY(NNSymbolSetAttrs);
   INIT_API_TABLE_ENTRY(MXSymbolListAttr);
   INIT_API_TABLE_ENTRY(MXSymbolListArguments);
   INIT_API_TABLE_ENTRY(MXSymbolListAuxiliaryStates);

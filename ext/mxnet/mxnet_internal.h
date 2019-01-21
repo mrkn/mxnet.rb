@@ -71,6 +71,7 @@ typedef unsigned LONG_LONG uint64_t;
 #endif
 
 typedef unsigned int mx_uint;
+typedef unsigned int nn_uint;
 typedef float mx_float;
 typedef void *ExecutorHandle;
 typedef void *DataIterCreator;
@@ -230,9 +231,10 @@ struct mxnet_api_table {
                           const char *key,
                           const char **out,
                           int *success);
-  int (* MXSymbolSetAttr)(SymbolHandle symbol,
-                          const char *key,
-                          const char *value);
+  int (* NNSymbolSetAttrs)(SymbolHandle symbol,
+                           nn_uint num_attrs,
+                           const char **keys,
+                           const char **vals);
   int (* MXSymbolListAttr)(SymbolHandle symbol,
                            mx_uint *out_size,
                            const char ***out);
