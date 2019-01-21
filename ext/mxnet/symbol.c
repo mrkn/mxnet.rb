@@ -312,7 +312,7 @@ symbol_set_attributes(int argc, VALUE *argv, VALUE obj)
   struct set_attributes_args args;
   VALUE kwargs, gc_guard = Qnil, keys_str = Qnil, vals_str = Qnil;
   char const **keys = NULL, **vals = NULL;
-  int num_attrs = 0;
+  nn_uint num_attrs = 0;
 
   rb_scan_args(argc, argv, ":", &kwargs);
 
@@ -320,7 +320,7 @@ symbol_set_attributes(int argc, VALUE *argv, VALUE obj)
     if (RHASH_SIZE(kwargs) > INT_MAX) {
       rb_raise(rb_eArgError, "too many attributes");
     }
-    num_attrs = (int)RHASH_SIZE(kwargs);
+    num_attrs = (nn_uint)RHASH_SIZE(kwargs);
 
     gc_guard = rb_ary_new_capa((long)num_attrs * 2);
     keys_str = rb_str_tmp_new(sizeof(char const *) * num_attrs);
