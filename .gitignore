@@ -19,3 +19,5 @@
 
 # jupyter notebook checkpoint
 .ipynb_checkpoints/
+
+/docker/Dockerfile

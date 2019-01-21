@@ -1,4 +1,3 @@
-
 namespace :docker do
   def make_tag(ruby_version, python_version, mxnet_version)
     name = 'mrkn/mxnet-rb-ci'
@@ -14,10 +13,23 @@ namespace :docker do
     ]
   end
 
+  def generate_dockerfile(ruby_version, &block)
+    require 'erb'
+    require 'tempfile'
+    dir = File.dirname(__FILE__)
+    Tempfile.open('Dockerfile') do |tempfile|
+      src = File.join(dir, 'Dockerfile.erb')
+      File.write(tempfile, ERB.new(File.read(src)).result(binding))
+      yield tempfile
+    end
+  end
+
   def docker_build(ruby_version, python_version, mxnet_version)
     tag = make_tag(ruby_version, python_version, mxnet_version)
     build_args = make_build_args(ruby_version, python_version, mxnet_version)
-    sh 'docker', 'build', '-t', tag, *build_args, '.'
+    generate_dockerfile(ruby_version) do |dockerfile|
+      sh 'docker', 'build', '-f', dockerfile.path, '-t', tag, *build_args, '.'
+    end
   end
 
   def docker_push(ruby_version, python_version, mxnet_version)
