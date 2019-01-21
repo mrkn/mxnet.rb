@@ -35,12 +35,9 @@ module MXNet
           @length
         end
 
-        def each
-          enum = @length.times
-          return enum unless block_given?
-          enum.each do |i|
-            yield i
-          end
+        def each(&block)
+          return enum_for unless block_given?
+          @length.times.each(&block)
         end
       end
 
@@ -63,12 +60,11 @@ module MXNet
           @length
         end
 
-        def each
-          enum = @length.times.to_a.shuffle.each
-          return enum unless block_given?
-          enum.each do |i|
-            yield i
-          end
+        def each(&block)
+          return enum_for unless block_given?
+          indices = @length.times.to_a
+          indices.shuffle!
+          indices.each(&block)
         end
       end
 
@@ -119,32 +115,24 @@ module MXNet
         end
 
         def each
-          return enum unless block_given?
-          enum.each do |i|
-            yield i
-          end
-        end
+          return enum_for unless block_given?
 
-        private
-
-        def enum
-          Enumerator.new do |yielder|
-            batch, @prev = @prev, []
-            @sampler.each do |i|
-              batch << i
-              if batch.length == @batch_size
-                yielder << batch
-                batch = []
-              end
+          batch, @prev = @prev, []
+          @sampler.each do |i|
+            batch << i
+            if batch.length == @batch_size
+              yield batch
+              batch = []
             end
-            unless batch.empty?
-              case @last_batch
-              when :discard
-              when :keep
-                yielder << batch
-              when :rollover
-                @prev = batch
-              end
+          end
+
+          unless batch.empty?
+            case @last_batch
+            when :discard
+            when :keep
+              yield batch
+            when :rollover
+              @prev = batch
             end
           end
         end
