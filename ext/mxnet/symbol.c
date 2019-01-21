@@ -317,7 +317,7 @@ symbol_set_attributes(int argc, VALUE *argv, VALUE obj)
   rb_scan_args(argc, argv, ":", &kwargs);
 
   if (!NIL_P(kwargs)) {
-    if (RHASH_SIZE(kwargs) > INT_MAX) {
+    if (RHASH_SIZE(kwargs) > UINT_MAX) {
       rb_raise(rb_eArgError, "too many attributes");
     }
     num_attrs = (nn_uint)RHASH_SIZE(kwargs);
