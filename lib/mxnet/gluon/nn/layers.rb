@@ -118,9 +118,10 @@ module MXNet
         #                #forward is called and +in_units+ will be
         #                inferred from the shape of input data.
         #
-        def initialize(units, use_bias: true, activation: nil, in_units: 0, **kwargs)
+        def initialize(units, use_bias: true, activation: nil, flatten: true, in_units: 0, **kwargs)
           super(**kwargs)
           with_name_scope do
+            @flatten = flatten
             @units = units
             @use_bias = use_bias
             @in_units = in_units
@@ -157,7 +158,8 @@ module MXNet
             weight,
             bias,
             no_bias: bias.nil?,
-            num_hidden: @units
+            num_hidden: @units,
+            flatten: @flatten
           )
           if self[:act]
             out = self[:act].(out)

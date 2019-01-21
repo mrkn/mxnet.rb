@@ -106,9 +106,9 @@ RSpec.describe MXNet::Gluon do
       inputs = MXNet::Symbol.var(:data)
       outputs = model.call(inputs)
       expect(model.collect_params.keys).to contain_exactly('test_weight', 'test_bias')
-      expect(output.list_outputs).to eq(['test_tanh_fwd_output'])
-      args, outs, auxs = outputs.infer_shape(data: [2, 3, 10])
-      expect(outs).to eq([[2, 3, 128]])
+      expect(outputs.list_outputs).to eq([:tanh_activation0_output])
+      args, outs, auxs = outputs.infer_shape(data: [30, 10])
+      expect(outs).to eq([[30, 128]])
     end
 
     specify 'with flatten: true' do
@@ -116,7 +116,7 @@ RSpec.describe MXNet::Gluon do
       inputs = MXNet::Symbol.var(:data)
       outputs = model.call(inputs)
       expect(model.collect_params.keys).to contain_exactly('test2_weight', 'test2_bias')
-      expect(outputs.list_outputs).to eq(['test2_relu_fwd_output'])
+      expect(outputs.list_outputs).to eq([:relu_activation0_output])
       args, outs, auxs = outputs.infer_shape(data: [17, 2, 5, 3])
       expect(outs).to eq([[17, 128]])
     end
