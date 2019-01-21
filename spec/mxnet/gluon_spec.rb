@@ -28,10 +28,10 @@ RSpec.describe MXNet::Gluon do
       net1.collect_params.init
       net2.call(MXNet::NDArray.zeros([3, 5]))
 
-      net1.save_params('net1.params')
+      net1.save_parameters('net1.params')
 
       net3 = namespace::Net.new(prefix: 'net3_')
-      net3.load_params('net1.params', MXNet.cpu)
+      net3.load_parameters('net1.params', MXNet.cpu)
     end
   end
 
@@ -64,12 +64,12 @@ RSpec.describe MXNet::Gluon do
     specify do
       net = MXNet::Gluon::NN::HybridSequential.new(prefix: 'test_')
       net.with_name_scope do
-        net << MXNet::Gluon::NN::Conv2D.new(10, 3)
+        net << MXNet::Gluon::NN::Conv2D.new(channels: 10, kernel_size: 3)
         net << MXNet::Gluon::NN::Dense.new(10, activation: :relu)
       end
-      expect(net.collect_params.keys).to eq(['test_conv0_weight', 'test_conv0_bias', 'test_dense0_weight', 'test_dense0_bias'])
-      expect(net.collect_params('.*weight').keys).to eq(['test_conv0_weight', 'test_dense0_weight'])
-      expect(net.collect_params('test_conv0_bias|test_dense0_bias').keys).to eq(['test_conv0_bias', 'test_dense0_bias'])
+      expect(net.collect_params.keys).to eq(['test_conv2d0_weight', 'test_conv2d0_bias', 'test_dense0_weight', 'test_dense0_bias'])
+      expect(net.collect_params(/.*weight/).keys).to eq(['test_conv2d0_weight', 'test_dense0_weight'])
+      expect(net.collect_params(/test_conv2d0_bias|test_dense0_bias/).keys).to eq(['test_conv2d0_bias', 'test_dense0_bias'])
     end
   end
 
@@ -301,7 +301,7 @@ RSpec.describe MXNet::Gluon do
   describe 'reshape' do
     specify do
       x = MXNet::NDArray.ones([2, 4, 10, 10])
-      layer = MXNet::Gluon::NN::Conv2D.new(10, 2, in_channels: 4)
+      layer = MXNet::Gluon::NN::Conv2D.new(channels: 10, kernel_size: 2, in_channels: 4)
       layer.collect_params.init
       x = MXNet::Autograd.record do
         x = layer.call(x)
@@ -315,7 +315,7 @@ RSpec.describe MXNet::Gluon do
   describe 'slice' do
     specify do
       x = MXNet::NDArray.ones([5, 4, 10, 10])
-      layer = MXNet::Gluon::NN::Conv2D.new(10, 2, in_channels: 4)
+      layer = MXNet::Gluon::NN::Conv2D.new(channels: 10, kernel_size: 2, in_channels: 4)
       layer.collect_params.init
       x = MXNet::Autograd.record do
         x = layer.call(x)
@@ -329,7 +329,7 @@ RSpec.describe MXNet::Gluon do
   describe 'at' do
     specify do
       x = MXNet::NDArray.ones([5, 4, 10, 10])
-      layer = MXNet::Gluon::NN::Conv2D.new(10, 2, in_channels: 4)
+      layer = MXNet::Gluon::NN::Conv2D.new(channels: 10, kernel_size: 2, in_channels: 4)
       layer.collect_params.init
       x = MXNet::Autograd.record do
         x = layer.call(x)
@@ -343,7 +343,7 @@ RSpec.describe MXNet::Gluon do
   describe 'deferred_init' do
     specify do
       x = MXNet::NDArray.ones([5, 4, 10, 10])
-      layer = MXNet::Gluon::NN::Conv2D.new(10, 2)
+      layer = MXNet::Gluon::NN::Conv2D.new(channels: 10, kernel_size: 2)
       layer.collect_params.init
       layer.call(x)
     end
@@ -449,7 +449,7 @@ RSpec.describe MXNet::Gluon do
     specify do
       net = MXNet::Gluon::NN::HybridSequential.new
       net.with_name_scope do
-        net << MXNet::Gluon::NN::Conv2D.new(64, kernel_size: 2, padding: 1)
+        net << MXNet::Gluon::NN::Conv2D.new(channels: 64, kernel_size: 2, padding: 1)
         net << MXNet::Gluon::NN::BatchNorm.new
         net << MXNet::Gluon::NN::Dense.new(10)
       end
@@ -489,7 +489,7 @@ RSpec.describe MXNet::Gluon do
       ctx = MXNet::Context.current
       net1 = MXNet::Gluon::NN::HybridSequential.new
       net1.with_name_scope do
-        net1 << MXNet::Gluon::NN::Conv2D.new(64, kernel_size: 2, padding: 1)
+        net1 << MXNet::Gluon::NN::Conv2D.new(channels: 64, kernel_size: 2, padding: 1)
         net1 << MXNet::Gluon::NN::BatchNorm.new
         net1 << MXNet::Gluon::NN::Dense.new(10)
       end
@@ -500,7 +500,7 @@ RSpec.describe MXNet::Gluon do
 
       net2 = MXNet::Gluon::NN::HybridSequential.new
       net2.with_name_scope do
-        net2 << MXNet::Gluon::NN::Conv2D.new(64, kernel_size: 2, padding: 1)
+        net2 << MXNet::Gluon::NN::Conv2D.new(channels: 64, kernel_size: 2, padding: 1)
         net2 << MXNet::Gluon::NN::BatchNorm.new
         net2 << MXNet::Gluon::NN::Dense.new(10)
       end

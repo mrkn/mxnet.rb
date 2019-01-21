@@ -64,6 +64,11 @@ module MXNet
           blocks.each { |block| register_child(block) }
         end
 
+        def <<(block)
+          add(block)
+          self
+        end
+
         # Returns the number of blocks in the sequential stack.
         def length
           @children.length
