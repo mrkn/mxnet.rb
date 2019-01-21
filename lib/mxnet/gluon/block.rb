@@ -765,9 +765,5 @@ module MXNet
         end
       end
     end
-
-    def self.SymbolBlock(*args)
-      SymbolBlock.new(*args)
-    end
   end
 end
