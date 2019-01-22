@@ -109,4 +109,14 @@ RSpec.describe MXNet::Gluon::Data::DataLoader do
       end
     end
   end
+
+  context 'with the MNIST dataset' do
+    let(:dataset) do
+      MXNet::Gluon::Data::Vision::MNIST.new
+    end
+
+    it 'should load the first examples' do
+      expect(loader.first).to eq([MXNet::NDArray.zeros([3, 28, 28, 1]), MXNet::NDArray.array([5, 0, 4], dtype: :int32)])
+    end
+  end
 end

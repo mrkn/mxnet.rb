@@ -102,8 +102,8 @@ module MXNet
           when MXNet::NDArray
             return NDArray.stack(*data)
           when Array
-            data = data[0].zip(data[1..-1])
-            return data.map {|i| default_batchify_fn(i) }
+            data = data[0].zip(*data[1..-1])
+            return data.map { |i| default_batchify_fn(i) }
           else
             require 'mxnet/narray_helper'
             nary = Numo::NArray[*data]
