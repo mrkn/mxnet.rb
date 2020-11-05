@@ -132,6 +132,8 @@ imperative_invoke(VALUE mod, VALUE handle, VALUE ndargs, VALUE keys, VALUE vals,
   ndargs = rb_convert_type(ndargs, T_ARRAY, "Array", "to_ary");
   keys = rb_convert_type(keys, T_ARRAY, "Array", "to_ary");
   vals = rb_convert_type(vals, T_ARRAY, "Array", "to_ary");
+  
+
   if (!NIL_P(out) && !RTEST(rb_obj_is_kind_of(out, mxnet_cNDArray))) {
     out = rb_convert_type(out, T_ARRAY, "Array", "to_ary");
   }
@@ -145,8 +147,10 @@ imperative_invoke(VALUE mod, VALUE handle, VALUE ndargs, VALUE keys, VALUE vals,
 
   num_params = (int)RARRAY_LEN(keys);
   keys_str = rb_str_tmp_new(sizeof(char const *)*num_params);
+  rb_gc_mark(keys_str);
   params_keys = (char const **)RSTRING_PTR(keys_str);
   vals_str = rb_str_tmp_new(sizeof(char const *)*num_params);
+  rb_gc_mark(vals_str);
   params_vals = (char const **)RSTRING_PTR(vals_str);
   for (i = 0; i < num_params; ++i) {
     VALUE key, val;
@@ -155,6 +159,8 @@ imperative_invoke(VALUE mod, VALUE handle, VALUE ndargs, VALUE keys, VALUE vals,
     if (RB_TYPE_P(key, T_SYMBOL)) {
       key = rb_sym_to_s(key);
     }
+
+
     params_keys[i] = StringValueCStr(key);
 
     val = rb_String(RARRAY_AREF(vals, i));
@@ -237,8 +243,10 @@ symbol_creator(VALUE mod, VALUE handle, VALUE args, VALUE kwargs, VALUE keys, VA
 
   num_params = (int)RARRAY_LEN(keys);
   keys_str = rb_str_tmp_new(sizeof(char const **)*num_params);
+  rb_gc_mark(keys_str);
   params_keys = (char const **)RSTRING_PTR(keys_str);
   vals_str = rb_str_tmp_new(sizeof(char const **)*num_params);
+  rb_gc_mark(vals_str);
   params_vals = (char const **)RSTRING_PTR(vals_str);
   for (i = 0; i < num_params; ++i) {
     VALUE key, val;
