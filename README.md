@@ -1,8 +1,4 @@
-# MXNet
-
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/mxnet`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+Welcome to the ruby mxnet bindings with access to core mxnet modules including NDArray and Gluon
 
 ## Installation
 
@@ -21,8 +17,8 @@ Or install it yourself as:
     $ gem install mxnet
 
 ## Usage
-
-TODO: Write usage instructions here
+Make sure that the mxnet library files are available by including the .so in $LD_LIBRARY_PATH environment variable.
+`export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<path to mxnet library>`
 
 ## Development
 
