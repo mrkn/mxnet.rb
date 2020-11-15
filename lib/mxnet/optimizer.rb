@@ -364,7 +364,98 @@ module MXNet
 
     # TODO: CCSGD
 
-    # TODO: Adam
+    
+    # The Adam optimizer.
+
+    # This class implements the optimizer described in *Adam: A Method for
+    # Stochastic Optimization*, available at http://arxiv.org/abs/1412.6980.
+
+    # If the storage types of grad is ``row_sparse``, and ``lazy_update`` is True, \
+    # **lazy updates** at step t are applied by::
+
+    #     for row in grad.indices:
+    #         rescaled_grad[row] = clip(grad[row] * rescale_grad + wd * weight[row], clip_gradient)
+    #         m[row] = beta1 * m[row] + (1 - beta1) * rescaled_grad[row]
+    #         v[row] = beta2 * v[row] + (1 - beta2) * (rescaled_grad[row]**2)
+    #         lr = learning_rate * sqrt(1 - beta1**t) / (1 - beta2**t)
+    #         w[row] = w[row] - lr * m[row] / (sqrt(v[row]) + epsilon)
+
+    # The lazy update only updates the mean and var for the weights whose row_sparse
+    # gradient indices appear in the current batch, rather than updating it for all indices.
+    # Compared with the original update, it can provide large improvements in model training
+    # throughput for some applications. However, it provides slightly different semantics than
+    # the original update, and may lead to different empirical results.
+
+    # Otherwise, **standard updates** at step t are applied by::
+
+    #     rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
+    #     m = beta1 * m + (1 - beta1) * rescaled_grad
+    #     v = beta2 * v + (1 - beta2) * (rescaled_grad**2)
+    #     lr = learning_rate * sqrt(1 - beta1**t) / (1 - beta2**t)
+    #     w = w - lr * m / (sqrt(v) + epsilon)
+    class Adam < Base
+  
+      # This optimizer accepts the following parameters in addition to those accepted
+      # by :class:`.Optimizer`.
+  
+      # For details of the update algorithm, see :class:`~mxnet.ndarray.adam_update`.
+  
+      # Parameters
+      # ----------
+      # +beta1+:: float, optional
+      #           Exponential decay rate for the first moment estimates.
+      # +beta2+:: float, optional
+      #           Exponential decay rate for the second moment estimates.
+      # +epsilo+:: float, optional
+      #           Small value to avoid division by 0.
+      # +lazy_update+:: bool, optional
+      #           Default is True. If True, lazy updates are applied \
+      #           if the storage types of weight and grad are both ``row_sparse``.
+      
+      def initialize( beta1: 0.9, beta2: 0.99, epsilon: 1e-8, lazy_update: true,
+                      weight: nil, batch_axis: 0, **kwargs)
+        super(**kwargs)
+        @beta1 = beta1
+        @beta2 = beta2
+        @epsilon = epsilon
+        @lazy_update = lazy_update
+
+      end
+      
+      def create_state(index, weight)
+        stype =  @lazy_update ? weight.stype : 'default'
+        [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype,
+                      stype: stype),  # mean
+                      MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype,
+                      stype: stype)]  # variance
+      end
+      
+      def update(index, weight, grad, state)
+        
+        update_count(index)
+
+        lr = get_lr(index)
+        wd = get_wd(index)
+
+        t = @index_update_count[index]
+        coef1 = 1. - @beta1**t
+        coef2 = 1. - @beta2**t
+        lr = lr * Math.sqrt(coef2)/coef1
+
+        kwargs = {beta1: @beta1, beta2: @beta2, epsilon: @epsilon,
+                  rescale_grad: @rescale_grad}
+
+        kwargs[:clip_gradient] = @clip_gradient if @clip_gradient
+            
+
+        mean, var = state
+        MXNet::NDArray.adam_update(weight, grad, mean, var, out: weight,
+                    lazy_update: @lazy_update, lr: lr, wd: wd, **kwargs)
+      end
+    end
+
+
+    registry_manager.register Adam
 
     # TODO: AdamGrad
 
