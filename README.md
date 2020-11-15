@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/mrkn/mxnet.rb.svg?branch=master)](https://travis-ci.org/mrkn/mxnet.rb)
 
-Welcome to the ruby mxnet bindings with access to core mxnet modules including NDArray and Gluon. The latest version test is 1.7.0
+Welcome to the ruby mxnet bindings with access to core mxnet modules including NDArray and Gluon. The latest version tested is [1.7.0](https://mxnet.apache.org/versions/1.7.0/)
 
 ## Installation
 
