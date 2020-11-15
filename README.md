@@ -1,4 +1,4 @@
-Welcome to the ruby mxnet bindings with access to core mxnet modules including NDArray and Gluon
+Welcome to the ruby mxnet bindings with access to core mxnet modules including NDArray and Gluon. The latest version test is 1.7.0
 
 ## Installation
 
