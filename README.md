@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/mrkn/mxnet.rb.svg?branch=master)](https://travis-ci.org/mrkn/mxnet.rb)
+
 Welcome to the ruby mxnet bindings with access to core mxnet modules including NDArray and Gluon. The latest version test is 1.7.0
 
 ## Installation
@@ -17,8 +19,11 @@ Or install it yourself as:
     $ gem install mxnet
 
 ## Usage
-Make sure that the mxnet library files are available by including the .so in $LD_LIBRARY_PATH environment variable.
-`export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<path to mxnet library>`
+
+To experiment with that code, run bin/console for an interactive prompt.
+
+Make sure that the mxnet library files are available by including the .so in `LD_LIBRARY_PATH` environment variable.
+`export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<path to mxnet library>`, alternatively put your Ruby code in the file `lib/mxnet` of this project. 
 
 ## Development
 
