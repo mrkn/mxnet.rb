@@ -423,11 +423,9 @@ module MXNet
       end
       
       def create_state(index, weight)
-        stype =  @lazy_update ? weight.stype : 'default'
-        [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype,
-                      stype: stype),  # mean
-                      MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype,
-                      stype: stype)]  # variance
+        #TODO: stype =  @lazy_update ? weight.stype : :default
+        [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype),  # mean, TODO: stype: stype
+                      MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)]  # variance, TODO: stype: stype
       end
       
       def update(index, weight, grad, state)
@@ -445,9 +443,8 @@ module MXNet
         kwargs = {beta1: @beta1, beta2: @beta2, epsilon: @epsilon,
                   rescale_grad: @rescale_grad}
 
-        kwargs[:clip_gradient] = @clip_gradient if @clip_gradient
+        kwargs[:clip_gradient] = @clip_gradient if @clip_gradient 
             
-
         mean, var = state
         MXNet::NDArray.adam_update(weight, grad, mean, var, out: weight,
                     lazy_update: @lazy_update, lr: lr, wd: wd, **kwargs)
@@ -495,7 +492,7 @@ module MXNet
 
       # Updates weight given gradient and index.
       def call(index, grad, weight)
-        if @states.has_key? index
+        if !@states.has_key? index
           @states[index] = @optimizer.create_state_multi_precision(index, weight)
           @states_synced[index] = true
         elsif !@states_synced[index]
