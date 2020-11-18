@@ -352,7 +352,84 @@ module MXNet
 
     registry_manager.register SGD
 
-    # TODO: Signum
+    # The Signum optimizer that takes the sign of gradient or momentum.
+
+    # The optimizer updates the weight by::
+
+    #     rescaled_grad = rescale_grad * clip(grad, clip_gradient) + wd * weight
+    #     state = momentum * state + (1-momentum)*rescaled_grad
+    #     weight = (1 - lr * wd_lh) * weight - lr * sign(state)
+
+    # References
+    # ----------
+    # Jeremy Bernstein, Yu-Xiang Wang, Kamyar Azizzadenesheli & Anima Anandkumar. (2018).
+    # signSGD: Compressed Optimisation for Non-Convex Problems. In ICML'18.
+
+    # See: https://arxiv.org/abs/1802.04434
+
+    # For details of the update algorithm see
+    # :class:`~mxnet.ndarray.signsgd_update` and :class:`~mxnet.ndarray.signum_update`.
+
+    # This optimizer accepts the following parameters in addition to those accepted
+    # by :class:`.Optimizer`.
+
+    # Parameters
+    # ----------
+    # +momentum+:: float, optional
+    #    The momentum value.
+    # +wd_lh+:: float, optional
+    #    The amount of decoupled weight decay regularization, see details in the original paper at:\
+    #    https://arxiv.org/abs/1711.05101
+
+    class Signum < Base
+      def initialize learning_rate: 0.01, momentum: 0.9, wd_lh: 0.0, **kwargs
+        super **kwargs
+        
+        @momentum = momentum
+        @wd_lh = wd_lh
+      end
+
+      def create_state index, weight
+        momentum = nil
+        if @momentum != 0.0
+          momentum = MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)
+        end
+
+        momentum
+      end
+
+      
+
+      def update index, weight, grad, state
+          update_impl index, weight, grad, state
+      end
+
+      private def update_impl index, weight, grad, state
+        raise unless weight.is_a? NDArray
+        raise unless grad.is_a? NDArray
+        update_count index
+        lr = get_lr index
+        wd = get_wd index
+
+        kwargs = {rescale_grad: @rescale_grad}
+        kwargs[:momentum] = @momentum if @momentum > 0
+            
+        kwargs[:clip_gradient] = @clip_gradient if @clip_gradient
+            
+        kwargs[:wd_lh] = @wd_lh if @wd_lh
+            
+
+        if state.nil?
+          MXNet::NDArray.signsgd_update weight, grad, out: weight,
+                         lr: lr, wd: wd, **kwargs
+        else
+          MXNet::NDArray.signum_update weight, grad, state, out: weight,
+                        lr: lr, wd: wd, **kwargs
+        end
+      end
+    end
+
+    registry_manager.register Signum
 
     # TODO: FTML
 
@@ -406,7 +483,7 @@ module MXNet
       #           Exponential decay rate for the first moment estimates.
       # +beta2+:: float, optional
       #           Exponential decay rate for the second moment estimates.
-      # +epsilo+:: float, optional
+      # +epsilon+:: float, optional
       #           Small value to avoid division by 0.
       # +lazy_update+:: bool, optional
       #           Default is True. If True, lazy updates are applied \
@@ -429,7 +506,8 @@ module MXNet
       end
       
       def update(index, weight, grad, state)
-        
+        raise unless weight.is_a? NDArray
+        raise unless grad.is_a? NDArray
         update_count(index)
 
         lr = get_lr(index)

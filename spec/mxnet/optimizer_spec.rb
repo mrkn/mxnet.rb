@@ -118,10 +118,30 @@ RSpec.describe MXNet::Optimizer::SGD do
   end
 end
 
+RSpec.xdescribe MXNet::Optimizer::Adam do
+
+  describe '#create_state' do
+  
+  end
+
+  describe '#update' do
+  
+  end
+
+end
+
+RSpec.xdescribe MXNet::Optimizer::Signum do
+  describe '#update' do
+  
+  end
+  describe '#create_state' do
+  
+  end
+end
+
+
 RSpec.xdescribe 'Sparse SGD' # TODO:
 RSpec.xdescribe 'FTML' # TODO:
-RSpec.xdescribe 'ADAM' # TODO:
-RSpec.xdescribe 'Signum' # TODO:
 RSpec.xdescribe 'RMSProp' # TODO:
 RSpec.xdescribe 'Ftrl' # TODO:
 RSpec.xdescribe 'NADAM' # TODO:
