@@ -806,7 +806,7 @@ module MXNet
             history = state
 
             # When grad is sparse, update weight with fused kernel
-            MXNet::NDArray::Sparse.adagrad_update(weight, grad, history, out = weight, lr = lr, wd = wd, **kwargs)
+            MXNet::NDArray::Sparse.adagrad_update(weight, grad, history, out: weight, lr: lr, wd: wd, **kwargs)
           else
             # When the grad is not sparse, the func step is called to update weight and state
             step([index], [weight], [grad], [state])
