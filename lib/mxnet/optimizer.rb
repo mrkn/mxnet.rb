@@ -798,15 +798,15 @@ module MXNet
 
             lr = get_lr(index)
             wd = get_wd(index)
-            kwargs = {'epsilon': epsilon, 'rescale_grad': rescale_grad}
+            kwargs = {epsilon: epsilon, rescale_grad: rescale_grad}
             if @clip_gradient
-              kwargs['clip_gradient'] = self.clip_gradient
+              kwargs[:clip_gradient] = @clip_gradient
             end
 
             history = state
 
             # When grad is sparse, update weight with fused kernel
-            sparse.adagrad_update(weight, grad, history, out = weight, lr = lr, wd = wd, **kwargs)
+            MXNet::NDArray::Sparse.adagrad_update(weight, grad, history, out = weight, lr = lr, wd = wd, **kwargs)
           else
             # When the grad is not sparse, the func step is called to update weight and state
             step([index], [weight], [grad], [state])
