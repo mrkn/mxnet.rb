@@ -494,15 +494,46 @@ module MXNet
 
     registry_manager.register FTML
 
+
     # TODO: DCASGD
 
     # TODO: NAG
 
-    # TODO: SGLD
-
-    # TODO: CCSGD
-
+    class SGLD < Base
+        # Stochastic Gradient Riemannian Langevin Dynamics.
     
+        # This class implements the optimizer described in the paper *Stochastic Gradient
+        # Riemannian Langevin Dynamics on the Probability Simplex*, available at
+        # https://papers.nips.cc/paper/4883-stochastic-gradient-riemannian-langevin-dynamics-on-the-probability-simplex.pdf.
+    
+        # 
+        def initialize **kwargs
+            super(**kwargs)
+        end
+    
+        def create_state index, weight
+            return nil
+        end
+    
+        def update index, weight, grad, state
+            raise unless weight.is_a? MXNet::NDArray
+            raise unless grad.is_a? MXNet::NDArray
+
+            update_count(index)
+            lr = get_lr(index)
+            wd = get_wd(index)
+    
+            grad = grad * @rescale_grad
+            grad = clip(grad, -@clip_gradient, @clip_gradient) unless @clip_gradient.nil?
+
+            weight += - lr/2 * (grad + wd * weight)
+            weight += MXNet::NDArray::Random.normal(0, Math.sqrt(lr), shape: weight.shape,
+                                dtype: weight.dtype, ctx: weight.context)
+        end
+    end 
+    
+    registry_manager.register SGLD
+
     # The Adam optimizer.
 
     # This class implements the optimizer described in *Adam: A Method for
