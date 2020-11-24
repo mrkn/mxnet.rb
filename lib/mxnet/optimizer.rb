@@ -495,7 +495,72 @@ module MXNet
     registry_manager.register FTML
 
 
-    # TODO: DCASGD
+
+    # The DCASGD optimizer.
+  
+    # This class implements the optimizer described in *Asynchronous Stochastic Gradient Descent
+    # with Delay Compensation for Distributed Deep Learning*,
+    # available at https://arxiv.org/abs/1609.08326.
+
+    # This optimizer accepts the following parameters in addition to those accepted
+    # by :class:`.Optimizer`.
+
+    # Parameters
+    # ----------
+    # +momentum+:: float, optional
+    #    The momentum value.
+
+    # +lamda+:: float, optional
+    #    Scale DC value.
+    # 
+
+    class DCASGD < Base
+      def initialize momentum: 0.0, lamda: 0.04, **kwargs
+          super **kwargs
+          @momentum = momentum
+          @weight_previous = {}
+          @lamda = lamda
+      end
+      def create_state index, weight
+          if @momentum == 0.0
+            return [nil,
+                    weight.copy_to(weight.context) ]  # previous weight
+          else
+            return [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype), # momentum
+                    weight.copy_to(weight.context) ]  # previous weight
+          end
+      end
+
+      def update index, weight, grad, state
+          raise unless weight.is_a? MXNet::NDArray
+          raise unless grad.is_a? MXNet::NDArray
+
+          update_count(index)
+          lr = get_lr(index)
+          wd = get_wd(index)
+  
+          grad = grad * @rescale_grad
+          grad = clip(grad, -@clip_gradient, @clip_gradient) unless @clip_gradient.nil?
+  
+          mom, previous_weight = state
+          if mom
+              mom *= @momentum
+              mom += -lr * (grad + wd * weight + @lamda \
+                               * grad * grad * (weight - previous_weight))
+          else
+              raise 'Momentum must be zero without mom' unless @momentum == 0.0
+              mom = -lr * (grad + wd * weight + @lamda \
+                           * grad * grad * (weight - previous_weight))
+          end
+
+          previous_weight = weight
+          weight += mom
+      end
+    end
+
+    registry_manager.register DCASGD
+
+    
 
     # TODO: NAG
 
