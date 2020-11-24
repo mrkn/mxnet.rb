@@ -384,7 +384,7 @@ module MXNet
     class Signum < Base
       def initialize learning_rate: 0.01, momentum: 0.9, wd_lh: 0.0, **kwargs
         super **kwargs
-        
+
         @momentum = momentum
         @wd_lh = wd_lh
       end
@@ -398,7 +398,7 @@ module MXNet
         momentum
       end
 
-      
+
 
       def update index, weight, grad, state
           update_impl index, weight, grad, state
@@ -413,11 +413,11 @@ module MXNet
 
         kwargs = {rescale_grad: @rescale_grad}
         kwargs[:momentum] = @momentum if @momentum > 0
-            
+
         kwargs[:clip_gradient] = @clip_gradient if @clip_gradient
-            
+
         kwargs[:wd_lh] = @wd_lh if @wd_lh
-            
+
 
         if state.nil?
           MXNet::NDArray.signsgd_update weight, grad, out: weight,
@@ -433,24 +433,24 @@ module MXNet
 
     class FTML < Base
       # The FTML optimizer.
-  
+
       # This class implements the optimizer described in
       # *FTML - Follow the Moving Leader in Deep Learning*,
       # available at http://proceedings.mlr.press/v70/zheng17a/zheng17a.pdf.
-  
+
       # Denote time step by t. The optimizer updates the weight by::
-  
+
       #     rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
       #     v = beta2 * v + (1 - beta2) * square(rescaled_grad)
       #     d_t = (1 - power(beta1, t)) / lr * square_root(v / (1 - power(beta2, t))) + epsilon)
       #     z = beta1 * z + (1 - beta1) * rescaled_grad - (d_t - beta1 * d_(t-1)) * weight
       #     weight = - z / d_t
-  
+
       # For details of the update algorithm, see :class:`~mxnet.ndarray.ftml_update`.
-  
+
       # This optimizer accepts the following parameters in addition to those accepted
       # by :class:`.Optimizer`.
-  
+
       # Parameters
       # ----------
       # +beta1+:: float, optional
@@ -459,20 +459,20 @@ module MXNet
       #     0 < beta2 < 1. Generally close to 1.
       # +epsilon+:: float, optional
       #     Small value to avoid division by 0.
-      
+
       def initialize beta1: 0.6, beta2: 0.999, epsilon: 1e-8, **kwargs
         super **kwargs
         @beta1 = beta1
         @beta2 = beta2
         @epsilon = epsilon
       end
-  
+
       def create_state index, weight
           [zeros(weight.shape, weight.context, dtype: weight.dtype), # d_0
            zeros(weight.shape, weight.context, dtype: weight.dtype), # v_0
            zeros(weight.shape, weight.context, dtype: weight.dtype)] # z_0
       end
-  
+
       def update index, weight, grad, state
         raise unless weight.is_a? MXNet::NDArray
         raise unless grad.is_a? MXNet::NDArray
@@ -483,9 +483,9 @@ module MXNet
 
         kwargs = {beta1: @beta1, beta2: @beta2, epsilon: @epsilon,
                   rescale_grad: @rescale_grad, t: t}
-        
+
         kwargs[:clip_grad] = @clip_gradient if @clip_gradient
-        
+
         prev_d, prev_v, prev_z = state
         MXNet::NDArray.ftml_update(weight, grad, prev_d, prev_v, prev_z, out=weight,
                     lr=lr, wd=wd, **kwargs)
@@ -497,7 +497,7 @@ module MXNet
 
 
     # The DCASGD optimizer.
-  
+
     # This class implements the optimizer described in *Asynchronous Stochastic Gradient Descent
     # with Delay Compensation for Distributed Deep Learning*,
     # available at https://arxiv.org/abs/1609.08326.
@@ -538,10 +538,10 @@ module MXNet
           update_count(index)
           lr = get_lr(index)
           wd = get_wd(index)
-  
+
           grad = grad * @rescale_grad
           grad = clip(grad, -@clip_gradient, @clip_gradient) unless @clip_gradient.nil?
-  
+
           mom, previous_weight = state
           if mom
               mom *= @momentum
@@ -560,26 +560,26 @@ module MXNet
 
     registry_manager.register DCASGD
 
-    
+
 
     # TODO: NAG
 
     class SGLD < Base
         # Stochastic Gradient Riemannian Langevin Dynamics.
-    
+
         # This class implements the optimizer described in the paper *Stochastic Gradient
         # Riemannian Langevin Dynamics on the Probability Simplex*, available at
         # https://papers.nips.cc/paper/4883-stochastic-gradient-riemannian-langevin-dynamics-on-the-probability-simplex.pdf.
-    
-        # 
+
+        #
         def initialize **kwargs
             super(**kwargs)
         end
-    
+
         def create_state index, weight
             return nil
         end
-    
+
         def update index, weight, grad, state
             raise unless weight.is_a? MXNet::NDArray
             raise unless grad.is_a? MXNet::NDArray
@@ -587,7 +587,7 @@ module MXNet
             update_count(index)
             lr = get_lr(index)
             wd = get_wd(index)
-    
+
             grad = grad * @rescale_grad
             grad = clip(grad, -@clip_gradient, @clip_gradient) unless @clip_gradient.nil?
 
@@ -595,8 +595,8 @@ module MXNet
             weight += MXNet::NDArray::Random.normal(0, Math.sqrt(lr), shape: weight.shape,
                                 dtype: weight.dtype, ctx: weight.context)
         end
-    end 
-    
+    end
+
     registry_manager.register SGLD
 
     # The Adam optimizer.
@@ -628,12 +628,12 @@ module MXNet
     #     lr = learning_rate * sqrt(1 - beta1**t) / (1 - beta2**t)
     #     w = w - lr * m / (sqrt(v) + epsilon)
     class Adam < Base
-  
+
       # This optimizer accepts the following parameters in addition to those accepted
       # by :class:`.Optimizer`.
-  
+
       # For details of the update algorithm, see :class:`~mxnet.ndarray.adam_update`.
-  
+
       # Parameters
       # ----------
       # +beta1+:: float, optional
@@ -645,7 +645,7 @@ module MXNet
       # +lazy_update+:: bool, optional
       #           Default is True. If True, lazy updates are applied \
       #           if the storage types of weight and grad are both ``row_sparse``.
-      
+
       def initialize( beta1: 0.9, beta2: 0.99, epsilon: 1e-8, lazy_update: true,
                       weight: nil, batch_axis: 0, **kwargs)
         super(**kwargs)
@@ -655,13 +655,13 @@ module MXNet
         @lazy_update = lazy_update
 
       end
-      
+
       def create_state(index, weight)
         #TODO: stype =  @lazy_update ? weight.stype : :default
         [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype),  # mean, TODO: stype: stype
                       MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)]  # variance, TODO: stype: stype
       end
-      
+
       def update(index, weight, grad, state)
         raise unless weight.is_a? NDArray
         raise unless grad.is_a? NDArray
@@ -678,8 +678,8 @@ module MXNet
         kwargs = {beta1: @beta1, beta2: @beta2, epsilon: @epsilon,
                   rescale_grad: @rescale_grad}
 
-        kwargs[:clip_gradient] = @clip_gradient if @clip_gradient 
-            
+        kwargs[:clip_gradient] = @clip_gradient if @clip_gradient
+
         mean, var = state
         MXNet::NDArray.adam_update(weight, grad, mean, var, out: weight,
                     lazy_update: @lazy_update, lr: lr, wd: wd, **kwargs)
@@ -689,7 +689,134 @@ module MXNet
 
     registry_manager.register Adam
 
-    # TODO: AdamGrad
+    # AdaGrad optimizer.
+    #
+    # This class implements the AdaGrad optimizer described in *Adaptive Subgradient
+    # Methods for Online Learning and Stochastic Optimization*, and available at
+    # http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf.
+    #
+    # This optimizer updates each weight by::
+    #
+    #     grad = clip(grad * rescale_grad, clip_gradient) + wd * weight
+    #     history += square(grad)
+    #     weight -= learning_rate * grad / (sqrt(history) + epsilon)
+    #
+
+    class AdaGrad < Base
+      # This optimizer accepts the following parameters in addition to those accepted
+      # by :class:`.Optimizer`.
+      #
+      # See Also
+      # ----------
+      # :meth:`mxnet.ndarray.sparse.adagrad_update`.
+      #
+      # Parameters
+      # ----------
+      # learning_rate : float, default 0.01
+      #     The initial learning rate. If None, the optimization will use the
+      #     learning rate from ``lr_scheduler``. If not None, it will overwrite
+      #     the learning rate in ``lr_scheduler``. If None and ``lr_scheduler``
+      #     is also None, then it will be set to 0.01 by default.
+      # epsilon : float, default 1e-6
+      #     Small value to avoid division by 0.
+      # use_fused_step : bool, default True
+      #     Whether or not to use fused kernels for optimizer.
+      #     When use_fused_step=False or grad is not sparse, step is called,
+      #     otherwise, fused_step is called.
+
+      def initialize(learning_rate: 0.01, epsilon: 1e-6, use_fused_steps: true, **kwargs)
+        super(**kwargs)
+        @learning_rate = learning_rate
+        @epsilon = epsilon
+        @use_fused_steps = use_fused_steps
+      end
+
+      def create_state(index, weight)
+        [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype), # TODO: stype: stype
+         MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)] # TODO: stype: stype
+
+      end
+
+      # Perform an optimization step using gradients and states.
+      #
+      #   Parameters
+      #   ----------
+      #   indices : list of int
+      #       List of unique indices of the parameters into the individual learning rates
+      #       and weight decays. Learning rates and weight decay may be set via `set_lr_mult()`
+      #       and `set_wd_mult()`, respectively.
+      #   weights : list of NDArray
+      #       List of parameters to be updated.
+      #   grads : list of NDArray
+      #       List of gradients of the objective with respect to this parameter.
+      #   states : List of any obj
+      #       List of state returned by `create_state()`.
+      def step(indices, weights, grads, states)
+        indices.zip(weights, grads, states).each { |(index, weight, grad, state)|
+          update_count(index)
+          lr = get_lr(index)
+          wd = get_wd(index)
+
+          grad *= rescale_grad
+          if @clip_gradient
+            grad = clip(grad, -@clip_gradient, @clip_gradient)
+          end
+          grad += wd * weight
+
+          #update history
+          history = state
+          history += square(grad)
+          d = grad / (sqrt(history) + epsilon)
+
+          # update weight
+          weight -= lr * d
+        }
+      end
+
+      # Perform a fused optimization step using gradients and states.
+      # Fused kernel is used for update.
+      #
+      # Parameters
+      # ----------
+      # indices : list of int
+      #     List of unique indices of the parameters into the individual learning rates
+      #     and weight decays. Learning rates and weight decay may be set via `set_lr_mult()`
+      #     and `set_wd_mult()`, respectively.
+      # weights : list of NDArray
+      #     List of parameters to be updated.
+      # grads : list of NDArray
+      #     List of gradients of the objective with respect to this parameter.
+      # states : List of any obj
+      #     List of state returned by `create_state()`.
+      #
+      def fused_step(indices, weights, grads, states)
+        zip(indices, weights, grads, states).each { |index, weight, grad, state|
+          is_sparse = grad.stype == 'row_sparse' # TODO stype ?
+
+          if is_sparse
+            update_count(index)
+
+            lr = get_lr(index)
+            wd = get_wd(index)
+            kwargs = {'epsilon': epsilon, 'rescale_grad': rescale_grad}
+            if @clip_gradient
+              kwargs['clip_gradient'] = self.clip_gradient
+            end
+
+            history = state
+
+            # When grad is sparse, update weight with fused kernel
+            sparse.adagrad_update(weight, grad, history, out = weight, lr = lr, wd = wd, **kwargs)
+          else
+            # When the grad is not sparse, the func step is called to update weight and state
+            step([index], [weight], [grad], [state])
+          end
+        }
+      end
+
+    end
+
+    registry_manager.register AdaGrad
 
     # TODO: RMSProp
 
