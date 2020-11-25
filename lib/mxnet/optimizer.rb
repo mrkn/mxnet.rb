@@ -691,17 +691,17 @@ module MXNet
 
     # AdaGrad optimizer.
     #
-    # This class implements the AdaGrad optimizer described in *Adaptive Subgradient
-    # Methods for Online Learning and Stochastic Optimization*, and available at
-    # http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf.
+    #     This class implements the AdaGrad optimizer described in *Adaptive Subgradient
+    #     Methods for Online Learning and Stochastic Optimization*, and available at
+    #     http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf.
     #
-    # This optimizer updates each weight by::
+    #     This optimizer updates each weight by::
     #
-    #     grad = clip(grad * rescale_grad, clip_gradient) + wd * weight
-    #     history += square(grad)
-    #     weight -= learning_rate * grad / (sqrt(history) + epsilon)
+    #         grad = clip(grad * rescale_grad, clip_gradient)
+    #         history += square(grad)
+    #         div = grad / sqrt(history + float_stable_eps)
+    #         weight += (div + weight * wd) * -lr
     #
-
     class AdaGrad < Base
       # This optimizer accepts the following parameters in addition to those accepted
       # by :class:`.Optimizer`.
@@ -710,108 +710,52 @@ module MXNet
       # ----------
       # :meth:`mxnet.ndarray.sparse.adagrad_update`.
       #
-      # Parameters
+      #     Parameters
       # ----------
-      # learning_rate : float, default 0.01
-      #     The initial learning rate. If None, the optimization will use the
-      #     learning rate from ``lr_scheduler``. If not None, it will overwrite
-      #     the learning rate in ``lr_scheduler``. If None and ``lr_scheduler``
-      #     is also None, then it will be set to 0.01 by default.
-      # epsilon : float, default 1e-6
-      #     Small value to avoid division by 0.
-      # use_fused_step : bool, default True
-      #     Whether or not to use fused kernels for optimizer.
-      #     When use_fused_step=False or grad is not sparse, step is called,
-      #     otherwise, fused_step is called.
+      # eps: float, optional
+      # Initial value of the history accumulator. Avoids division by 0.
 
-      def initialize(learning_rate: 0.01, epsilon: 1e-6, use_fused_steps: true, **kwargs)
+      def initialize( epsilon: 1e-7, **kwargs)
         super(**kwargs)
-        @learning_rate = learning_rate
-        @epsilon = epsilon
-        @use_fused_steps = use_fused_steps
+        @float_stable_eps = epsilon
       end
 
       def create_state(index, weight)
-        [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype), # TODO: stype: stype
-         MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)] # TODO: stype: stype
-
+        MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype) # TODO: stype: stype
       end
 
-      # Perform an optimization step using gradients and states.
-      #
-      #   Parameters
-      #   ----------
-      #   indices : list of int
-      #       List of unique indices of the parameters into the individual learning rates
-      #       and weight decays. Learning rates and weight decay may be set via `set_lr_mult()`
-      #       and `set_wd_mult()`, respectively.
-      #   weights : list of NDArray
-      #       List of parameters to be updated.
-      #   grads : list of NDArray
-      #       List of gradients of the objective with respect to this parameter.
-      #   states : List of any obj
-      #       List of state returned by `create_state()`.
-      def step(indices, weights, grads, states)
-        indices.zip(weights, grads, states).each { |(index, weight, grad, state)|
-          update_count(index)
-          lr = get_lr(index)
-          wd = get_wd(index)
 
+      def update(index, weight, grad, state)
+        raise unless weight.is_a? NDArray
+        raise unless grad.is_a? NDArray
+        is_sparse = grad.dtype == 'row_sparse' # TODO stype ?
+        update_count(index)
+
+        lr = get_lr(index)
+        wd = get_wd(index)
+        history = state
+
+        if is_sparse
+
+          kwargs = {epsilon: epsilon, rescale_grad: rescale_grad}
+          if @clip_gradient
+            kwargs[:clip_gradient] = @clip_gradient
+          end
+          # When grad is sparse, update weight with fused kernel
+          MXNet::NDArray::Sparse.adagrad_update(weight, grad, history, out: weight, lr: lr, wd: wd, **kwargs)
+        else
           grad *= rescale_grad
           if @clip_gradient
             grad = clip(grad, -@clip_gradient, @clip_gradient)
           end
-          grad += wd * weight
 
           #update history
-          history = state
-          history += square(grad)
-          d = grad / (sqrt(history) + epsilon)
+          history += MXNet::NDArray::square(grad)
+          d = grad / (MXNet::NDArray::sqrt(history) + @float_stable_eps)
 
           # update weight
-          weight -= lr * d
-        }
-      end
-
-      # Perform a fused optimization step using gradients and states.
-      # Fused kernel is used for update.
-      #
-      # Parameters
-      # ----------
-      # indices : list of int
-      #     List of unique indices of the parameters into the individual learning rates
-      #     and weight decays. Learning rates and weight decay may be set via `set_lr_mult()`
-      #     and `set_wd_mult()`, respectively.
-      # weights : list of NDArray
-      #     List of parameters to be updated.
-      # grads : list of NDArray
-      #     List of gradients of the objective with respect to this parameter.
-      # states : List of any obj
-      #     List of state returned by `create_state()`.
-      #
-      def fused_step(indices, weights, grads, states)
-        zip(indices, weights, grads, states).each { |index, weight, grad, state|
-          is_sparse = grad.stype == 'row_sparse' # TODO stype ?
-
-          if is_sparse
-            update_count(index)
-
-            lr = get_lr(index)
-            wd = get_wd(index)
-            kwargs = {epsilon: epsilon, rescale_grad: rescale_grad}
-            if @clip_gradient
-              kwargs[:clip_gradient] = @clip_gradient
-            end
-
-            history = state
-
-            # When grad is sparse, update weight with fused kernel
-            MXNet::NDArray::Sparse.adagrad_update(weight, grad, history, out: weight, lr: lr, wd: wd, **kwargs)
-          else
-            # When the grad is not sparse, the func step is called to update weight and state
-            step([index], [weight], [grad], [state])
-          end
-        }
+          weight += (d + weight * wd) -lr
+        end
       end
 
     end
