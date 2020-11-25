@@ -830,7 +830,87 @@ module MXNet
     end
 
     registry_manager.register AdaDelta
-    # TODO: Ftrl
+
+    # The Ftrl optimizer.
+    #
+    #     Referenced from *Ad Click Prediction: a View from the Trenches*, available at
+    #     http://dl.acm.org/citation.cfm?id=2488200.
+    #
+    #     eta :
+    #         .. math::
+    #            \\eta_{t,i} = \\frac{learningrate}{\\beta+\\sqrt{\\sum_{s=1}^tg_{s,i}^2}}
+    #
+    #     The optimizer updates the weight by::
+    #
+    #         rescaled_grad = clip(grad * rescale_grad, clip_gradient)
+    #         z += rescaled_grad - (sqrt(n + rescaled_grad**2) - sqrt(n)) * weight / learning_rate
+    #         n += rescaled_grad**2
+    #         w = (sign(z) * lamda1 - z) / ((beta + sqrt(n)) / learning_rate + wd) * (abs(z) > lamda1)
+    #
+    #     If the storage types of weight, state and grad are all ``row_sparse``, \
+    #     **sparse updates** are applied by::
+    #
+    #         for row in grad.indices:
+    #             rescaled_grad[row] = clip(grad[row] * rescale_grad, clip_gradient)
+    #             z[row] += rescaled_grad[row] - (sqrt(n[row] + rescaled_grad[row]**2) - sqrt(n[row])) * weight[row] / learning_rate
+    #             n[row] += rescaled_grad[row]**2
+    #             w[row] = (sign(z[row]) * lamda1 - z[row]) / ((beta + sqrt(n[row])) / learning_rate + wd) * (abs(z[row]) > lamda1)
+    #
+    #     The sparse update only updates the z and n for the weights whose row_sparse
+    #     gradient indices appear in the current batch, rather than updating it for all
+    #     indices. Compared with the original update, it can provide large
+    #     improvements in model training throughput for some applications. However, it
+    #     provides slightly different semantics than the original update, and
+    #     may lead to different empirical results.
+    #
+    #     For details of the update algorithm, see :class:`~mxnet.ndarray.ftrl_update`.
+
+    class Ftrl < Base
+
+      #     This optimizer accepts the following parameters in addition to those accepted
+      #     by :class:`.Optimizer`.
+      #
+      #     Parameters
+      #     ----------
+      #     lamda1 : float, optional
+      #         L1 regularization coefficient.
+      #     learning_rate : float, optional
+      #         The initial learning rate.
+      #     beta : float, optional
+      #         Per-coordinate learning rate correlation parameter.
+      #
+      def initialize(lamda1=0.01, learning_rate=0.1, beta=1, **kwargs)
+        super(**kwargs)
+        @lamda1 = lamda1
+        @beta = beta
+        @lr = learning_rate
+      end
+
+      def create_state(index, weight)
+        [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype),  # z #TODO stype: stype
+         MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)]  # n #TODO stype: stype
+      end
+
+      def update(index, weight, grad, state)
+        raise unless weight.is_a? NDArray
+        raise unless grad.is_a? NDArray
+        update_count(index)
+
+        lr = get_lr(index)
+        wd = get_wd(index)
+
+        kwargs = {lamda1: @lamda1, beta: @beta, rescale_grad: @rescale_grad}
+        if self.clip_gradient
+          kwargs[:clip_gradient] = @clip_gradient
+        end
+
+        # accumulated g and delta initialization
+        z, n = state
+        ftrl_update(weight, grad, z, n, out=weight, lr=lr, wd=wd, **kwargs)
+      end
+    end
+
+    registry_manager.register Ftrl
 
     # The AdaMax optimizer.
     #
