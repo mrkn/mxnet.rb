@@ -762,8 +762,91 @@ module MXNet
 
     registry_manager.register AdaGrad
 
-    # TODO: RMSProp
 
+    # The RMSProp optimizer.
+    #
+    # Two versions of RMSProp are implemented:
+    #
+    # If ``centered=False``, we follow
+    # http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf by
+    # Tieleman & Hinton, 2012.
+    # For details of the update algorithm see :class:`~mxnet.ndarray.rmsprop_update`.
+    #
+    # If ``centered=True``, we follow http://arxiv.org/pdf/1308.0850v5.pdf (38)-(45)
+    # by Alex Graves, 2013.
+    # For details of the update algorithm see :class:`~mxnet.ndarray.rmspropalex_update`.
+    #
+    class RMSProp < Base
+
+      # This optimizer accepts the following parameters in addition to those accepted
+      # by :class:`.Optimizer`.
+      #
+      # Parameters
+      # ----------
+      # gamma1: float, optional
+      #     A decay factor of moving average over past squared gradient.
+      # gamma2: float, optional
+      #     A "momentum" factor. Only used if `centered`=``True``.
+      # epsilon : float, optional
+      #     Small value to avoid division by 0.
+      # centered : bool, optional
+      #     Flag to control which version of RMSProp to use.::
+      #
+      #         True: will use Graves's version of `RMSProp`,
+      #         False: will use Tieleman & Hinton's version of `RMSProp`.
+      #
+      # clip_weights : float, optional
+      #     Clips weights into range ``[-clip_weights, clip_weights]``.
+      def initialize(learning_rate: 0.001, gamma1: 0.9, gamma2: 0.9,
+                   epsilon: 1e-8, centered: false, clip_weights: nil, **kwargs)
+        super(learning_rate: learning_rate, **kwargs)
+        @gamma1 = gamma1
+        @gamma2 = gamma2
+        @centered = centered
+        @epsilon = epsilon
+        @clip_weights = clip_weights
+      end
+
+      def create_state(index, weight)
+        if @centered
+          [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype), # n TODO stype
+           MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype), # g TODO stype
+           MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)] # delta TODO stype
+        else
+          [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)] # n TODO stype
+        end
+      end
+
+      def update(index, weight, grad, state)
+        raise unless weight.is_a?(NDArray)
+        raise unless grad.is_a?(NDArray)
+        update_count(index)
+        lr = get_lr(index)
+        wd = get_wd(index)
+
+        kwargs = {gamma1: @gamma1, epsilon: @epsilon,
+                  rescale_grad: @rescale_grad}
+        if @centered
+          kwargs[:gamma2] = @gamma2
+        end
+        if @clip_gradient
+          kwargs[:clip_gradient] = @clip_gradient
+        end
+        if @clip_weights
+          kwargs[:clip_weights] = @clip_weights
+        end
+
+        if @centered
+          n, g, delta = state
+          MXNet::NDArray.rmspropalex_update(weight, grad, n, g, delta, out: weight, lr: lr, wd: wd, **kwargs)
+        else
+          n, *rest = state
+          MXNet::NDArray.rmsprop_update(weight, grad, n, out: weight, lr: lr, wd: wd, **kwargs)
+        end
+      end
+    end
+
+    registry_manager.register RMSProp
 
 
     # The AdaDelta optimizer.
