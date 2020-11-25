@@ -853,8 +853,8 @@ module MXNet
       end
 
       def create_state(index, weight)
-        [MXNet::NDArray.zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
-         MXNet::NDArray.zeros(weight.shape, weight.context, dtype=weight.dtype)]  # variance
+        [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype),  # mean
+         MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)]  # variance
       end
 
       def update(index, weight, grad, state)
@@ -884,6 +884,8 @@ module MXNet
 
       end
     end
+
+    registry_manager.register Adamax
 
     # The Nesterov Adam optimizer.
     #
@@ -916,8 +918,8 @@ module MXNet
       end
 
       def create_state(index, weight)
-        [MXNet::NDArray.zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
-         MXNet::NDArray.zeros(weight.shape, weight.context, dtype=weight.dtype)]  # variance
+        [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype),  # mean
+         MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)]  # variance
       end
 
       def update(index, weight, grad, state)
@@ -957,6 +959,8 @@ module MXNet
         end
       end
     end
+
+    registry_manager.register Nadam
 
     class Test < Base
       def initialize(**kwargs)
