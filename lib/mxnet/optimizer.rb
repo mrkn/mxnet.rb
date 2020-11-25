@@ -832,7 +832,58 @@ module MXNet
     registry_manager.register AdaDelta
     # TODO: Ftrl
 
-    # TODO: Adamax
+    # The AdaMax optimizer.
+    #
+    #     It is a variant of Adam based on the infinity norm
+    #     available at http://arxiv.org/abs/1412.6980 Section 7.
+    #
+    #     The optimizer updates the weight by::
+    #
+    #         grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
+    #         m = beta1 * m_t + (1 - beta1) * grad
+    #         u = maximum(beta2 * u, abs(grad))
+    #         weight -= lr / (1 - beta1**t) * m / u
+    #
+    class Adamax < Base
+
+      def initialize(learning_rate: 0.002, beta1: 0.9, beta2: 0.999, **kwargs)
+        super(learning_rate: learning_rate,**kwargs)
+        @beta1=beta1
+        @beta2=beta2
+      end
+
+      def create_state(index, weight)
+        [MXNet::NDArray.zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
+         MXNet::NDArray.zeros(weight.shape, weight.context, dtype=weight.dtype)]  # variance
+      end
+
+      def update(index, weight, grad, state)
+        raise unless weight.is_a? NDArray
+        raise unless grad.is_a? NDArray
+        update_count(index)
+
+        lr = get_lr(index)
+        wd = get_wd(index)
+
+        t = @index_update_count[index]
+        lr /= (1. - @beta1**t)
+
+        # preprocess grad
+        grad = grad * @rescale_grad + wd * weight
+        if @clip_gradient
+          grad = clip(grad, -@clip_gradient, @clip_gradient)
+        end
+        # update m_t and u_t
+        m_t, u_t = state
+        m_t *= @beta1
+        m_t += (1. - @beta1) * grad
+        u_t = maximum(@beta2 * u_t, NDabs(grad))
+
+        # update weight
+        weight -= lr * m_t / u_t
+
+      end
+    end
 
     # TODO: Nadam
 
