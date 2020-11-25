@@ -885,7 +885,78 @@ module MXNet
       end
     end
 
-    # TODO: Nadam
+    # The Nesterov Adam optimizer.
+    #
+    #     Much like Adam is essentially RMSprop with momentum,
+    #     Nadam is Adam RMSprop with Nesterov momentum available
+    #     at http://cs229.stanford.edu/proj2015/054_report.pdf.
+    #
+    class Nadam < Base
+      #     This optimizer accepts the following parameters in addition to those accepted
+      #     by :class:`.Optimizer`.
+      #
+      #     Parameters
+      #     ----------
+      #     beta1 : float, optional
+      #         Exponential decay rate for the first moment estimates.
+      #     beta2 : float, optional
+      #         Exponential decay rate for the second moment estimates.
+      #     epsilon : float, optional
+      #         Small value to avoid division by 0.
+      #     schedule_decay : float, optional
+      #         Exponential decay rate for the momentum schedule
+
+      def initialize(learning_rate: 0.001, beta1: 0.9, beta2: 0.999, epsilon: 1e-8, schedule_decay: 0.004, **kwargs)
+        super(learning_rate: learning_rate, **kwargs)
+        @beta1 = beta1
+        @beta2 = beta2
+        @epsilon = epsilon
+        @schedule_decay = schedule_decay
+        @m_schedule = 1.0
+      end
+
+      def create_state(index, weight)
+        [MXNet::NDArray.zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
+         MXNet::NDArray.zeros(weight.shape, weight.context, dtype=weight.dtype)]  # variance
+      end
+
+      def update(index, weight, grad, state)
+        raise unless weight.is_a? NDArray
+        raise unless grad.is_a? NDArray
+        update_count(index)
+        lr = get_lr(index)
+        wd = get_wd(index)
+
+        t = @index_update_count[index]
+
+        # preprocess grad
+        grad = grad * @rescale_grad + wd * weight
+        if @clip_gradient
+          grad = clip(grad, -@clip_gradient, @clip_gradient)
+
+          # warming momentum schedule
+          momentum_t = @beta1 * (1. - 0.5 * (pow(0.96, t * @schedule_decay)))
+          momentum_t_1 = @beta1 * (1. - 0.5 * (pow(0.96, (t + 1) * @schedule_decay)))
+          @m_schedule = @m_schedule * momentum_t
+          m_schedule_next = @m_schedule * momentum_t_1
+
+          # update m_t and v_t
+          m_t, v_t = state
+          m_t *= @beta1
+          m_t += (1. - @beta1) * grad
+          v_t *= @beta2
+          v_t += (1. - @beta2) * grad * grad
+
+          grad_prime = grad / (1. - @m_schedule)
+          m_t_prime = m_t / (1. - m_schedule_next)
+          v_t_prime = v_t / (1. - pow(@beta2, t))
+          m_t_bar = (1. - momentum_t) * grad_prime + momentum_t_1 * m_t_prime
+
+          # update weight
+          weight -= lr * m_t_bar / (sqrt(v_t_prime) + @epsilon)
+        end
+      end
+    end
 
     class Test < Base
       def initialize(**kwargs)
