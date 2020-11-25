@@ -764,8 +764,72 @@ module MXNet
 
     # TODO: RMSProp
 
-    # TODO: AdaDelta
 
+
+    # The AdaDelta optimizer.
+    #
+    #     This class implements AdaDelta, an optimizer described in  *ADADELTA: An adaptive
+    #     learning rate method*, available at https://arxiv.org/abs/1212.5701.
+    #
+    #         This optimizer updates each weight by::
+    #
+    #             grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
+    #             acc_grad = rho * acc_grad + (1. - rho) * grad * grad
+    #             delta = sqrt(acc_delta + epsilon) / sqrt(acc_grad + epsilon) * grad
+    #             acc_delta = rho * acc_delta + (1. - rho) * delta * delta
+    #             weight -= (delta + wd * weight)
+    class AdaDelta < Base
+      #     This optimizer accepts the following parameters in addition to those accepted
+      #     by :class:`.Optimizer`.
+      #
+      #             Parameters
+      #     ----------
+      #     rho: float
+      #     Decay rate for both squared gradients and delta.
+      #         epsilon : float
+      #     Small value to avoid division by 0.
+
+      def initialize(rho: 0.90, epsilon: 1e-5, **kwargs)
+        super(**kwargs)
+        @rho=rho
+        @epsilon=epsilon
+      end
+
+      def create_state(index, weight)
+        [MXNet::NDArray.zeros(weight.shape, weight.context),  # accumulated g
+         MXNet::NDArray.zeros(weight.shape, weight.context)] # accumulated delta
+      end
+
+      def update(index, weight, grad, state)
+        raise unless weight.is_a? NDArray
+        raise unless grad.is_a? NDArray
+
+        wd = get_wd(index)
+        update_count(index)
+
+        # # preprocess grad
+        grad *= @rescale_grad
+        if @clip_gradient
+          grad = clip(grad, - @clip_gradient, @clip_gradient)
+        end
+
+        # accumulated g and delta initlization
+        acc_g, acc_delta = state
+
+        acc_g *= @rho
+        acc_g += (1. - @rho) * grad * grad
+        current_delta = MXNet::NDArray::sqrt(acc_delta + @epsilon) / MXNet::NDArray::sqrt(acc_g + @epsilon) * grad
+        acc_delta *= @rho
+        acc_delta += (1. - @rho) * current_delta * current_delta
+
+
+        # update weight
+        weight -= current_delta + wd * weight
+      end
+
+    end
+
+    registry_manager.register AdaDelta
     # TODO: Ftrl
 
     # TODO: Adamax
