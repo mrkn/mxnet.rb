@@ -446,7 +446,7 @@ module MXNet
     class Signum < Base
       def initialize learning_rate: 0.01, momentum: 0.9, wd_lh: 0.0, **kwargs
         super **kwargs
-        
+
         @momentum = momentum
         @wd_lh = wd_lh
       end
@@ -460,7 +460,7 @@ module MXNet
         momentum
       end
 
-      
+
 
       def update index, weight, grad, state
           update_impl index, weight, grad, state
@@ -475,11 +475,11 @@ module MXNet
 
         kwargs = {rescale_grad: @rescale_grad}
         kwargs[:momentum] = @momentum if @momentum > 0
-            
+
         kwargs[:clip_gradient] = @clip_gradient if @clip_gradient
-            
+
         kwargs[:wd_lh] = @wd_lh if @wd_lh
-            
+
 
         if state.nil?
           MXNet::NDArray.signsgd_update weight, grad, out: weight,
@@ -495,24 +495,24 @@ module MXNet
 
     class FTML < Base
       # The FTML optimizer.
-  
+
       # This class implements the optimizer described in
       # *FTML - Follow the Moving Leader in Deep Learning*,
       # available at http://proceedings.mlr.press/v70/zheng17a/zheng17a.pdf.
-  
+
       # Denote time step by t. The optimizer updates the weight by::
-  
+
       #     rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
       #     v = beta2 * v + (1 - beta2) * square(rescaled_grad)
       #     d_t = (1 - power(beta1, t)) / lr * square_root(v / (1 - power(beta2, t))) + epsilon)
       #     z = beta1 * z + (1 - beta1) * rescaled_grad - (d_t - beta1 * d_(t-1)) * weight
       #     weight = - z / d_t
-  
+
       # For details of the update algorithm, see :class:`~mxnet.ndarray.ftml_update`.
-  
+
       # This optimizer accepts the following parameters in addition to those accepted
       # by :class:`.Optimizer`.
-  
+
       # Parameters
       # ----------
       # +beta1+:: float, optional
@@ -521,20 +521,20 @@ module MXNet
       #     0 < beta2 < 1. Generally close to 1.
       # +epsilon+:: float, optional
       #     Small value to avoid division by 0.
-      
+
       def initialize beta1: 0.6, beta2: 0.999, epsilon: 1e-8, **kwargs
         super **kwargs
         @beta1 = beta1
         @beta2 = beta2
         @epsilon = epsilon
       end
-  
+
       def create_state index, weight
           [zeros(weight.shape, weight.context, dtype: weight.dtype), # d_0
            zeros(weight.shape, weight.context, dtype: weight.dtype), # v_0
            zeros(weight.shape, weight.context, dtype: weight.dtype)] # z_0
       end
-  
+
       def update index, weight, grad, state
         raise unless weight.is_a? MXNet::NDArray
         raise unless grad.is_a? MXNet::NDArray
@@ -545,9 +545,9 @@ module MXNet
 
         kwargs = {beta1: @beta1, beta2: @beta2, epsilon: @epsilon,
                   rescale_grad: @rescale_grad, t: t}
-        
+
         kwargs[:clip_grad] = @clip_gradient if @clip_gradient
-        
+
         prev_d, prev_v, prev_z = state
         MXNet::NDArray.ftml_update(weight, grad, prev_d, prev_v, prev_z, out=weight,
                     lr=lr, wd=wd, **kwargs)
@@ -860,7 +860,7 @@ module MXNet
     registry_manager.register LARS
 
     # The DCASGD optimizer.
-  
+
     # This class implements the optimizer described in *Asynchronous Stochastic Gradient Descent
     # with Delay Compensation for Distributed Deep Learning*,
     # available at https://arxiv.org/abs/1609.08326.
@@ -901,10 +901,10 @@ module MXNet
           update_count(index)
           lr = get_lr(index)
           wd = get_wd(index)
-  
+
           grad = grad * @rescale_grad
           grad = clip(grad, -@clip_gradient, @clip_gradient) unless @clip_gradient.nil?
-  
+
           mom, previous_weight = state
           if mom
               mom *= @momentum
@@ -923,26 +923,26 @@ module MXNet
 
     registry_manager.register DCASGD
 
-    
+
 
     # TODO: NAG
 
     class SGLD < Base
         # Stochastic Gradient Riemannian Langevin Dynamics.
-    
+
         # This class implements the optimizer described in the paper *Stochastic Gradient
         # Riemannian Langevin Dynamics on the Probability Simplex*, available at
         # https://papers.nips.cc/paper/4883-stochastic-gradient-riemannian-langevin-dynamics-on-the-probability-simplex.pdf.
-    
-        # 
+
+        #
         def initialize **kwargs
             super(**kwargs)
         end
-    
+
         def create_state index, weight
             return nil
         end
-    
+
         def update index, weight, grad, state
             raise unless weight.is_a? MXNet::NDArray
             raise unless grad.is_a? MXNet::NDArray
@@ -950,7 +950,7 @@ module MXNet
             update_count(index)
             lr = get_lr(index)
             wd = get_wd(index)
-    
+
             grad = grad * @rescale_grad
             grad = clip(grad, -@clip_gradient, @clip_gradient) unless @clip_gradient.nil?
 
@@ -958,8 +958,8 @@ module MXNet
             weight += MXNet::NDArray::Random.normal(0, Math.sqrt(lr), shape: weight.shape,
                                 dtype: weight.dtype, ctx: weight.context)
         end
-    end 
-    
+    end
+
     registry_manager.register SGLD
 
     # The Adam optimizer.
@@ -991,12 +991,12 @@ module MXNet
     #     lr = learning_rate * sqrt(1 - beta1**t) / (1 - beta2**t)
     #     w = w - lr * m / (sqrt(v) + epsilon)
     class Adam < Base
-  
+
       # This optimizer accepts the following parameters in addition to those accepted
       # by :class:`.Optimizer`.
-  
+
       # For details of the update algorithm, see :class:`~mxnet.ndarray.adam_update`.
-  
+
       # Parameters
       # ----------
       # +beta1+:: float, optional
@@ -1008,7 +1008,7 @@ module MXNet
       # +lazy_update+:: bool, optional
       #           Default is True. If True, lazy updates are applied \
       #           if the storage types of weight and grad are both ``row_sparse``.
-      
+
       def initialize( beta1: 0.9, beta2: 0.99, epsilon: 1e-8, lazy_update: true,
                       weight: nil, batch_axis: 0, **kwargs)
         super(**kwargs)
@@ -1018,13 +1018,13 @@ module MXNet
         @lazy_update = lazy_update
 
       end
-      
+
       def create_state(index, weight)
         #TODO: stype =  @lazy_update ? weight.stype : :default
         [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype),  # mean, TODO: stype: stype
                       MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)]  # variance, TODO: stype: stype
       end
-      
+
       def update(index, weight, grad, state)
         raise unless weight.is_a? NDArray
         raise unless grad.is_a? NDArray
@@ -1041,8 +1041,8 @@ module MXNet
         kwargs = {beta1: @beta1, beta2: @beta2, epsilon: @epsilon,
                   rescale_grad: @rescale_grad}
 
-        kwargs[:clip_gradient] = @clip_gradient if @clip_gradient 
-            
+        kwargs[:clip_gradient] = @clip_gradient if @clip_gradient
+
         mean, var = state
         MXNet::NDArray.adam_update(weight, grad, mean, var, out: weight,
                     lazy_update: @lazy_update, lr: lr, wd: wd, **kwargs)
@@ -1052,17 +1052,441 @@ module MXNet
 
     registry_manager.register Adam
 
-    # TODO: AdamGrad
+    # AdaGrad optimizer.
+    #
+    #     This class implements the AdaGrad optimizer described in *Adaptive Subgradient
+    #     Methods for Online Learning and Stochastic Optimization*, and available at
+    #     http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf.
+    #
+    #     This optimizer updates each weight by::
+    #
+    #         grad = clip(grad * rescale_grad, clip_gradient)
+    #         history += square(grad)
+    #         div = grad / sqrt(history + float_stable_eps)
+    #         weight += (div + weight * wd) * -lr
+    #
+    class AdaGrad < Base
+      # This optimizer accepts the following parameters in addition to those accepted
+      # by :class:`.Optimizer`.
+      #
+      # See Also
+      # ----------
+      # :meth:`mxnet.ndarray.sparse.adagrad_update`.
+      #
+      #     Parameters
+      # ----------
+      # eps: float, optional
+      # Initial value of the history accumulator. Avoids division by 0.
 
-    # TODO: RMSProp
+      def initialize( epsilon: 1e-7, **kwargs)
+        super(**kwargs)
+        @float_stable_eps = epsilon
+      end
 
-    # TODO: AdaDelta
+      def create_state(index, weight)
+        MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype) # TODO: stype: stype
+      end
 
-    # TODO: Ftrl
 
-    # TODO: Adamax
+      def update(index, weight, grad, state)
+        raise unless weight.is_a? NDArray
+        raise unless grad.is_a? NDArray
+        is_sparse = grad.dtype == 'row_sparse' # TODO stype ?
+        update_count(index)
 
-    # TODO: Nadam
+        lr = get_lr(index)
+        wd = get_wd(index)
+        history = state
+
+        if is_sparse
+
+          kwargs = {epsilon: epsilon, rescale_grad: rescale_grad}
+          if @clip_gradient
+            kwargs[:clip_gradient] = @clip_gradient
+          end
+          # When grad is sparse, update weight with fused kernel
+          MXNet::NDArray::Sparse.adagrad_update(weight, grad, history, out: weight, lr: lr, wd: wd, **kwargs)
+        else
+          grad *= rescale_grad
+          if @clip_gradient
+            grad = clip(grad, -@clip_gradient, @clip_gradient)
+          end
+
+          #update history
+          history += MXNet::NDArray::square(grad)
+          d = grad / (MXNet::NDArray::sqrt(history) + @float_stable_eps)
+
+          # update weight
+          weight += (d + weight * wd) -lr
+        end
+      end
+
+    end
+
+    registry_manager.register AdaGrad
+
+
+    # The RMSProp optimizer.
+    #
+    # Two versions of RMSProp are implemented:
+    #
+    # If ``centered=False``, we follow
+    # http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf by
+    # Tieleman & Hinton, 2012.
+    # For details of the update algorithm see :class:`~mxnet.ndarray.rmsprop_update`.
+    #
+    # If ``centered=True``, we follow http://arxiv.org/pdf/1308.0850v5.pdf (38)-(45)
+    # by Alex Graves, 2013.
+    # For details of the update algorithm see :class:`~mxnet.ndarray.rmspropalex_update`.
+    #
+    class RMSProp < Base
+
+      # This optimizer accepts the following parameters in addition to those accepted
+      # by :class:`.Optimizer`.
+      #
+      # Parameters
+      # ----------
+      # gamma1: float, optional
+      #     A decay factor of moving average over past squared gradient.
+      # gamma2: float, optional
+      #     A "momentum" factor. Only used if `centered`=``True``.
+      # epsilon : float, optional
+      #     Small value to avoid division by 0.
+      # centered : bool, optional
+      #     Flag to control which version of RMSProp to use.::
+      #
+      #         True: will use Graves's version of `RMSProp`,
+      #         False: will use Tieleman & Hinton's version of `RMSProp`.
+      #
+      # clip_weights : float, optional
+      #     Clips weights into range ``[-clip_weights, clip_weights]``.
+      def initialize(learning_rate: 0.001, gamma1: 0.9, gamma2: 0.9,
+                   epsilon: 1e-8, centered: false, clip_weights: nil, **kwargs)
+        super(learning_rate: learning_rate, **kwargs)
+        @gamma1 = gamma1
+        @gamma2 = gamma2
+        @centered = centered
+        @epsilon = epsilon
+        @clip_weights = clip_weights
+      end
+
+      def create_state(index, weight)
+        if @centered
+          [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype), # n TODO stype
+           MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype), # g TODO stype
+           MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)] # delta TODO stype
+        else
+          [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)] # n TODO stype
+        end
+      end
+
+      def update(index, weight, grad, state)
+        raise unless weight.is_a?(NDArray)
+        raise unless grad.is_a?(NDArray)
+        update_count(index)
+        lr = get_lr(index)
+        wd = get_wd(index)
+
+        kwargs = {gamma1: @gamma1, epsilon: @epsilon,
+                  rescale_grad: @rescale_grad}
+        if @centered
+          kwargs[:gamma2] = @gamma2
+        end
+        if @clip_gradient
+          kwargs[:clip_gradient] = @clip_gradient
+        end
+        if @clip_weights
+          kwargs[:clip_weights] = @clip_weights
+        end
+
+        if @centered
+          n, g, delta = state
+          MXNet::NDArray.rmspropalex_update(weight, grad, n, g, delta, out: weight, lr: lr, wd: wd, **kwargs)
+        else
+          n, *rest = state
+          MXNet::NDArray.rmsprop_update(weight, grad, n, out: weight, lr: lr, wd: wd, **kwargs)
+        end
+      end
+    end
+
+    registry_manager.register RMSProp
+
+
+    # The AdaDelta optimizer.
+    #
+    #     This class implements AdaDelta, an optimizer described in  *ADADELTA: An adaptive
+    #     learning rate method*, available at https://arxiv.org/abs/1212.5701.
+    #
+    #         This optimizer updates each weight by::
+    #
+    #             grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
+    #             acc_grad = rho * acc_grad + (1. - rho) * grad * grad
+    #             delta = sqrt(acc_delta + epsilon) / sqrt(acc_grad + epsilon) * grad
+    #             acc_delta = rho * acc_delta + (1. - rho) * delta * delta
+    #             weight -= (delta + wd * weight)
+    class AdaDelta < Base
+      #     This optimizer accepts the following parameters in addition to those accepted
+      #     by :class:`.Optimizer`.
+      #
+      #             Parameters
+      #     ----------
+      #     rho: float
+      #     Decay rate for both squared gradients and delta.
+      #         epsilon : float
+      #     Small value to avoid division by 0.
+
+      def initialize(rho: 0.90, epsilon: 1e-5, **kwargs)
+        super(**kwargs)
+        @rho=rho
+        @epsilon=epsilon
+      end
+
+      def create_state(index, weight)
+        [MXNet::NDArray.zeros(weight.shape, weight.context),  # accumulated g
+         MXNet::NDArray.zeros(weight.shape, weight.context)] # accumulated delta
+      end
+
+      def update(index, weight, grad, state)
+        raise unless weight.is_a? NDArray
+        raise unless grad.is_a? NDArray
+
+        wd = get_wd(index)
+        update_count(index)
+
+        # # preprocess grad
+        grad *= @rescale_grad
+        if @clip_gradient
+          grad = clip(grad, - @clip_gradient, @clip_gradient)
+        end
+
+        # accumulated g and delta initlization
+        acc_g, acc_delta = state
+
+        acc_g *= @rho
+        acc_g += (1. - @rho) * grad * grad
+        current_delta = MXNet::NDArray::sqrt(acc_delta + @epsilon) / MXNet::NDArray::sqrt(acc_g + @epsilon) * grad
+        acc_delta *= @rho
+        acc_delta += (1. - @rho) * current_delta * current_delta
+
+
+        # update weight
+        weight -= current_delta + wd * weight
+      end
+
+    end
+
+    registry_manager.register AdaDelta
+
+    # The Ftrl optimizer.
+    #
+    #     Referenced from *Ad Click Prediction: a View from the Trenches*, available at
+    #     http://dl.acm.org/citation.cfm?id=2488200.
+    #
+    #     eta :
+    #         .. math::
+    #            \\eta_{t,i} = \\frac{learningrate}{\\beta+\\sqrt{\\sum_{s=1}^tg_{s,i}^2}}
+    #
+    #     The optimizer updates the weight by::
+    #
+    #         rescaled_grad = clip(grad * rescale_grad, clip_gradient)
+    #         z += rescaled_grad - (sqrt(n + rescaled_grad**2) - sqrt(n)) * weight / learning_rate
+    #         n += rescaled_grad**2
+    #         w = (sign(z) * lamda1 - z) / ((beta + sqrt(n)) / learning_rate + wd) * (abs(z) > lamda1)
+    #
+    #     If the storage types of weight, state and grad are all ``row_sparse``, \
+    #     **sparse updates** are applied by::
+    #
+    #         for row in grad.indices:
+    #             rescaled_grad[row] = clip(grad[row] * rescale_grad, clip_gradient)
+    #             z[row] += rescaled_grad[row] - (sqrt(n[row] + rescaled_grad[row]**2) - sqrt(n[row])) * weight[row] / learning_rate
+    #             n[row] += rescaled_grad[row]**2
+    #             w[row] = (sign(z[row]) * lamda1 - z[row]) / ((beta + sqrt(n[row])) / learning_rate + wd) * (abs(z[row]) > lamda1)
+    #
+    #     The sparse update only updates the z and n for the weights whose row_sparse
+    #     gradient indices appear in the current batch, rather than updating it for all
+    #     indices. Compared with the original update, it can provide large
+    #     improvements in model training throughput for some applications. However, it
+    #     provides slightly different semantics than the original update, and
+    #     may lead to different empirical results.
+    #
+    #     For details of the update algorithm, see :class:`~mxnet.ndarray.ftrl_update`.
+
+    class Ftrl < Base
+
+      #     This optimizer accepts the following parameters in addition to those accepted
+      #     by :class:`.Optimizer`.
+      #
+      #     Parameters
+      #     ----------
+      #     lamda1 : float, optional
+      #         L1 regularization coefficient.
+      #     learning_rate : float, optional
+      #         The initial learning rate.
+      #     beta : float, optional
+      #         Per-coordinate learning rate correlation parameter.
+      #
+      def initialize(lamda1=0.01, learning_rate=0.1, beta=1, **kwargs)
+        super(**kwargs)
+        @lamda1 = lamda1
+        @beta = beta
+        @lr = learning_rate
+      end
+
+      def create_state(index, weight)
+        [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype),  # z #TODO stype: stype
+         MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)]  # n #TODO stype: stype
+      end
+
+      def update(index, weight, grad, state)
+        raise unless weight.is_a? NDArray
+        raise unless grad.is_a? NDArray
+        update_count(index)
+
+        lr = get_lr(index)
+        wd = get_wd(index)
+
+        kwargs = {lamda1: @lamda1, beta: @beta, rescale_grad: @rescale_grad}
+        if self.clip_gradient
+          kwargs[:clip_gradient] = @clip_gradient
+        end
+
+        # accumulated g and delta initialization
+        z, n = state
+        ftrl_update(weight, grad, z, n, out=weight, lr=lr, wd=wd, **kwargs)
+      end
+    end
+
+    registry_manager.register Ftrl
+
+    # The AdaMax optimizer.
+    #
+    #     It is a variant of Adam based on the infinity norm
+    #     available at http://arxiv.org/abs/1412.6980 Section 7.
+    #
+    #     The optimizer updates the weight by::
+    #
+    #         grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
+    #         m = beta1 * m_t + (1 - beta1) * grad
+    #         u = maximum(beta2 * u, abs(grad))
+    #         weight -= lr / (1 - beta1**t) * m / u
+    #
+    class Adamax < Base
+
+      def initialize(learning_rate: 0.002, beta1: 0.9, beta2: 0.999, **kwargs)
+        super(learning_rate: learning_rate,**kwargs)
+        @beta1=beta1
+        @beta2=beta2
+      end
+
+      def create_state(index, weight)
+        [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype),  # mean
+         MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)]  # variance
+      end
+
+      def update(index, weight, grad, state)
+        raise unless weight.is_a? NDArray
+        raise unless grad.is_a? NDArray
+        update_count(index)
+
+        lr = get_lr(index)
+        wd = get_wd(index)
+
+        t = @index_update_count[index]
+        lr /= (1. - @beta1**t)
+
+        # preprocess grad
+        grad = grad * @rescale_grad + wd * weight
+        if @clip_gradient
+          grad = clip(grad, -@clip_gradient, @clip_gradient)
+        end
+        # update m_t and u_t
+        m_t, u_t = state
+        m_t *= @beta1
+        m_t += (1. - @beta1) * grad
+        u_t = maximum(@beta2 * u_t, NDabs(grad))
+
+        # update weight
+        weight -= lr * m_t / u_t
+
+      end
+    end
+
+    registry_manager.register Adamax
+
+    # The Nesterov Adam optimizer.
+    #
+    #     Much like Adam is essentially RMSprop with momentum,
+    #     Nadam is Adam RMSprop with Nesterov momentum available
+    #     at http://cs229.stanford.edu/proj2015/054_report.pdf.
+    #
+    class Nadam < Base
+      #     This optimizer accepts the following parameters in addition to those accepted
+      #     by :class:`.Optimizer`.
+      #
+      #     Parameters
+      #     ----------
+      #     beta1 : float, optional
+      #         Exponential decay rate for the first moment estimates.
+      #     beta2 : float, optional
+      #         Exponential decay rate for the second moment estimates.
+      #     epsilon : float, optional
+      #         Small value to avoid division by 0.
+      #     schedule_decay : float, optional
+      #         Exponential decay rate for the momentum schedule
+
+      def initialize(learning_rate: 0.001, beta1: 0.9, beta2: 0.999, epsilon: 1e-8, schedule_decay: 0.004, **kwargs)
+        super(learning_rate: learning_rate, **kwargs)
+        @beta1 = beta1
+        @beta2 = beta2
+        @epsilon = epsilon
+        @schedule_decay = schedule_decay
+        @m_schedule = 1.0
+      end
+
+      def create_state(index, weight)
+        [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype),  # mean
+         MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)]  # variance
+      end
+
+      def update(index, weight, grad, state)
+        raise unless weight.is_a? NDArray
+        raise unless grad.is_a? NDArray
+        update_count(index)
+        lr = get_lr(index)
+        wd = get_wd(index)
+
+        t = @index_update_count[index]
+
+        # preprocess grad
+        grad = grad * @rescale_grad + wd * weight
+        if @clip_gradient
+          grad = clip(grad, -@clip_gradient, @clip_gradient)
+
+          # warming momentum schedule
+          momentum_t = @beta1 * (1. - 0.5 * (pow(0.96, t * @schedule_decay)))
+          momentum_t_1 = @beta1 * (1. - 0.5 * (pow(0.96, (t + 1) * @schedule_decay)))
+          @m_schedule = @m_schedule * momentum_t
+          m_schedule_next = @m_schedule * momentum_t_1
+
+          # update m_t and v_t
+          m_t, v_t = state
+          m_t *= @beta1
+          m_t += (1. - @beta1) * grad
+          v_t *= @beta2
+          v_t += (1. - @beta2) * grad * grad
+
+          grad_prime = grad / (1. - @m_schedule)
+          m_t_prime = m_t / (1. - m_schedule_next)
+          v_t_prime = v_t / (1. - pow(@beta2, t))
+          m_t_bar = (1. - momentum_t) * grad_prime + momentum_t_1 * m_t_prime
+
+          # update weight
+          weight -= lr * m_t_bar / (sqrt(v_t_prime) + @epsilon)
+        end
+      end
+    end
+
+    registry_manager.register Nadam
 
     class Test < Base
       def initialize(**kwargs)
