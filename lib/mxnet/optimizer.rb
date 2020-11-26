@@ -859,6 +859,154 @@ module MXNet
 
     registry_manager.register LARS
 
+
+
+    # LAMB Optimizer.
+    # 
+    class LAMB < Base
+      def initialize learning_rate: 0.001, beta1: 0.9, beta2: 0.999, epsilon: 1e-6,
+                   lower_bound: nil, upper_bound: nil, bias_correction: true, **kwargs
+          super(**kwargs)
+          @beta1 = beta1
+          @beta2 = beta2
+          @epsilon = epsilon
+          @lower_bound = lower_bound
+          @upper_bound = upper_bound
+          @bias_correction = bias_correction
+          @aggregate_num = [1, [45, ENV['MXNET_OPTIMIZER_AGGREGATION_SIZE'] || 45].min].max
+      end
+
+      def create_state index, weight
+          #stype = weight.stype TODO stype
+          dtype = weight.dtype
+          return [MXNet::NDArray.zeros(weight.shape, weight.context, dtype: dtype), #, stype=stype), #TODO stype
+            MXNet::NDArray.zeros(weight.shape, weight.context, dtype: dtype)] #, stype=stype)], #TODO stype
+      end
+
+      def _update_impl index, weight, grad, state, multi_precision: false
+          kwargs = {beta1: @beta1, beta2: @beta2, epsilon: @epsilon,
+            bias_correction: @bias_correction,
+            rescale_grad: @rescale_grad}
+  
+          if @aggregate_num <= 1 or not index.is_a? Array
+              if index.is_a? Array
+                  raise 'Must have same number of indices as aggregate_num' unless index.length == @aggregate_num
+                  index, weight, grad, state = index[0], weight[0], grad[0], state[0]
+              end
+
+              raise 'weight must be NDArray' unless weight.is_a? NDArray
+              raise 'grad must be NDArray' unless grad.is_a? NDArray
+              update_count(index)
+              lr = get_lr(index)
+              wd = get_wd(index)
+              t = @index_update_count[index]
+              
+              weight_ptr = weight
+              grad_ptr = grad
+              if multi_precision
+                  mean, var = state[1]
+                  weight32 = state[0]
+              else
+                  mean, var = state
+              end
+
+              kwargs[:t] = t
+
+              
+              kwargs[:clip_gradient] = @clip_gradient if @clip_gradient
+  
+              if multi_precision
+                  g = MXNet::NDArray.mp_lamb_update_phase1(weight_ptr, grad_ptr, mean, var, weight32, wd: wd, **kwargs)
+                  kwargs = {}
+                  kwargs[:lower_bound] = @lower_bound if @lower_bound
+                  kwargs[:upper_bound] = @upper_bound if @upper_bound
+                      
+                  r_1 = MXNet::NDArray.norm(weight32)
+                  r_2 = MXNet::NDArray.norm(g)
+                  MXNet::NDArray.mp_lamb_update_phase2(weight_ptr, g, r_1, r_2, weight32, lr: lr, out: weight_ptr, **kwargs)
+              else
+                  g = MXNet::NDArray.lamb_update_phase1(weight_ptr, grad_ptr, mean, var, wd: wd, **kwargs)
+                  kwargs = {}
+                  
+                  kwargs[:lower_bound] = @lower_bound if @lower_bound
+              
+                  kwargs[:upper_bound] = @upper_bound if @upper_bound
+                  r_1 = MXNet::NDArray.norm(weight_ptr)
+                  r_2 = MXNet::NDArray.norm(g)
+                  MXNet::NDArray.lamb_update_phase2(weight_ptr, g, r_1, r_2, lr: lr, out: weight_ptr, **kwargs)
+              end
+          else
+            kwargs[:clip_gradient] = @clip_gradient if @clip_gradient
+            kwargs[:lower_bound] = @lower_bound if @lower_bound
+                
+            kwargs[:upper_bound] = @upper_bound if @upper_bound
+                
+
+            step_count, lrs, wds = [], [], []
+            for i, w_i, g_i in index.zip(weight, grad)
+              raise 'w_i must be NDArray' unless w_i.is_a? NDArray   
+              raise 'g_i must be NDArray' unless g_i.is_a? NDArray   
+              update_count(i)
+              step_count.append(@index_update_count[i])
+              lrs.append(get_lr(i))
+              wds.append(get_wd(i))
+            end
+
+            updated_tensors = 0
+            while updated_tensors < weight.length
+                sidx = updated_tensors
+                eidx = [updated_tensors + @aggregate_num, weight.length].min -1
+                if multi_precision
+                  mean_var = list(zip(*state[sidx..eidx]))[1]
+                  temp = list(zip(*mean_var))
+                  mean = temp[0]
+                  var = temp[1]
+                  splat_states = *state[sidx..eidx]
+                  first_state = splat_states.shift
+                  MXNet::NDArray.multi_mp_lamb_update(weight[sidx..eidx],
+                                        grad[sidx..eidx],
+                                        mean, var,
+                                        Array(first_state.zip(splat_states))[0],
+                                        out: weight[sidx..eidx],
+                                        step_count: step_count[sidx..eidx],
+                                        lrs: lrs[sidx..eidx],
+                                        wds: wds[sidx..eidx],
+                                        **kwargs)                    
+                else
+                  mean, var = list(zip(*state[sidx..eidx]))
+                  MXNet::NDArray.multi_lamb_update(weight[sidx..eidx],
+                                      grad[sidx..eidx],
+                                      mean, var,
+                                      out: weight[sidx..eidx],
+                                      step_count: step_count[sidx..eidx],
+                                      lrs: lrs[sidx..eidx],
+                                      wds: wds[sidx..eidx],
+                                      **kwargs)
+
+                end
+                updated_tensors += @aggregate_num
+            end
+          end
+      end
+
+      def update index, weight, grad, state
+          _update_impl(index, weight, grad, state, multi_precision: false)
+      end
+      
+      def update_multi_precision index, weight, grad, state
+          if index.is_a? Array
+            use_multi_precision = @multi_precision and weight[0].dtype == :float16
+          else
+            use_multi_precision = @multi_precision and weight.dtype == :float16
+          end
+          _update_impl(index, weight, grad, state, multi_precision: use_multi_precision)
+      end
+
+    end
+
+
+    registry_manager.register LAMB
+
     # The DCASGD optimizer.
 
     # This class implements the optimizer described in *Asynchronous Stochastic Gradient Descent
