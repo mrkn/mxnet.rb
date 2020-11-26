@@ -556,7 +556,308 @@ module MXNet
 
     registry_manager.register FTML
 
+    # the LARS optimizer from 'Large Batch Training of Convolution Networks' \
+    # (https://arxiv.org/abs/1708.03888)
 
+    # Behave mostly like SGD with momentum and weight decay but is scaling \
+    # adaptively the learning for each layer (except bias and batch norm parameters):
+    # w_norm = L2norm(weights)
+    # g_norm = L2norm(gradients)
+    # if w_norm > 0 and g_norm > 0:
+    #     lr_layer = lr * lr_mult * eta * w_norm / (g_norm + weight_decay * w_norm + eps)
+    # else:
+    #     lr_layer = lr * lr_mult
+
+    class LARS < Base
+      # Parameters
+      # ----------
+      # momentum : float, optional
+      #     The momentum value.
+      # +lazy_update+:: bool, optional
+      #     Default is True. If True, lazy updates are applied \
+      #     if the storage types of weight and grad are both ``row_sparse``.
+      # +lars_eta+:: float, optional
+      #     LARS coefficient used to scale the learning rate. Default set to 0.001.
+      # +lars_epsilon+:: float, optional
+      #     Optional epsilon in case of very small gradients. Default set to 0.
+      # +momentum_correction+:: bool, optional
+      #     If True scale momentum w.r.t global learning rate change (with an lr_scheduler) \
+      #     as indicated in 'Accurate, Large Minibatch SGD: Training ImageNet in 1 Hour` \
+      #     (https://arxiv.org/pdf/1706.02677.pdf)
+      #     Default set to True.
+      
+      def initialize momentum: 0.0, lazy_update: true, eta: 0.001, eps: 0,
+                   momentum_correction: true, **kwargs
+          super(**kwargs)
+          @momentum = momentum
+          @momentum_correction = momentum_correction
+          @lazy_update = lazy_update
+          @aggregate_num = ENV['MXNET_OPTIMIZER_AGGREGATION_SIZE'] || 4
+          @eta = eta
+          @eps = eps
+          @skip = 0
+          @last_lr = nil
+          @cur_lr = nil
+      end
+  
+      # Gets the learning rates given the indices of the weights.
+  
+      # Parameters
+      # ----------
+      # +indices+:: list of int
+      #     Indices corresponding to weights.
+
+      # Returns
+      # -------
+      # +lrs+:: list of float
+      #     Learning rates for those indices.
+      def get_lrs indices
+        @last_lr = @cur_lr unless @cur_lr.nil?
+
+        if @lr_scheduler.nil?
+          lr = @lr
+        else
+          lr = @lr_scheduler[@num_update]
+        end
+
+        @last_lr = lr if @cur_lr.nil?
+            
+        @cur_lr = lr
+
+        lrs = indices.map{ lr }
+
+        indices.each_with_index do |index, i|
+          if @param_dict.include? index
+              lrs[i] *= @param_dict[index].lr_mult
+          elsif @lr_mult.include? index 
+              lrs[i] *= @lr_mult[index]
+          elsif @idx2name.include? index
+              lrs[i] *= @lr_mult[@idx2name[index]] || 1.0
+          end
+        end
+        lrs
+      end
+
+      def set_wd_mult args_wd_mult
+          @wd_mult = {}
+          idx2name.values.each do |n|
+              is_weight = n.endswith('_weight')
+              @wd_mult[n] = 0.0 unless is_weight
+          end
+
+          if @sym_info
+              _attr, arg_names = @sym_info
+              arg_names.each do |name|
+                  if _attr.include? name  and _attr[name].include? '__wd_mult__'
+                      @wd_mult[name] = float(_attr[name]['__wd_mult__'])
+                  end
+              end
+          end
+          @wd_mult.update(args_wd_mult)
+      end
+
+      def create_state_multi_precision index, weight
+          weight_master_copy = nil
+          if @multi_precision and weight.dtype == :float16
+              weight_master_copy = weight.as_type(:float32)
+              return [create_state(index, weight_master_copy), weight_master_copy]
+          end
+
+          if weight.dtype == :float16 and not @multi_precision
+              warn "Accumulating with float16 in optimizer can lead to " +
+                            "poor accuracy or slow convergence. " +
+                            "Consider using multi_precision=True option of the " +
+                            "SGD optimizer"
+          end
+
+          create_state(index, weight)
+      end
+
+      def create_state index, weight
+          momentum = nil
+          if @momentum != 0.0
+              #stype = weight.stype if self.lazy_update else 'default' TODO: stype
+              momentum = MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype) #, stype=stype)
+          end
+          momentum
+      end
+
+      # L2 Norm implementation
+      def _l2norm v, rescale=false
+          v = v.as_type(:float32)
+          v *= @rescale_grad if rescale
+          
+          MXNet::NDArray.norm(v)[0].to_f
+      end
+
+      # Returns a scaling factor for the learning rate for this layer
+      def _get_lars i, weight, g, lr, wd
+          
+          name = @idx2name.include? i ? @idx2name[i] : i.to_s
+
+          return lr if ['gamma', 'beta','bias'].any? {|n| name.end_with?(n)}
+  
+          w_norm = _l2norm(weight)
+          g_norm = _l2norm(g, rescale: true)
+  
+          if w_norm > 0.0 and g_norm > 0.0
+              lars = @eta * w_norm/(g_norm + wd * w_norm + @eps)
+          else
+              lars = 1.0
+          end
+
+          lars * lr
+      end
+
+      def _update_impl indices, weights, grads, states, multi_precision: false
+        aggregate = true
+
+        unless indices.is_a? Array
+            indices = [indices]
+            weights = [weights]
+            grads = [grads]
+            states = [states]
+        end
+
+        weights.zip(grads).each do |weight, grad|
+          raise 'Weight must be NDArray' unless weight.is_a? NDArray
+          raise 'Grad must be NDArray' unless grad.is_a? NDArray
+
+          aggregate = aggregate #and TODO: Support stype
+                        #weight.stype == 'default' and
+                        #grad.stype == 'default') 
+        end
+
+        update_count(indices)
+        lrs = get_lrs(indices)
+        wds = get_wds(indices)
+
+        kwargs = {rescale_grad: @rescale_grad}
+
+        if @momentum > 0
+          if (@momentum_correction and @last_lr != 0)
+            kwargs[:momentum] = (@momentum * (@cur_lr / @last_lr))
+          else
+            kwargs[:momentum] = @momentum
+          end  
+        end
+
+        
+        kwargs[:clip_gradient] = @clip_gradient if @clip_gradient
+
+        if aggregate
+            nb_params = indices.length
+            names =  indices.map{|i| @idx2name.has_key?(i) ? @idx2name[i] : i.to_s}
+            lars_idx = nb_params.times.reject {|i| ['gamma', 'beta', 'bias'].any?{|n| names[i].end_with? n }}
+
+            nb_lars = lars_idx.length
+            no_lars_idx = nb_params.times.select {|i| ['gamma', 'beta', 'bias'].any?{|n| names[i].end_with? n }}
+
+            cur_ctx = weights[0].context
+            full_idx = lars_idx + no_lars_idx
+            new_lrs = MXNet::NDArray.array(full_idx.map{|i| lrs[i]}, ctx: cur_ctx, dtype: :float32)
+            new_wds = MXNet::NDArray.array(full_idx.map{|i| wds[i]}, ctx: cur_ctx, dtype: :float32)
+            new_weights = full_idx.map{|i| weights[i] } 
+            new_grads =  full_idx.map{|i| grads[i] } 
+            new_states =  full_idx.map{|i| states[i] } 
+            if nb_lars > 0
+               lars_range = 0..(nb_lars-1)
+                w_sum_sq = MXNet::NDArray.multi_sum_sq(*new_weights[lars_range], num_arrays: nb_lars)
+                g_sum_sq = MXNet::NDArray.multi_sum_sq(*new_grads[lars_range], num_arrays: nb_lars)
+                MXNet::NDArray.multi_lars(new_lrs[lars_range], w_sum_sq, g_sum_sq, new_wds[lars_range],
+                            eta: @eta, eps: @eps, rescale_grad: @rescale_grad,
+                            out: new_lrs[lars_range])
+            end
+            # Same than usual using preloaded sgd functions
+            sidx = 0
+            while sidx < indices.length
+                eidx = sidx + new_weights[sidx..(sidx+@aggregate_num)].length-1
+
+                if not @multi_precision
+                    if @momentum > 0
+                      MXNet::NDArray.preloaded_multi_sgd_mom_update(
+                            *((new_weights[sidx..eidx].zip(new_grads[sidx..eidx],
+                                                new_states[sidx..eidx])).flatten +
+                              [new_lrs[sidx..eidx], new_wds[sidx..eidx]]),
+                            out: new_weights[sidx..eidx],
+                            num_weights: new_weights[sidx..eidx].length,
+                            **kwargs)
+                    else
+                      MXNet::NDArray.preloaded_multi_sgd_update(
+                            *( (new_weights[sidx..eidx].zip(
+                                                new_grads[sidx..eidx])).flatten +
+                              [new_lrs[sidx..eidx], new_wds[sidx..eidx]]),
+                            out: new_weights[sidx..eidx],
+                            num_weights: new_weights[sidx..eidx].length,
+                            **kwargs)
+                    end
+                else
+                    if @momentum > 0
+                      splat_states = *new_states[sidx..eidx]
+                      first_state = splat_states.shift
+                      MXNet::NDArray.preloaded_multi_mp_sgd_mom_update(
+                            *((new_weights[sidx..eidx]).zip(new_grads[sidx..eidx],
+                                                *first_state.zip(splat_states)).flatten +
+                              [new_lrs[sidx..eidx], new_wds[sidx..eidx]]),
+                            out: new_weights[sidx..eidx],
+                            num_weights: new_weights[sidx..eidx].length,
+                            **kwargs)
+                    else
+                      splat_states = *new_states[sidx..eidx]
+                      first_state = splat_states.shift
+                      MXNet::NDArray.preloaded_multi_mp_sgd_update(
+                            *((new_weights[sidx..eidx].zip( new_grads[sidx..eidx],
+                                                first_state.zip(splat_states)[1])).flatten +
+                              [new_lrs[sidx..eidx], new_wds[sidx..eidx]]),
+                            out: new_weights[sidx..eidx],
+                            num_weights: new_weights[sidx..eidx].length,
+                            **kwargs)
+                    end
+                end
+                sidx += @aggregate_num
+            end
+        else
+          lrs = indices.zip(weights, grads, lrs, wds).map{|i, w, g, lr, wd| get_lars(i, w, g, lr, wd)}
+          weights.zip(grads, states, lrs, wds).each do |weight, grad, state, lr, wd|
+            if @multi_precision
+              if state[0].nil?
+                MXNet::NDArray.mp_sgd_update(weight, grad, state[1], out: weight,
+                  lr: lr, wd: wd, **kwargs)
+              else
+                MXNet::NDArray.mp_sgd_mom_update(weight, grad, state[0], state[1], out: weight,
+                  lr: lr, wd: wd, **kwargs)
+                  
+              end  
+            else
+              if state.nil?
+                MXNet::NDArray.sgd_update(weight, grad, out: weight, lazy_update: @lazy_update,
+                  lr: lr, wd: wd, **kwargs)
+              else
+                MXNet::NDArray.sgd_mom_update(weight, grad, state, out: weight,
+                  lazy_update: @lazy_update, lr: lr, wd: wd, **kwargs)  
+              end
+            end
+          end
+        end
+      end
+
+      def update index, weight, grad, state
+          _update_impl(index, weight, grad, state, multi_precision: false)
+      end
+  
+      def update_multi_precision index, weight, grad, state
+          if index.is_a? Array
+            use_multi_precision = @multi_precision and weight[0].dtype == :float16 
+          else 
+            use_multi_precision = @multi_precision and weight.dtype == :float16
+          end
+          _update_impl(index, weight, grad, state,
+                            multi_precision: use_multi_precision)
+      end
+    end
+
+
+    registry_manager.register LARS
 
     # The DCASGD optimizer.
   
