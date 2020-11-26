@@ -859,6 +859,228 @@ module MXNet
 
     registry_manager.register LARS
 
+    # The Large Batch SGD optimizer with momentum and weight decay.
+  
+    # The optimizer updates the weight by::
+
+    #     state = momentum * state + lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
+    #     weight = weight - state
+
+    # For details of the update algorithm see :class:`~mxnet.ndarray.sgd_update`
+    # and :class:`~mxnet.ndarray.sgd_mom_update`.
+    # In addition to the SGD updates the LBSGD optimizer uses the LARS, Layer-wise
+    # Adaptive Rate Scaling, algorithm to have a separate learning rate for each
+    # layer of the network, which leads to better stability over large batch sizes.
+
+    # This optimizer accepts the following parameters in addition to those accepted
+    # by :class:`.Optimizer`.
+
+    class LBSGD < Base
+  
+      # Parameters
+      # ----------
+      # momentum : float, optional
+      #     The momentum value.
+      # multi_precision: bool, optional
+      #     Flag to control the internal precision of the optimizer.
+      #     False: results in using the same precision as the weights (default),
+      #     True: makes internal 32-bit copy of the weights and applies gradients
+      #     in 32-bit precision even if actual weights used in the model have lower precision.
+      #     Turning this on can improve convergence and accuracy when training with float16.
+  
+      # warmup_strategy: string ('linear', 'power2', 'sqrt'. , 'lars'   default : 'linear')
+      # warmup_epochs: unsigned, default: 5
+      # batch_scale:   unsigned, default: 1 (same as batch size * numworkers)
+      # updates_per_epoch: updates_per_epoch (default: 32, Default might not reflect true number batches per epoch. Used for warmup.)
+      # begin_epoch: unsigned, default 0, starting epoch.
+      
+      def initialize momentum: 0.0, multi_precision: false, warmup_strategy: :linear,
+                   warmup_epochs: 5, batch_scale: 1, updates_per_epoch: 32, begin_epoch: 0, num_epochs: 60,
+                   **kwargs
+          super(**kwargs)
+          #logging.info('Running Large-Batch SGD Algorithm')
+          #logging.info('(Batch_scale=%f, warmup_epochs=%d, warmup_strategy=%s, updates_per_epoch=%d)',
+          #             batch_scale, warmup_epochs, warmup_strategy, updates_per_epoch)
+          @momentum = momentum
+          @multi_precision = multi_precision
+          # new user parameters for large batch
+          @warmup_strategy = warmup_strategy
+          @warmup_epochs = warmup_epochs
+          @batch_scale = batch_scale
+          @updates_per_epoch = updates_per_epoch
+          @init_updates = begin_epoch * updates_per_epoch
+          @num_epochs = num_epochs
+          # addl internal usage parameters and storage
+          @lbmult = 1
+          @cumgrads = {}
+          # for adaptive lr
+          @adaptive = false
+          @admult = 1  # adaptation constant
+      end
+  
+      def create_state index, weight
+          momentum = nil
+          weight_master_copy = nil
+          if @multi_precision and weight.dtype == :float16
+            weight_master_copy = MXNet::NDArray.array(weight, ctx: weight.context, dtype: :float32)
+            if @momentum != 0.0
+                momentum = MXNet::NDArray.zeros(weight.shape, weight.context, dtype: :float32)
+                                  #stype:weight.stype) #TODO stype
+            end
+            return [momentum, weight_master_copy]
+          end
+
+          if weight.dtype == :float16 and not @multi_precision
+            warn("Accumulating with float16 in optimizer can lead to " +
+                          "poor accuracy or slow convergence. " +
+                          "Consider using multi_precision=True option of the " +
+                          "SGD optimizer")
+          end
+          
+          if @momentum != 0.0
+              momentum = MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype) #, stype: weight.stype)
+          end
+          momentum
+      end
+  
+      # Returns lr scaling factor for large batch according to warmup schedule
+      # (to be implemented)
+      def get_lbmult nup
+        nwup = @warmup_epochs * @updates_per_epoch
+        strategy = @warmup_strategy
+        maxmult = @batch_scale.to_f
+        if nup >= nwup
+          mult = maxmult
+        elsif nwup <= 1
+          mult = 1.0
+        else
+          if strategy == :linear
+              mult = 1.0 + (maxmult - 1) * nup / nwup
+          elsif strategy == :power2
+              mult = 1.0 + (maxmult-1) * (nup*nup)/(nwup*nwup)
+          elsif strategy == :sqrt
+              mult = 1.0 + (maxmult - 1) * Math.sqrt(float(nup) / nwup)
+          else
+              mult = 1.0
+          end
+        end
+        mult
+      end
+
+      #Returns a scaling factor for the learning rate for this layer
+      #default is 1
+      def get_lars weight, g, wd
+          
+          weight2 = l2norm(weight)
+          grad2 = l2norm(g)
+          lars = Math.sqrt(weight2 / (grad2 + wd * weight2 + 1e-18))
+          if lars < 0.01
+            lars = 0.01
+          elsif lars > 100
+              lars = 100
+          end
+          lars
+      end
+
+      # inner product implementation
+      def l2norm v
+          
+          norm = multiply(v, v).asnumpy().sum()
+          return norm
+      end
+
+      # called every macro-batch to reset cumulated gradients to 0 for a given index
+      def reset_cum_gradient index
+          @cumgrads[index][:cum_grad] = 0
+      end
+
+      # get the cumulated gradient for index
+      def get_cum_gradient index
+          if @cumgrads.include? index
+              return @cumgrads[index]
+          else
+              return {}
+          end
+      end
+
+      # store cumulated gradient for index
+      def put_cum_gradient index, cgrad
+          @cumgrads[index] = cgrad
+      end
+
+      # Cumulate gradients for large-batch emulation. Cumulated by index (layer)
+      def cumulate_gradient grad, index
+          cgrad = get_cum_gradient(index)
+          if cgrad
+              num_cums = cgrad[:num_cums]
+              if num_cums > 0
+                  cum_grad = cgrad[:cum_grad] + grad
+                  num_cums += 1
+              else
+                  cum_grad = grad
+                  num_cums = @init_updates + 1
+              end
+          else
+              cum_grad = grad
+              num_cums = @init_updates + 1
+          end
+
+          cgrad = {cum_grad: cum_grad, num_cums: num_cums}
+          put_cum_gradient(index, cgrad)
+          cgrad
+      end
+      
+      def update index, weight, grad, state
+        raise 'weight must be an NDArray' unless weight.is_a? MXNet::NDArray
+        raise 'grad must be an NDArray' unless grad.is_a? MXNet::NDArray
+        
+
+        lr = get_lr(index)
+        wd = get_wd(index)
+        update_count(index)
+
+        # new stuff for large batch
+        cgrad = cumulate_gradient(grad, index)
+        if (cgrad[:num_cums] % batch_scale) == 0
+            grad = cgrad[:cum_grad] / self.batch_scale
+            if @warmup_strategy == :lars
+                lbmult = get_lars(weight, grad, wd)
+            else
+                lbmult = get_lbmult(cgrad[:num_cums])
+            end
+            lr = lr * lbmult
+            # do the regular sgd update flow
+            kwargs = {rescale_grad: @rescale_grad}
+
+            kwargs[:momentum] = @momentum if @momentum > 0
+            kwargs[:clip_gradient] = @clip_gradient if @clip_gradient
+
+            use_multi_precision = state.is_a? Array
+
+            if use_multi_precision
+              if state[0].nil?
+                MXNet::NDArray.mp_sgd_update(weight, grad, state[1], out: weight, lr: lr, wd: wd, **kwargs)
+              else
+                MXNet::NDArray.mp_sgd_mom_update(weight, grad, state[0], state[1], out: weight, lr: lr, wd: wd, **kwargs)
+              end 
+            else
+              if state.nil?
+                MXNet::NDArray.sgd_update(weight, grad, out: weight, lr: lr, wd: wd, **kwargs)
+              else
+                MXNet::NDArray.sgd_mom_update(weight, grad, state, out: weight, lr: lr, wd: wd, **kwargs)
+              end 
+            end
+            # reset update count and cumulated gradient per large batch
+            reset_cum_gradient(index)
+        else
+            lr = 0.0
+            kwargs = {}
+            MXNet::NDArray.sgd_update(weight, grad, out: weight, lr: lr, wd: wd, **kwargs)
+        end
+      end
+    end
+
+    registry_manager.register LBSGD
 
 
     # LAMB Optimizer.
