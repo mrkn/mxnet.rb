@@ -97,8 +97,8 @@ module MXNet
         @sym_info = sym ? [sym.attr_dict, sym.list_arguments] : []
         @param_dict = param_dict || {}
 
-        self.lr_mult = {}
-        self.wd_mult = {}
+        @lr_mult = {}
+        @wd_mult = {}
       end
 
       attr_accessor :rescale_grad, :param_dict
@@ -270,6 +270,68 @@ module MXNet
         end
         return wd
       end
+
+      # Gets the learning rates given the indices of the weights.
+  
+      # Parameters
+      # ----------
+      # +indices+:: list of integer
+      #     Indices corresponding to weights.
+
+      # Returns
+      # -------
+      # +lrs+:: list of float
+      #     Learning rates for those indices.
+      
+      private def get_lrs(indices)
+          
+          if @lr_scheduler.nil?
+            lr = @lr
+          else
+            lr = @lr_scheduler[@num_update]
+          end
+
+          lrs = indices.map{lr}
+
+          indices.each_with_index do |index, i|
+              if @param_dict.has_key? index
+                  lrs[i] *= @param_dict[index].lr_mult
+              elsif  @lr_mult.has_key? index
+                  lrs[i] *= @lr_mult[index]
+              elsif @idx2name.has_key? index
+                  lrs[i] *= @lr_mult[@idx2name[index]] || 1.0
+              end
+          end
+
+          lrs
+      end
+      
+      # Gets weight decays for indices.
+      # Returns 0 for non-weights if the name of weights are provided for `__init__`.
+
+      # Parameters
+      # ----------
+      # +indices+:: list of int
+      #     Indices of weights.
+
+      # Returns
+      # -------
+      # +wds+:: list of float
+      #     Weight decays for those indices.
+      private def get_wds indices
+        wds = indices.map {@wd}
+        indices.each_with_index do |index, i|
+          if @param_dict.has_key? index
+              wds[i] *= @param_dict[index].wd_mult
+          elsif @wd_mult.has_key? index 
+              wds[i] *= @wd_mult[index]
+          elsif @idx2name.has_key? index
+              wds[i] *= @wd_mult[@idx2name[index]] || 1.0
+          end
+        end
+        wds
+      end
+
     end
 
     # The SGD optimizer with momentum and weight decay.
