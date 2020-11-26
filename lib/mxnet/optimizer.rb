@@ -1295,7 +1295,102 @@ module MXNet
 
 
 
-    # TODO: NAG
+    # Nesterov accelerated gradient.
+    class NAG < Base
+      # Nesterov accelerated gradient.
+      #
+      #     This optimizer updates each weight by::
+      #
+      #         state = momentum * state + grad + wd * weight
+      #         weight = weight - (lr * (grad + momentum * state))
+      #
+      #     Parameters
+      #     ----------
+      #     momentum : float, optional
+      #        The momentum value.
+      #     multi_precision: bool, optional
+      #         Flag to control the internal precision of the optimizer.
+      #         False: results in using the same precision as the weights (default),
+      #         True: makes internal 32-bit copy of the weights and applies gradients
+      #         in 32-bit precision even if actual weights used in the model have lower precision.
+      #         Turning this on can improve convergence and accuracy when training with float16.
+      #
+      def initialize(momentum: 0.0, **kwargs)
+        super(**kwargs)
+        @momentum=momentum
+      end
+
+      def create_state_multi_precision(index, weight)
+        weight_master_copy = nil
+        if @multi_precision and weight.dtype == :float16
+          weight_master_copy = weight.as_type(:float32)
+          return create_state(index, weight_master_copy), weight_master_copy
+        end
+        if weight.dtype == :float16 and not @multi_precision
+          warn("Accumulating with float16 in optimizer can lead to
+          poor accuracy or slow convergence.
+          Consider using multi_precision=True option of the
+          NAG optimizer")
+
+          return create_state(index, weight)
+        end
+      end
+      def create_state(index, weight)
+        momentum = nil
+        if @momentum != 0.0
+          zeros = MXNet::NDArray.zeros(weight.shape, weight.context, dtype: weight.dtype)
+          momentum = zeros
+        end
+        return momentum
+      end
+
+
+      private def update_impl(index, weight, grad, state, multi_precision: false)
+        raise unless weight.is_a? NDArray
+        raise unless grad.is_a? NDArray
+        update_count index
+        lr = get_lr index
+        wd = get_wd index
+
+        kwargs = {rescale_grad: @rescale_grad}
+        if self.momentum > 0
+          kwargs[:momentum] = @momentum
+        end
+
+        if @clip_gradient
+          kwargs[:clip_gradient] = @clip_gradient
+        end
+
+        if !multi_precision
+          if !state.nil?
+            MXNet::NDArray.nag_mom_update(weight, grad, state, out: weight, lr: lr, wd: wd, **kwargs)
+          else
+            MXNet::NDArray.sgd_update(weight, grad, out: weight, lr:lr, wd: wd, **kwargs)
+          end
+        else
+          if !state[0].nil?
+            MXNet::NDArray.mp_nag_mom_update(weight, grad, state[0], state[1], out: weight,
+                              lr: lr, wd: wd, **kwargs)
+          else
+            MXNet::NDArray.mp_sgd_update(weight, grad, state[1], out: weight,
+                          lr: lr, wd: wd, **kwargs)
+          end
+
+        end
+      end
+
+      def update(index, weight, grad, state)
+          update_impl(index, weight, grad, state, multi_precision:false )
+      end
+
+      def update_multi_precision( index, weight, grad, state)
+          use_multi_precision = @multi_precision and weight.dtype == :float16 and state.is_a? NDArray
+      self._update_impl(index, weight, grad, state,
+                        multi_precision=use_multi_precision)
+      end
+    end
+
+    registry_manager.register NAG
 
     class SGLD < Base
         # Stochastic Gradient Riemannian Langevin Dynamics.
