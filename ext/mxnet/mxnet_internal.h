@@ -152,7 +152,6 @@ struct mxnet_api_table {
   int (* MXNDArrayGetShape)(NDArrayHandle handle, mx_uint *out_dim,
                             const mx_uint **out_pdata);
   int (* MXNDArrayGetDType)(NDArrayHandle handle, int *out_dtype);
-  int (* MXNDArrayGetStorageType)(NDArrayHandle handle, int *out_storage_type);
   int (* MXNDArraySyncCopyFromCPU)(NDArrayHandle handle, const void *data, size_t size);
   int (* MXNDArraySyncCopyToCPU)(NDArrayHandle handle, void *data, size_t size);
   int (* MXNDArrayAt)(NDArrayHandle handle, mx_uint idx, NDArrayHandle *out);
@@ -319,6 +318,7 @@ struct mxnet_api_table {
                              int *num_outputs,
                              NDArrayHandle **outputs,
                              int **out_stypes);
+  int (* MXNDArrayGetStorageType)(NDArrayHandle handle, int *out_storage_type);
 };
 
 struct mxnet_api_table *mxnet_get_api_table(void);
