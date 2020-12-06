@@ -173,6 +173,30 @@ module MXNet
       end
     end
 
+
+    describe '#stype and #to_stype' do
+      specify do
+        a = MXNet::NDArray.empty([1, 2])
+        expect(a.stype).to eq(:default)
+        a = a.to_stype :csr
+        expect(a.stype).to eq(:csr)
+        a = a.to_stype :default
+        expect(a.stype).to eq(:default)
+        a = a.to_stype :row_sparse
+        expect(a.stype).to eq(:row_sparse)
+        a = a.to_stype :default
+        expect(a.stype).to eq(:default)
+
+        a = Mxnet::NDArray.empty([1])
+        expect{a.to_stype :csr }.to raise_error
+        
+        a = Mxnet::NDArray.empty([1,2,3])
+        expect{a.to_stype :csr }.to raise_error
+
+        
+      end
+    end
+
     describe '#ndim' do
       specify do
         x = MXNet::NDArray.empty([3, 2, 1, 4])
