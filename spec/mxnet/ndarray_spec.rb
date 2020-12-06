@@ -173,6 +173,53 @@ module MXNet
       end
     end
 
+
+    describe '#stype and #to_stype' do
+      specify do
+        original = MXNet::NDArray.ones([1, 2]) 
+        expect(original.stype).to eq(:default)
+
+        casted = original.to_stype :csr
+        expect(casted.stype).to eq(:csr)
+        #ensure integrity of values
+        expect(MXNet::NDArray.sum((original == casted), exclude: true).to_i).to eq(original.shape.reduce :*)
+        
+        casted = casted.to_stype :default
+        expect(casted.stype).to eq(:default)
+        #ensure integrity of values
+        expect(MXNet::NDArray.sum((original == casted), exclude: true).to_i).to eq(original.shape.reduce :*)
+        
+
+        casted = original.to_stype :row_sparse
+        expect(casted.stype).to eq(:row_sparse)
+        #ensure integrity of values
+        expect(MXNet::NDArray.sum((original == casted), exclude: true).to_i).to eq(original.shape.reduce :*)
+
+
+        casted = casted.to_stype :default
+        expect(casted.stype).to eq(:default)
+        #ensure integrity of values
+        expect(MXNet::NDArray.sum((original == casted), exclude: true).to_i).to eq(original.shape.reduce :*)
+        
+        csr_shape_lt_2 = MXNet::NDArray.empty([1])
+        expect{csr_shape_lt_2.to_stype :csr }.to raise_error
+
+        csr_shape_gt_2 = MXNet::NDArray.empty([1,2,3])
+        expect{csr_shape_gt_2.to_stype :csr }.to raise_error
+
+
+
+        row_sparse_shape_lt_2 = MXNet::NDArray.empty([1,2,3])
+        expect{row_sparse_shape_lt_2.to_stype :row_sparse }.to_not raise_error
+
+        row_sparse_shape_gt_2 = MXNet::NDArray.empty([1,2,3])
+        expect{row_sparse_shape_gt_2.to_stype :row_sparse }.to_not raise_error
+
+
+        
+      end
+    end
+
     describe '#ndim' do
       specify do
         x = MXNet::NDArray.empty([3, 2, 1, 4])

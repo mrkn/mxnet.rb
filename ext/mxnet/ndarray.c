@@ -99,6 +99,108 @@ dtype_m_available_p(VALUE mod, VALUE dtype)
   return mxnet_dtype_is_available(dtype) ? Qtrue : Qfalse;
 }
 
+
+static size_t storage_type_sizes[NUMBER_OF_STORAGE_TYPE_IDS];
+static ID storage_type_name_ids[NUMBER_OF_STORAGE_TYPE_IDS];
+
+VALUE
+mxnet_storage_type_id2name(int stype_id)
+{
+  if (0 <= stype_id && stype_id < NUMBER_OF_STORAGE_TYPE_IDS) {
+    return ID2SYM(storage_type_name_ids[stype_id]);
+  }
+
+  return Qnil;
+}
+
+static VALUE
+storage_type_m_id2name(VALUE mod, VALUE stype_id_v)
+{
+  int stype_id = NUM2INT(stype_id_v);
+  return mxnet_storage_type_id2name(stype_id);
+}
+
+int
+mxnet_storage_type_name2id(VALUE stype_name)
+{
+  ID stype_name_id;
+  int i;
+
+  if (!RB_TYPE_P(stype_name, T_SYMBOL)) {
+    stype_name = rb_to_symbol(StringValue(stype_name));
+  }
+  stype_name_id = SYM2ID(stype_name);
+
+  for (i = 0; i < NUMBER_OF_STORAGE_TYPE_IDS; ++i) {
+    if (storage_type_name_ids[i] == stype_name_id) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+static VALUE
+storage_type_m_name2id(VALUE mod, VALUE stype_name)
+{
+  int stype_id;
+  stype_id = mxnet_storage_type_name2id(stype_name);
+  return stype_id == -1 ? Qnil : INT2NUM(stype_id);
+}
+
+VALUE
+mxnet_storage_type_name(VALUE id_or_name)
+{
+  int stype_id;
+
+  if (RB_INTEGER_TYPE_P(id_or_name)) {
+    stype_id = NUM2INT(id_or_name);
+  }
+  else {
+    stype_id = mxnet_storage_type_name2id(id_or_name);
+  }
+  if (0 <= stype_id && stype_id < NUMBER_OF_STORAGE_TYPE_IDS)
+    return mxnet_storage_type_id2name(stype_id);
+
+  return Qnil;
+}
+
+static VALUE
+storage_type_m_name(VALUE mod, VALUE id_or_name)
+{
+  return mxnet_storage_type_name(id_or_name);
+}
+
+int
+mxnet_storage_type_is_available(VALUE stype)
+{
+  int stype_id;
+  if (RB_INTEGER_TYPE_P(stype)) {
+    stype_id = NUM2INT(stype);
+  }
+  else {
+    if (!RB_TYPE_P(stype, T_SYMBOL)) {
+      VALUE str = rb_check_convert_type(stype, T_STRING, "String", "to_str");
+      if (NIL_P(str)) {
+        rb_raise(rb_eTypeError, "Invalid type for storage type (%"PRIsVALUE")", stype);
+      }
+      stype = str;
+    }
+    stype_id = mxnet_storage_type_name2id(stype);
+  }
+  return 0 <= stype_id && stype_id < NUMBER_OF_STORAGE_TYPE_IDS;
+}
+
+static VALUE
+storage_type_m_available_p(VALUE mod, VALUE stype)
+{
+  return mxnet_storage_type_is_available(stype) ? Qtrue : Qfalse;
+}
+
+
+
+
+
 static void
 ndarray_free(void *ptr)
 {
@@ -426,6 +528,24 @@ ndarray_get_dtype(VALUE obj)
   return mxnet_dtype_id2name(dtype_id);
 }
 
+static int
+ndarray_get_storage_type_id(VALUE obj)
+{
+  NDArrayHandle handle;
+  int stype_id;
+
+  handle = mxnet_ndarray_get_handle(obj);
+  CHECK_CALL(MXNET_API(MXNDArrayGetStorageType)(handle, &stype_id));
+  return stype_id;
+}
+
+static VALUE
+ndarray_get_storage_type(VALUE obj)
+{
+  int stype_id = ndarray_get_storage_type_id(obj);
+  return mxnet_storage_type_id2name(stype_id);
+}
+
 VALUE
 mxnet_ndarray_get_shape(VALUE obj)
 {
@@ -741,7 +861,7 @@ ndarray_wait_to_read(VALUE obj)
 void
 mxnet_init_ndarray(void)
 {
-  VALUE cNDArray, mDType;
+  VALUE cNDArray, mDType, mStorageType;
 
   cNDArray = rb_const_get_at(mxnet_mMXNet, rb_intern("NDArray"));
 
@@ -754,6 +874,7 @@ mxnet_init_ndarray(void)
   /* TODO: rb_define_singleton_method(cNDArray, "load_from_buffer", ndarray_s_load_from_buffer, 1); */
 
   rb_define_method(cNDArray, "dtype", ndarray_get_dtype, 0);
+  rb_define_method(cNDArray, "stype", ndarray_get_storage_type, 0);
   rb_define_method(cNDArray, "shape", mxnet_ndarray_get_shape, 0);
   rb_define_method(cNDArray, "reshape", ndarray_reshape, 1);
   rb_define_method(cNDArray, "grad", ndarray_grad, 0);
@@ -790,4 +911,25 @@ mxnet_init_ndarray(void)
   INIT_DTYPE(kInt64,   int64_t,  "int64");
 
 #undef INIT_DTYPE
+
+
+  mStorageType = rb_define_module_under(mxnet_mMXNet, "StorageType");
+
+  rb_define_module_function(mStorageType, "id2name", storage_type_m_id2name, 1);
+  rb_define_module_function(mStorageType, "name2id", storage_type_m_name2id, 1);
+  rb_define_module_function(mStorageType, "name", storage_type_m_name, 1);
+  rb_define_module_function(mStorageType, "available?", storage_type_m_available_p, 1);
+
+
+
+#define INIT_STYPE(id, name) do { \
+    storage_type_name_ids[id] = rb_intern(name); \
+  } while (0)
+
+  INIT_STYPE(kDefaultStorage, "default");
+  INIT_STYPE(kRowSparseStorage, "row_sparse");
+  INIT_STYPE(kCSRStorage, "csr");
+
+#undef INIT_STYPE
+
 }

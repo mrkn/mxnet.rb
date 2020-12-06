@@ -2,19 +2,19 @@ module MXNet
   class NDArray
     include Enumerable
 
-    def self.ones(shape, ctx=nil, dtype=:float32, **kwargs)
+    def self.ones(shape, ctx: nil, dtype: :float32, **kwargs)
       ctx ||= Context.default
       dtype = Utils.dtype_id(dtype)
       Internal._ones(shape: shape, ctx: ctx, dtype: dtype, **kwargs)
     end
 
-    def self.zeros(shape, ctx=nil, dtype=:float32, **kwargs)
+    def self.zeros(shape, ctx: nil, dtype: :float32, **kwargs)
       ctx ||= Context.default
       dtype = Utils.dtype_id(dtype)
       Internal._zeros(shape: shape, ctx: ctx, dtype: dtype, **kwargs)
     end
 
-    def self.arange(start, stop=nil, step: 1.0, repeat: 1, ctx: nil, dtype: :float32)
+    def self.arange(start, stop: nil, step: 1.0, repeat: 1, ctx: nil, dtype: :float32)
       ctx ||= Context.default
       dtype = Utils.dtype_name(dtype)
       Internal._arange(start: start, stop: stop, step: step, repeat: repeat, dtype: dtype, ctx: ctx)
@@ -761,6 +761,12 @@ module MXNet
       Ops.tile(self, *args, **kwargs)
     end
 
+    def to_stype stype=:default
+      raise "To convert to a CSR, the NDArray should be 2 Dimensional. Current " +
+      "shape is #{shape}" if shape.length != 2 and stype == :csr
+      Ops.cast_storage(self, stype: stype)
+    end
+
     GRAD_REQ_MAP = {
       null: 0,
       write: 1,
@@ -874,4 +880,5 @@ module MXNet
     end
     raise TypeError, "Unable convert #{array_like.class} to MXNet::NDArray"
   end
+
 end

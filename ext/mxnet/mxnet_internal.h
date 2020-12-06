@@ -94,6 +94,17 @@ enum DTypeID {
   NUMBER_OF_DTYPE_IDS
 };
 
+enum StorageTypeID {
+  // dense
+  kDefaultStorage = 0,
+  // row sparse
+  kRowSparseStorage = 1,
+  // csr
+  kCSRStorage = 2,
+  NUMBER_OF_STORAGE_TYPE_IDS
+};
+
+
 struct mxnet_api_table {
   const char * (* MXGetLastError)();
 
@@ -307,6 +318,7 @@ struct mxnet_api_table {
                              int *num_outputs,
                              NDArrayHandle **outputs,
                              int **out_stypes);
+  int (* MXNDArrayGetStorageType)(NDArrayHandle handle, int *out_storage_type);
 };
 
 struct mxnet_api_table *mxnet_get_api_table(void);
@@ -319,6 +331,7 @@ void *mxnet_get_handle(VALUE obj);
 void mxnet_set_handle(VALUE obj, VALUE handle_v);
 
 VALUE mxnet_dtype_id2name(int dtype_id);
+VALUE mxnet_storage_type_id2name(int stype_id);
 int mxnet_dtype_name2id(VALUE dtype_name);
 VALUE mxnet_dtype_name(VALUE id_or_name);
 
