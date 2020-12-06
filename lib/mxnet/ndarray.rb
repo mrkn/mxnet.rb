@@ -761,6 +761,12 @@ module MXNet
       Ops.tile(self, *args, **kwargs)
     end
 
+    def to_stype stype=:default
+      raise "To convert to a CSR, the NDArray should be 2 Dimensional. Current " +
+      "shape is #{shape}" if shape.length != 2
+      Ops.cast_storage(self, stype: stype)
+    end
+
     GRAD_REQ_MAP = {
       null: 0,
       write: 1,
@@ -874,4 +880,5 @@ module MXNet
     end
     raise TypeError, "Unable convert #{array_like.class} to MXNet::NDArray"
   end
+
 end
