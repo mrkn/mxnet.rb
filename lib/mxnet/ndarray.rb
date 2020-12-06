@@ -763,7 +763,7 @@ module MXNet
 
     def to_stype stype=:default
       raise "To convert to a CSR, the NDArray should be 2 Dimensional. Current " +
-      "shape is #{shape}" if shape.length != 2
+      "shape is #{shape}" if shape.length != 2 and stype == :csr
       Ops.cast_storage(self, stype: stype)
     end
 
