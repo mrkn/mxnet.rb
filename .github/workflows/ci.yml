@@ -1,0 +1,128 @@
+name: CI
+
+on:
+- push
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+        - ubuntu-20.04
+        - ubuntu-18.04
+        - macos-11.0
+        - macos-10.15
+        - windows-latest
+
+        ruby:
+        #- 3.0.0-preview2
+        - 2.7
+        #- 2.6
+        #- debug
+
+        mxnet:
+        - 1.7.0
+
+        use_gpu:
+        - false
+        #- true
+
+        exclude:
+        - os: macos-11.0
+          use_gpu: true
+        - os: macos-10.15
+          use_gpu: true
+        - os: windows-latest
+          ruby: 3.0.0-preview2
+        - os: windows-latest
+          ruby: debug
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set environment variables
+      shell: bash
+      run: |
+        cat <<ENV >> $GITHUB_ENV
+        mxnet_root=${HOME}/mxnet-${{ matrix.mxnet }}
+        mxnet_srcdir=${HOME}/mxnet-${{ matrix.mxnet }}/src
+        ENV
+
+    - name: Install dependencies on Ubuntu
+      if: ${{ startsWith(matrix.os, 'ubuntu') }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential git ninja-build ccache libopenblas-dev libopencv-dev cmake
+
+    - name: Install dependencies on macOS
+      if: ${{ startsWith(matrix.os, 'macos') }}
+      run: |
+        brew install wget cmake ninja ccache opencv llvm
+        echo "PKG_CONFIG_PATH=/usr/local/opt/openblas/lib/pkgconfig" >> $GITHUB_ENV
+        echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
+
+    - name: Install dependencies on Windows
+      if: ${{ startsWith(matrix.os, 'windows') }}
+      run: |
+        choco install wget python git 7zip cmake ninja opencv
+        choco info opencv
+
+    - name: Build and install OpenBLAS
+      if: ${{ startsWith(matrix.os, 'windows') }}
+      shell: bash
+      run: |
+        wget https://github.com/xianyi/OpenBLAS/releases/download/v0.3.13/OpenBLAS-0.3.13-x64.zip
+        mkdir -p ~/openblas
+        unzip -x OpenBLAS-0.3.13-x64.zip -d ~/openblas
+        echo "${HOME}/openblas/bin" >> $GITHUB_PATH
+        echo "OpenBLAS_HOME=${HOME}/openblas" >> $GITHUB_ENV
+
+    - run: exit 1
+      shell: bash
+
+    - name: Cache built MXNet
+      uses: actions/cache@v2
+      env:
+        cache-name: built-mxnet
+      with:
+        path: ~/mxnet-${{ matrix.mxnet }}
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ matrix.mxnet }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ env.cache-name }}-
+          ${{ runner.os }}-build-
+          ${{ runner.os }}-
+
+    - name: Biild and install MXNet from source
+      shell: bash
+      run: |
+        mkdir -p $mxnet_srcdir
+        if [ ! -f $mxnet_srcdir/CMakeList.txt ]; then
+          rm -rf $mxnet_srcdir
+          mkdir -p $mxnet_srcdir
+          git clone -b 1.7.0 --depth 1 --recurse-submodules --shallow-submodules https://github.com/apache/incubator-mxnet.git $mxnet_srcdir
+        fi
+
+        cd $mxnet_srcdir
+        cmake -GNinja -DCMAKE_INSTALL_PREFIX=$mxnet_root -DUSE_CUDA=OFF -DUSE_CPP_PACKAGE=ON
+        ninja -j 4
+        ninja install
+        ninja clean
+
+    - name: Setup Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby }}
+
+    - run: gem install bundler
+    - run: bundle install
+
+    # TODO: prepare data:
+    # - mnist
+    # - cifar10
+
+    # - run: rake compile
+    # - run: rake spec
