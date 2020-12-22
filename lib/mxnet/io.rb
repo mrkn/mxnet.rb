@@ -131,5 +131,5 @@ end
 
 # require 'mxnet/io/resize_iter'
 # require 'mxnet/io/prefetching_iter'
-# require 'mxnet/io/ndarray_iter'
+require 'mxnet/io/ndarray_iter'
 require 'mxnet/io/mxdata_iter'
